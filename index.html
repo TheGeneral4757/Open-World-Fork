@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open World</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{overflow:hidden;font-family:Arial,Helvetica,sans-serif;background:#071522;color:white}
+.menu{width:100vw;height:100vh;position:relative;overflow:hidden;background:radial-gradient(circle at 82% 30%,#ffd98a 0,#f5a75b 8%,transparent 22%),linear-gradient(#4d91c4 0%,#8ec5e8 32%,#e7a66b 54%,#214b42 55%,#102c27 100%)}
+.sun{position:absolute;width:110px;height:110px;border-radius:50%;background:#fff4c2;box-shadow:0 0 70px 30px rgba(255,220,130,.55);right:10%;top:27%}
+.sky-glow{position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(255,191,91,.25) 52%,rgba(4,25,30,.55) 100%)}
+.mountain{position:absolute;bottom:30%;width:0;height:0;border-left:260px solid transparent;border-right:260px solid transparent;border-bottom:360px solid #31536a;filter:drop-shadow(0 10px 8px rgba(0,0,0,.25))}
+.m1{left:28%;bottom:34%}.m2{left:5%;bottom:31%;border-bottom-color:#263f53;transform:scale(.75)}.m3{left:52%;bottom:35%;border-bottom-color:#3c6174;transform:scale(.7)}
+.snow{position:absolute;left:calc(28% + 215px);bottom:calc(34% + 275px);width:0;height:0;border-left:45px solid transparent;border-right:45px solid transparent;border-bottom:70px solid #dcecf0}
+.land{position:absolute;left:-5%;right:-5%;bottom:-5%;height:45%;border-radius:50% 50% 0 0;background:radial-gradient(ellipse at 75% 25%,#17606a 0 8%,transparent 9%),linear-gradient(160deg,#214b38,#102e26 65%,#091b19);transform:rotate(-2deg)}
+.water{position:absolute;right:-4%;bottom:8%;width:48%;height:30%;border-radius:50%;background:linear-gradient(150deg,#2e91a5,#17647d 55%,#0b4056);transform:rotate(-7deg);opacity:.9}
+.city{position:absolute;right:20%;bottom:32%;width:190px;height:115px}
+.building{position:absolute;bottom:0;width:28px;background:#554f49;border-radius:3px 3px 0 0}
+.b1{left:5px;height:45px}.b2{left:38px;height:70px}.b3{left:72px;height:55px}.b4{left:108px;height:85px}.b5{left:145px;height:50px}
+.tower{position:absolute;bottom:0;left:82px;width:30px;height:120px;background:#665e55}
+.tower:before{content:"";position:absolute;top:-32px;left:-10px;border-left:25px solid transparent;border-right:25px solid transparent;border-bottom:35px solid #4c4640}
+.hero{position:absolute;left:34%;bottom:14%;width:55px;height:135px;z-index:5}
+.hero .head{position:absolute;top:0;left:14px;width:28px;height:28px;border-radius:50%;background:#201a16}
+.hero .body{position:absolute;top:27px;left:9px;width:38px;height:65px;border-radius:12px 12px 5px 5px;background:#172027}
+.hero .leg1,.hero .leg2{position:absolute;top:87px;width:16px;height:48px;background:#16191c;border-radius:5px}
+.hero .leg1{left:9px;transform:rotate(8deg)}.hero .leg2{left:29px;transform:rotate(-8deg)}
+.logo{position:absolute;top:7%;left:5.5%;z-index:10;font-weight:1000;font-size:clamp(48px,6vw,105px);line-height:.78;letter-spacing:-5px;text-shadow:5px 7px 0 #18222a,0 12px 30px rgba(0,0,0,.55)}
+.logo span{display:block;color:#f2ae35;text-shadow:5px 7px 0 #493012,0 10px 25px rgba(0,0,0,.55)}
+.tagline{position:absolute;top:5%;right:5%;font-size:clamp(14px,1.5vw,23px);letter-spacing:2px;opacity:.9;z-index:10}
+.buttons{position:absolute;z-index:20;left:5.5%;top:42%;width:min(390px,32vw)}
+button{width:100%;height:75px;margin-bottom:17px;border:2px solid #617386;border-radius:10px;color:white;font-size:25px;font-weight:bold;text-align:left;padding-left:35px;cursor:pointer;background:rgba(8,22,34,.88);box-shadow:0 8px 20px rgba(0,0,0,.35);transition:.2s}
+button:hover{transform:translateX(7px);border-color:#8cff64}
+.play{background:linear-gradient(90deg,#087d32,#0d542d);border-color:#72ff4d;box-shadow:0 0 20px rgba(80,255,80,.25)}
+.icon{margin-right:18px}.notice{position:absolute;bottom:4%;left:5.5%;font-size:13px;opacity:.55}
+.modal{display:none;position:absolute;inset:0;z-index:100;background:rgba(0,0,0,.72);align-items:center;justify-content:center}
+.panel{width:min(500px,85vw);padding:35px;border:2px solid #638094;border-radius:16px;background:#0b1b29;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+.panel h2{font-size:32px;margin-bottom:20px}.panel p{color:#c8d4dc;margin-bottom:25px}
+.close{width:auto;padding:0 25px;height:50px;margin:0;font-size:18px}
+@media(max-width:700px){.logo{top:5%;left:5%;font-size:52px}.buttons{left:5%;top:38%;width:55vw}button{height:62px;font-size:19px}.hero{left:48%}}
+</style>
+</head>
+<body>
+<div class="menu">
+<div class="sun"></div><div class="sky-glow"></div>
+<div class="mountain m1"></div><div class="mountain m2"></div><div class="mountain m3"></div><div class="snow"></div>
+<div class="water"></div>
+<div class="city"><div class="building b1"></div><div class="building b2"></div><div class="building b3"></div><div class="tower"></div><div class="building b4"></div><div class="building b5"></div></div>
+<div class="land"></div>
+<div class="hero"><div class="head"></div><div class="body"></div><div class="leg1"></div><div class="leg2"></div></div>
+<div class="logo">OPEN<span>WORLD</span></div>
+<div class="tagline">EXPLORE &nbsp; • &nbsp; BUILD &nbsp; • &nbsp; SURVIVE</div>
+<div class="buttons">
+<button class="play" onclick="startGame()"><span class="icon">▶</span> PLAY</button>
+<button onclick="openSettings()"><span class="icon">⚙</span> SETTINGS</button>
+</div>
+<div class="notice">OPEN WORLD • ADVENTURE AWAITS</div>
+<div class="modal" id="settings"><div class="panel"><h2>Settings</h2><p>Game settings will be added here as the Open World game is built.</p><button class="close" onclick="closeSettings()">CLOSE</button></div></div>
+</div>
+<script>
+function startGame(){alert("The Open World game will start here!")}
+function openSettings(){document.getElementById("settings").style.display="flex"}
+function closeSettings(){document.getElementById("settings").style.display="none"}
+</script>
+</body>
+</html>
