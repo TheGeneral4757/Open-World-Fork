@@ -1,98 +1,44 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Open World</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07131a}
-body{font-family:Georgia,"Times New Roman",serif;color:#fff}.menu{position:relative;width:100vw;height:100vh;overflow:hidden;background:#07131a}
-.scene{position:absolute;inset:0;width:100%;height:100%}.ui{position:absolute;inset:0;z-index:20;pointer-events:none}
-.logo{position:absolute;left:5.5%;top:6.3%;font-weight:900;font-size:clamp(54px,6.3vw,110px);line-height:.72;letter-spacing:-5px;color:#fafaf4;text-shadow:5px 7px 0 #16212a,0 13px 35px #000b}
-.logo span{display:block;color:#f3b442;text-shadow:5px 7px 0 #4b3011,0 10px 30px #0009}
-.logo small{display:block;margin:16px 0 0 9px;font-size:.18em;letter-spacing:8px;color:#eef2ed;text-shadow:2px 2px #16212a}
-.topline{position:absolute;right:5%;top:5%;font-size:clamp(13px,1.4vw,22px);letter-spacing:4px;text-shadow:0 2px 10px #000a}.topline:after{content:"";display:block;height:1px;margin-top:13px;background:linear-gradient(90deg,transparent,#fff,transparent)}
-.controls{position:absolute;left:5.5%;top:45%;width:min(430px,33vw);pointer-events:auto}.btn{display:block;width:100%;height:84px;margin-bottom:18px;border:1px solid #c7ecea;border-radius:10px;color:white;text-align:left;padding:10px 28px;background:linear-gradient(110deg,#045b49f2,#154d4699);box-shadow:0 13px 36px #0006,inset 0 1px #ffffff33;cursor:pointer;transition:.2s;font:700 27px Georgia,"Times New Roman",serif;letter-spacing:2px}.btn.settings{background:linear-gradient(110deg,#050f17f2,#12202acc);border-color:#b5c0c6d9}.btn:hover{transform:translateX(8px);box-shadow:0 0 32px #70efe43b,0 16px 40px #0007;border-color:#c8fff9}.sub{display:block;margin:4px 0 0 46px;font:400 10px Arial,sans-serif;letter-spacing:3px;color:#d3dfde}.icon{display:inline-flex;width:38px;justify-content:center;margin-right:8px;font-family:Arial,sans-serif}
-.bottom{position:absolute;left:5.5%;bottom:5.2%;font-size:14px;letter-spacing:3px;text-shadow:0 2px 7px #000}.bottom:before{content:"";display:inline-block;width:75px;height:1px;margin-right:13px;vertical-align:middle;background:#e9efed}
-.compass{position:absolute;right:4.2%;bottom:5%;width:96px;height:96px;border:1px solid #fff8;border-radius:50%;background:#040e153f;box-shadow:inset 0 0 25px #fff1}.compass:before{content:"";position:absolute;inset:9px;border:1px solid #fff4;border-radius:50%}.compass i{position:absolute;font:700 12px Arial;font-style:normal}.n{top:2px;left:45px}.s{bottom:2px;left:46px}.e{right:2px;top:42px}.w{left:2px;top:42px}.needle{position:absolute;left:45px;top:20px;width:7px;height:56px;background:linear-gradient(#f4b545 0 50%,#e9eeee 50%);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);transform:rotate(28deg)}
-.modal{display:none;position:absolute;z-index:100;inset:0;align-items:center;justify-content:center;background:#000c;backdrop-filter:blur(8px)}.panel{width:min(520px,86vw);padding:38px;border:1px solid #7897a0;border-radius:14px;background:linear-gradient(145deg,#0b1d29,#08131d);box-shadow:0 25px 80px #000d}.panel h2{margin:0 0 12px;color:#f5cc74;font-size:36px}.panel p{margin:0 0 24px;font:400 16px/1.7 Arial;color:#cbd7dc}.close{padding:11px 25px;border:1px solid #73929b;border-radius:7px;background:#14323c;color:white;cursor:pointer;font-size:16px}
-@media(max-width:700px){.logo{top:5%;left:5%;font-size:52px}.topline{display:none}.controls{left:5%;top:40%;width:60vw}.btn{height:66px;font-size:19px}.compass{display:none}.bottom{font-size:11px}}
-</style></head>
-<body><div class="menu">
-<svg class="scene" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
-<defs>
-<linearGradient id="sky" x2="0" y2="1"><stop stop-color="#123955"/><stop offset=".3" stop-color="#5c91a6"/><stop offset=".59" stop-color="#e7a26b"/><stop offset=".8" stop-color="#54755e"/><stop offset="1" stop-color="#061917"/></linearGradient>
-<radialGradient id="sun"><stop stop-color="#fffde1"/><stop offset=".2" stop-color="#fff0b8"/><stop offset=".55" stop-color="#ffd68b" stop-opacity=".45"/><stop offset="1" stop-color="#ffd68b" stop-opacity="0"/></radialGradient>
-<linearGradient id="far" x2="0" y2="1"><stop stop-color="#7096a4"/><stop offset="1" stop-color="#385e6c"/></linearGradient>
-<linearGradient id="mount" x2="1" y2="1"><stop stop-color="#5a7b8b"/><stop offset=".55" stop-color="#345666"/><stop offset="1" stop-color="#1f3b49"/></linearGradient>
-<linearGradient id="ground" x2="0" y2="1"><stop stop-color="#4d7749"/><stop offset=".5" stop-color="#25503a"/><stop offset="1" stop-color="#061a18"/></linearGradient>
-<linearGradient id="water" x2="1" y2="1"><stop stop-color="#6ec3c2"/><stop offset=".45" stop-color="#2d8391"/><stop offset="1" stop-color="#073c51"/></linearGradient>
-<linearGradient id="stone"><stop stop-color="#504845"/><stop offset=".5" stop-color="#8b7869"/><stop offset="1" stop-color="#3f3936"/></linearGradient>
-<linearGradient id="cloak" x2="1" y2="1"><stop stop-color="#080f15"/><stop offset=".55" stop-color="#303b45"/><stop offset="1" stop-color="#11181e"/></linearGradient>
-<filter id="blur"><feGaussianBlur stdDeviation="18"/></filter><filter id="soft"><feGaussianBlur stdDeviation="7"/></filter><filter id="shadow"><feDropShadow dx="0" dy="10" stdDeviation="9" flood-opacity=".45"/></filter>
-<pattern id="rip" width="170" height="40" patternUnits="userSpaceOnUse"><path d="M0 20q40-12 84 0t86 0" fill="none" stroke="#fff" stroke-opacity=".2" stroke-width="3"/></pattern>
-<g id="pine"><path d="M38 132V84" stroke="#39291e" stroke-width="10"/><path d="M38 12L13 52h14L8 80h17L12 105l26-17 26 17-13-25h17L47 52h14Z" fill="#214d35"/><path d="M38 25L21 52h9L18 73h20L31 88l7-5 7 5-7-15h20L47 52h9Z" fill="#3c7645"/></g>
-<g id="bush"><ellipse cx="28" cy="29" rx="30" ry="22" fill="#285f3b"/><ellipse cx="7" cy="38" rx="18" ry="14" fill="#3c7948"/><ellipse cx="47" cy="39" rx="18" ry="15" fill="#1f5334"/></g>
-</defs>
-<rect width="1920" height="1080" fill="url(#sky)"/>
-<ellipse cx="1660" cy="290" rx="260" ry="260" fill="url(#sun)" filter="url(#blur)"/><circle cx="1660" cy="290" r="61" fill="#fff6c8"/>
-<g fill="#fff" opacity=".18" filter="url(#soft)"><path d="M0 180c80-80 180-25 240-70 70-45 160 0 190 60 70 0 100 45 45 70H50c-70 0-75-35-50-60Z"/><path d="M640 160c70-65 165-45 200 10 55-35 145-20 175 40 55 0 85 35 35 58H625c-55-10-45-70 15-108Z"/><path d="M1160 110c85-60 180-18 205 40 70-48 175-20 205 35 60 0 90 38 40 62h-450c-60-15-54-80 0-137Z"/></g>
-<path d="M0 540c140-95 235-135 340-50 110-95 215-40 320 35 130-100 260-70 360 25 120-100 245-90 340 0 95-90 220-80 320 0 100-85 190-55 240-20v190H0Z" fill="url(#far)"/>
-<path d="M0 590c135-55 210-145 340-60 100-110 190-180 310-55 115-190 190-240 285-115 90 115 150 175 225 180 100-100 190-225 290-105 105-135 185-205 278-70 75 85 155 90 192 50v230H0Z" fill="url(#mount)"/>
-<path d="M546 468c92-138 175-218 242-250 50 45 80 105 139 180-52-22-87-10-131 20-37-69-66-97-98-102-50 50-79 105-152 152Z" fill="#eef7f6"/>
-<path d="M1536 430c70-90 124-140 166-175 42 55 72 108 111 165-57-24-88-10-134 22-44-50-76-76-109-72Z" fill="#e5f2f2"/>
-<path d="M0 565q380-70 720 30t720-4 480-35v145q-420-65-790-2t-780-8-350 8Z" fill="#dfebe6" opacity=".12" filter="url(#blur)"/>
-<path d="M0 625c220-65 445-14 670-30 240-18 420 8 615-18 220-27 425-20 635 15v488H0Z" fill="url(#ground)"/>
-<g fill="#587d4f" opacity=".42"><ellipse cx="250" cy="705" rx="220" ry="65"/><ellipse cx="570" cy="675" rx="180" ry="55"/><ellipse cx="1000" cy="683" rx="260" ry="64"/><ellipse cx="1408" cy="663" rx="240" ry="62"/></g>
-<g fill="none" stroke="#819d68" stroke-opacity=".3" stroke-width="15"><path d="M0 770c210-87 390-33 570-63s330-34 560 35 400 20 790-76"/><path d="M0 825c225-82 405-33 595-64s350-36 585 15 400 17 740-58"/></g>
-<path d="M1170 605c235-65 515-80 750-13v488h-649c58-81 35-146-30-220-55-65-88-154-71-255Z" fill="url(#water)"/>
-<path d="M1170 605c235-65 515-80 750-13v488h-649c58-81 35-146-30-220-55-65-88-154-71-255Z" fill="url(#rip)"/>
-<path d="M1548 602q120-42 230-5l86 483h-360q88-255 44-478Z" fill="#ffd994" opacity=".1" filter="url(#blur)"/>
-<path d="M1048 596c28 108-20 200-70 285" fill="none" stroke="#dffbf7" stroke-opacity=".7" stroke-width="10"/>
-
-<!-- CITY -->
-<path d="M1245 653c155-74 320-62 490-21 80 19 130 0 185-28v150c-220-28-390 2-560 18-72-34-101-75-115-119Z" fill="#315940"/>
-<g filter="url(#shadow)">
-<g fill="url(#stone)"><rect x="1305" y="585" width="58" height="100"/><rect x="1373" y="534" width="75" height="151"/><rect x="1458" y="590" width="49" height="95"/><rect x="1517" y="501" width="82" height="184"/><rect x="1614" y="556" width="61" height="129"/><rect x="1686" y="590" width="47" height="95"/></g>
-<g fill="#f3cc71"><rect x="1320" y="615" width="11" height="17"/><rect x="1320" y="648" width="11" height="17"/><rect x="1388" y="567" width="13" height="18"/><rect x="1388" y="603" width="13" height="18"/><rect x="1421" y="567" width="13" height="18"/><rect x="1421" y="603" width="13" height="18"/><rect x="1535" y="535" width="13" height="18"/><rect x="1568" y="535" width="13" height="18"/><rect x="1535" y="571" width="13" height="18"/><rect x="1568" y="571" width="13" height="18"/><rect x="1535" y="607" width="13" height="18"/><rect x="1568" y="607" width="13" height="18"/><rect x="1630" y="588" width="11" height="18"/><rect x="1630" y="623" width="11" height="18"/></g>
-<path d="M1490 503l68-89 70 89Z" fill="#403934"/><rect x="1517" y="445" width="85" height="240" fill="url(#stone)"/><path d="M1494 445l65-91 69 91Z" fill="#39332f"/><g fill="#f8d272"><rect x="1545" y="492" width="27" height="38"/><rect x="1545" y="548" width="27" height="38"/><rect x="1545" y="604" width="27" height="38"/></g></g>
-<path d="M1218 739q196-38 396-13" fill="none" stroke="#684a32" stroke-width="18" stroke-linecap="round"/><path d="M1228 730q188-27 376-14" fill="none" stroke="#a17950" stroke-width="3"/>
-
-<!-- FOREST -->
-<g opacity=".94"><use href="#pine" x="20" y="635" transform="scale(1.6)"/><use href="#pine" x="165" y="580" transform="scale(1.2)"/><use href="#pine" x="348" y="665" transform="scale(1.4)"/><use href="#pine" x="654" y="660" transform="scale(1.1)"/><use href="#pine" x="870" y="684" transform="scale(.94)"/><use href="#pine" x="1720" y="642" transform="scale(1.5)"/><use href="#pine" x="1827" y="698" transform="scale(1.12)"/></g>
-<g><use href="#bush" x="86" y="795"/><use href="#bush" x="316" y="824"/><use href="#bush" x="595" y="806"/><use href="#bush" x="875" y="792"/><use href="#bush" x="1090" y="822"/></g>
-<!-- ships -->
-<g filter="url(#shadow)"><g transform="translate(1660 700) scale(.92)"><path d="M0 63h126q-16 32-104 32Z" fill="#5b422f"/><path d="M47 63V0h6v63Z" fill="#463327"/><path d="M56 7l45 48H56Z" fill="#e4e8df"/><path d="M51 18L10 55h41Z" fill="#a67c54"/></g><g transform="translate(1438 830) scale(.56)"><path d="M0 63h126q-16 32-104 32Z" fill="#5b422f"/><path d="M47 63V0h6v63Z" fill="#463327"/><path d="M56 7l45 48H56Z" fill="#e4e8df"/><path d="M51 18L10 55h41Z" fill="#a67c54"/></g></g>
-
-<!-- foreground -->
-<path d="M0 942c175-75 305-50 470-17s320 58 536-29 374-21 599 24 227 20 315-21v181H0Z" fill="#071a18"/>
-<g fill="#6b7f4e" opacity=".55"><ellipse cx="117" cy="950" rx="145" ry="34"/><ellipse cx="328" cy="1000" rx="150" ry="39"/><ellipse cx="560" cy="956" rx="185" ry="45"/><ellipse cx="835" cy="1006" rx="178" ry="47"/></g>
-<g fill="#5b503f" filter="url(#shadow)"><path d="M0 1080v-70q77-109 181-49t110 119Z"/><path d="M182 1080q50-143 154-129t135 129Z"/><path d="M393 1080q64-158 201-127t147 127Z"/><path d="M660 1080q82-160 234-116t142 116Z"/></g>
-<g fill="#9b8359" opacity=".48"><path d="M33 982q58-42 116-10-38 21-88 28Z"/><path d="M239 1004q59-37 105-18-34 24-83 31Z"/><path d="M478 1001q68-41 133-15-51 24-118 31Z"/></g>
-
-<!-- adventurer -->
-<g transform="translate(555 688)" filter="url(#shadow)">
-<path d="M42 67q36-25 74 2l20 157q-38-19-65-34-30 15-64 33Z" fill="url(#cloak)"/><path d="M49 57q28-18 55-1l4 59q-30 11-61-5Z" fill="#1d2730"/><path d="M53 29q25-27 48-1l2 28H50Z" fill="#0f171d"/><circle cx="77" cy="43" r="20" fill="#3c291f"/><rect x="47" y="112" width="22" height="89" rx="7" fill="#0e151a" transform="rotate(6 47 112)"/><rect x="84" y="112" width="22" height="89" rx="7" fill="#0e151a" transform="rotate(-6 84 112)"/><rect x="106" y="47" width="7" height="118" rx="4" fill="#ecf4f1" transform="rotate(24 106 47)"/><rect x="97" y="77" width="24" height="7" rx="3" fill="#a7793c" transform="rotate(24 97 77)"/></g>
-
-<!-- cinematic light + birds -->
-<path d="M1490 220l-285 790h128l238-760Z" fill="#ffe6a1" opacity=".055" filter="url(#blur)"/><path d="M1735 270l-170 740h78l155-712Z" fill="#fff2be" opacity=".05" filter="url(#blur)"/>
-<g fill="none" stroke="#16262e" stroke-width="4" stroke-linecap="round" opacity=".8"><path d="M1245 288q22-20 44 0t44 0"/><path d="M1350 245q16-15 32 0t32 0"/><path d="M1441 329q18-16 36 0t36 0"/></g>
-<g fill="#ffec9a" opacity=".75"><circle cx="422" cy="754" r="3"/><circle cx="503" cy="822" r="2.5"/><circle cx="1040" cy="762" r="2.5"/><circle cx="1168" cy="803" r="3"/><circle cx="1275" cy="736" r="2.5"/></g>
-<rect width="1920" height="1080" fill="#0b2421" opacity=".04"/>
-</svg>
-
-<div class="ui">
-<div class="logo">OPEN<span>WORLD</span><small>AN UNFORGETTABLE ADVENTURE</small></div>
-<div class="topline">EXPLORE &nbsp; • &nbsp; BUILD &nbsp; • &nbsp; SURVIVE</div>
-<div class="controls">
-<button class="btn" onclick="startGame()"><span class="icon">▶</span> PLAY<span class="sub">ENTER THE WORLD</span></button>
-<button class="btn settings" onclick="openSettings()"><span class="icon">⚙</span> SETTINGS<span class="sub">CUSTOMIZE YOUR EXPERIENCE</span></button>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08141d}
+body{font-family:Georgia,"Times New Roman",serif}
+.screen{position:relative;width:100vw;height:100vh;overflow:hidden;background:#08141d}
+.hero-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
+.hit{position:absolute;z-index:10;border:0;background:transparent;cursor:pointer}
+.hit:hover{background:rgba(80,240,220,.08);box-shadow:0 0 28px rgba(80,240,220,.22)}
+.play{left:5.5%;top:45.8%;width:min(430px,33vw);height:10%}
+.settings{left:5.5%;top:59%;width:min(430px,33vw);height:10%}
+.modal{display:none;position:absolute;inset:0;z-index:30;align-items:center;justify-content:center;background:rgba(0,0,0,.78);backdrop-filter:blur(8px)}
+.panel{width:min(520px,86vw);padding:38px;border:1px solid #7897a0;border-radius:14px;background:linear-gradient(145deg,#0b1d29,#08131d);box-shadow:0 25px 80px rgba(0,0,0,.82);color:#fff}
+.panel h2{margin:0 0 12px;color:#f5cc74;font-size:36px}
+.panel p{margin:0 0 24px;font:400 16px/1.7 Arial,sans-serif;color:#cbd7dc}
+.close{padding:11px 25px;border:1px solid #73929b;border-radius:7px;background:#14323c;color:white;cursor:pointer;font-size:16px}
+@media(max-width:700px){.play{left:5%;top:42%;width:60vw}.settings{left:5%;top:56%;width:60vw}}
+</style>
+</head>
+<body>
+<div class="screen">
+  <img class="hero-image" src="assets/home-screen.webp" alt="Open World cinematic home screen">
+  <button class="hit play" aria-label="Play" onclick="startGame()"></button>
+  <button class="hit settings" aria-label="Settings" onclick="openSettings()"></button>
+  <div class="modal" id="settings">
+    <div class="panel">
+      <h2>Settings</h2>
+      <p>Your adventure settings will live here as the game is built.</p>
+      <button class="close" onclick="closeSettings()">CLOSE</button>
+    </div>
+  </div>
 </div>
-<div class="bottom">A VAST WORLD AWAITS...</div>
-<div class="compass"><i class="n">N</i><i class="s">S</i><i class="e">E</i><i class="w">W</i><div class="needle"></div></div>
-</div>
-<div class="modal" id="settings"><div class="panel"><h2>Settings</h2><p>Your adventure settings will live here as the game is built.</p><button class="close" onclick="closeSettings()">CLOSE</button></div></div>
 <script>
 function startGame(){alert("The Open World game will start here!")}
 function openSettings(){document.getElementById("settings").style.display="flex"}
 function closeSettings(){document.getElementById("settings").style.display="none"}
 </script>
-</div></body></html>
+</body>
+</html>
