@@ -6,166 +6,197 @@
 <title>Open World</title>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071522}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07131d}
 body{font-family:Georgia,"Times New Roman",serif;color:#fff}
-.menu{position:relative;width:100vw;height:100vh;overflow:hidden;background:#071522}
+.menu{position:relative;width:100vw;height:100vh;overflow:hidden;background:#07131d}
 .scene{position:absolute;inset:0;width:100%;height:100%}
-.ui{position:absolute;inset:0;z-index:10;pointer-events:none}
-.logo{position:absolute;left:5.5%;top:7%;color:#fff;font-size:clamp(52px,6.2vw,108px);font-weight:900;line-height:.78;letter-spacing:-5px;text-shadow:5px 7px 0 #121b22,0 12px 35px rgba(0,0,0,.7)}
-.logo .gold{display:block;color:#f4b43f;text-shadow:5px 7px 0 #4a3011,0 10px 30px rgba(0,0,0,.65)}
-.logo small{display:block;margin:14px 0 0 8px;font-size:.18em;letter-spacing:8px;line-height:1;color:#edf2ee;text-shadow:2px 2px #182029}
-.topline{position:absolute;right:5.2%;top:5.2%;font-size:clamp(13px,1.4vw,22px);letter-spacing:4px;text-shadow:0 2px 9px #111}
-.topline:after{content:"";display:block;width:100%;height:1px;margin-top:14px;background:linear-gradient(90deg,transparent,#fff,transparent)}
-.controls{position:absolute;left:5.5%;top:46%;width:min(430px,33vw);pointer-events:auto}
-.menu-btn{position:relative;width:100%;height:84px;margin-bottom:18px;border:2px solid rgba(190,231,235,.9);border-radius:10px;color:#fff;text-align:left;padding:10px 28px;font:700 27px Georgia,"Times New Roman",serif;letter-spacing:2px;cursor:pointer;background:linear-gradient(100deg,rgba(4,73,66,.94),rgba(16,83,78,.54));box-shadow:0 10px 35px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.18);transition:.2s}
-.menu-btn.settings{background:linear-gradient(100deg,rgba(5,12,19,.94),rgba(16,25,34,.82));border-color:rgba(151,161,169,.8)}
-.menu-btn:hover{transform:translateX(7px);box-shadow:0 0 30px rgba(91,242,221,.3),0 12px 35px rgba(0,0,0,.42)}
-.menu-btn .sub{display:block;margin-left:46px;font:400 10px Arial,sans-serif;letter-spacing:3px;color:#cfe0df;margin-top:4px}
-.icon{display:inline-flex;width:38px;justify-content:center;margin-right:8px;font-family:Arial,sans-serif}
-.bottom{position:absolute;left:5.5%;bottom:5.5%;font-size:14px;letter-spacing:3px;text-shadow:0 2px 6px #111}
-.bottom:before{content:"";display:inline-block;width:75px;height:1px;vertical-align:middle;margin-right:13px;background:#e8eeee}
-.compass{position:absolute;right:4.4%;bottom:5.2%;width:95px;height:95px;border:1px solid rgba(255,255,255,.5);border-radius:50%;background:rgba(5,15,22,.24);box-shadow:inset 0 0 26px rgba(255,255,255,.06)}
-.compass:before{content:"";position:absolute;inset:9px;border:1px solid rgba(255,255,255,.27);border-radius:50%}
-.compass span{position:absolute;font:700 12px Arial,sans-serif}.n{top:2px;left:44px}.s{bottom:2px;left:45px}.e{right:2px;top:41px}.w{left:2px;top:41px}
-.needle{position:absolute;left:44px;top:20px;width:7px;height:55px;background:linear-gradient(#f4b43f 0 50%,#e4eeee 50%);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);transform:rotate(28deg)}
-.modal{display:none;position:absolute;z-index:50;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,.76);backdrop-filter:blur(7px)}
-.panel{width:min(520px,86vw);padding:38px;border:1px solid #73919b;border-radius:14px;background:linear-gradient(145deg,#0b1c28,#08131d);box-shadow:0 25px 80px rgba(0,0,0,.8)}
-.panel h2{margin:0 0 12px;color:#f5c96f;font-size:36px}.panel p{font:400 16px Arial,sans-serif;line-height:1.7;color:#cbd7dc;margin:0 0 22px}
-.close{padding:12px 25px;border:1px solid #72919b;border-radius:7px;background:#122f39;color:#fff;cursor:pointer;font-size:16px}
-@media(max-width:700px){.logo{left:5%;top:5%;font-size:52px}.topline{display:none}.controls{left:5%;top:42%;width:60vw}.menu-btn{height:66px;font-size:19px}.compass{display:none}.bottom{font-size:11px}}
+.ui{position:absolute;inset:0;z-index:50;pointer-events:none}
+.logo{position:absolute;left:5.5%;top:6.2%;font-weight:900;font-size:clamp(54px,6.3vw,110px);line-height:.73;letter-spacing:-5px;color:#fff;text-shadow:5px 7px 0 #15202a,0 12px 36px rgba(0,0,0,.72)}
+.logo .gold{display:block;color:#f3b342;text-shadow:5px 7px 0 #4a3011,0 10px 30px rgba(0,0,0,.7)}
+.logo small{display:block;margin:15px 0 0 9px;font-size:.18em;letter-spacing:8px;line-height:1;color:#eef3ef;text-shadow:2px 2px #13202a}
+.topline{position:absolute;right:5%;top:5.3%;font-size:clamp(13px,1.38vw,22px);letter-spacing:4px;text-shadow:0 2px 9px rgba(0,0,0,.65);text-align:right}
+.topline:after{content:"";display:block;height:1px;margin-top:13px;background:linear-gradient(90deg,transparent,#fff,transparent)}
+.controls{position:absolute;left:5.5%;top:45%;width:min(430px,33vw);pointer-events:auto}
+.menu-btn{position:relative;display:block;width:100%;height:84px;margin-bottom:18px;border:1px solid rgba(184,228,231,.9);border-radius:10px;color:#fff;text-align:left;padding:11px 28px;font:700 27px Georgia,"Times New Roman",serif;letter-spacing:2px;cursor:pointer;background:linear-gradient(115deg,rgba(0,98,77,.95),rgba(14,75,67,.66));box-shadow:0 12px 34px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.18);transition:.22s}
+.menu-btn.settings{background:linear-gradient(115deg,rgba(5,15,23,.94),rgba(17,30,40,.78));border-color:rgba(166,175,184,.82)}
+.menu-btn:hover{transform:translateX(8px);box-shadow:0 0 32px rgba(112,239,228,.25),0 14px 38px rgba(0,0,0,.44);border-color:#bffdf8}
+.menu-btn .icon{display:inline-flex;width:37px;justify-content:center;margin-right:9px;font-family:Arial,sans-serif}
+.menu-btn .sub{display:block;margin-left:46px;margin-top:4px;font:400 10px Arial,sans-serif;letter-spacing:3px;color:#d2e0df}
+.bottom{position:absolute;left:5.5%;bottom:5%;font-size:14px;letter-spacing:3px;text-shadow:0 2px 6px rgba(0,0,0,.75)}
+.bottom:before{content:"";display:inline-block;width:75px;height:1px;margin-right:13px;vertical-align:middle;background:#e8eeee}
+.compass{position:absolute;right:4.3%;bottom:5%;width:96px;height:96px;border:1px solid rgba(255,255,255,.5);border-radius:50%;background:rgba(5,15,22,.26);box-shadow:inset 0 0 25px rgba(255,255,255,.06)}
+.compass:before{content:"";position:absolute;inset:9px;border:1px solid rgba(255,255,255,.24);border-radius:50%}
+.compass .n,.compass .s,.compass .e,.compass .w{position:absolute;font:bold 12px Arial,sans-serif}.n{left:45px;top:2px}.s{left:46px;bottom:2px}.e{right:2px;top:42px}.w{left:2px;top:42px}
+.needle{position:absolute;left:45px;top:20px;width:7px;height:57px;background:linear-gradient(#f6bb4d 0 50%,#e7efef 50%);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);transform:rotate(28deg)}
+.modal{display:none;position:absolute;z-index:100;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,.76);backdrop-filter:blur(8px)}
+.panel{width:min(520px,86vw);padding:38px;border:1px solid #7898a0;border-radius:14px;background:linear-gradient(145deg,#0b1c28,#08131d);box-shadow:0 25px 80px rgba(0,0,0,.8)}
+.panel h2{margin:0 0 12px;font-size:36px;color:#f5ca70}.panel p{margin:0 0 23px;font:400 16px/1.7 Arial,sans-serif;color:#cbd7dc}
+.close{padding:11px 26px;border:1px solid #74929c;border-radius:7px;background:#14323c;color:#fff;cursor:pointer;font-size:16px}
+@media(max-width:700px){.logo{left:5%;top:5%;font-size:52px}.topline{display:none}.controls{left:5%;top:40%;width:60vw}.menu-btn{height:66px;font-size:19px}.compass{display:none}.bottom{font-size:11px}}
 </style>
 </head>
 <body>
 <div class="menu">
-<svg class="scene" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+<svg class="scene" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
 <defs>
-  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17486d"/><stop offset=".48" stop-color="#8ab7c8"/><stop offset=".72" stop-color="#efad69"/><stop offset="1" stop-color="#173f38"/></linearGradient>
-  <radialGradient id="sun"><stop offset="0" stop-color="#fffbe0"/><stop offset=".18" stop-color="#ffe9ae"/><stop offset=".5" stop-color="#ffd383" stop-opacity=".58"/><stop offset="1" stop-color="#ffd383" stop-opacity="0"/></radialGradient>
-  <linearGradient id="farMount" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#63859a"/><stop offset="1" stop-color="#31576d"/></linearGradient>
-  <linearGradient id="mount" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#527487"/><stop offset="1" stop-color="#233f51"/></linearGradient>
-  <linearGradient id="gold"><stop stop-color="#fff0a6"/><stop offset=".25" stop-color="#f6cb68"/><stop offset=".55" stop-color="#d99a28"/><stop offset="1" stop-color="#6b4211"/></linearGradient>
-  <linearGradient id="lake" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5db7bd"/><stop offset=".45" stop-color="#287d91"/><stop offset="1" stop-color="#083f56"/></linearGradient>
-  <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#46784e"/><stop offset=".45" stop-color="#234a38"/><stop offset="1" stop-color="#071d1a"/></linearGradient>
-  <linearGradient id="castle" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#4c4744"/><stop offset=".45" stop-color="#8b7a6a"/><stop offset="1" stop-color="#433c38"/></linearGradient>
-  <linearGradient id="cloak" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b1118"/><stop offset=".55" stop-color="#2f3942"/><stop offset="1" stop-color="#10171c"/></linearGradient>
-  <filter id="glow"><feGaussianBlur stdDeviation="18"/></filter>
-  <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity=".42"/></filter>
-  <filter id="soft"><feGaussianBlur stdDeviation="3"/></filter>
-  <pattern id="waterLines" width="140" height="32" patternUnits="userSpaceOnUse"><path d="M0 17 Q35 9 70 17 T140 17" fill="none" stroke="#c7f2ee" stroke-opacity=".2" stroke-width="2"/></pattern>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#173f61"/><stop offset=".32" stop-color="#5d91a7"/><stop offset=".63" stop-color="#e7aa72"/><stop offset="1" stop-color="#264b42"/>
+  </linearGradient>
+  <radialGradient id="sunGlow"><stop offset="0" stop-color="#fff8cf"/><stop offset=".16" stop-color="#ffeaa5"/><stop offset=".46" stop-color="#ffd487" stop-opacity=".48"/><stop offset="1" stop-color="#ffd487" stop-opacity="0"/></radialGradient>
+  <linearGradient id="distant" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#6e94a3"/><stop offset="1" stop-color="#355a69"/></linearGradient>
+  <linearGradient id="mountain" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#547789"/><stop offset=".5" stop-color="#315567"/><stop offset="1" stop-color="#203d4c"/></linearGradient>
+  <linearGradient id="snow" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f7fbfb"/><stop offset="1" stop-color="#cddfe2"/></linearGradient>
+  <linearGradient id="valley" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3d6d46"/><stop offset=".5" stop-color="#214937"/><stop offset="1" stop-color="#071c19"/></linearGradient>
+  <linearGradient id="water" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#61c0bf"/><stop offset=".48" stop-color="#287e90"/><stop offset="1" stop-color="#083c53"/></linearGradient>
+  <linearGradient id="castle" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#4a4541"/><stop offset=".5" stop-color="#897769"/><stop offset="1" stop-color="#403a37"/></linearGradient>
+  <linearGradient id="cloak" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0a1017"/><stop offset=".55" stop-color="#303b44"/><stop offset="1" stop-color="#10171d"/></linearGradient>
+  <linearGradient id="gold"><stop stop-color="#fff0a3"/><stop offset=".25" stop-color="#f9d06d"/><stop offset=".58" stop-color="#d99c2d"/><stop offset="1" stop-color="#694313"/></linearGradient>
+  <filter id="blur20"><feGaussianBlur stdDeviation="20"/></filter>
+  <filter id="blur8"><feGaussianBlur stdDeviation="8"/></filter>
+  <filter id="shadow"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-opacity=".45"/></filter>
+  <filter id="texture"><feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="2" seed="7" result="n"/><feColorMatrix in="n" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 .11 0"/><feBlend in="SourceGraphic" in2="n" mode="multiply"/></filter>
+  <pattern id="ripples" width="180" height="42" patternUnits="userSpaceOnUse"><path d="M0 20 C34 8 65 8 91 20 S145 32 180 20" fill="none" stroke="#eaf7f2" stroke-opacity=".22" stroke-width="3"/></pattern>
+  <g id="tree">
+    <path d="M34 122 L36 77" stroke="#3a291f" stroke-width="12" stroke-linecap="round"/>
+    <path d="M36 66 C6 81 2 57 13 43 C-3 31 16 8 36 18 C48 -2 79 5 79 28 C98 37 82 64 61 61 C70 83 53 94 36 85Z" fill="#2a623e"/>
+    <circle cx="25" cy="42" r="24" fill="#3d7c49" opacity=".7"/><circle cx="55" cy="34" r="27" fill="#1f5335" opacity=".8"/>
+  </g>
 </defs>
 
 <!-- sky -->
-<rect width="1536" height="1024" fill="url(#sky)"/>
-<ellipse cx="1365" cy="313" rx="180" ry="180" fill="url(#sun)" filter="url(#glow)"/>
-<circle cx="1365" cy="313" r="48" fill="#fff4bd"/>
-
-<!-- clouds -->
-<g fill="#fff" opacity=".22" filter="url(#soft)">
-  <path d="M0 175 C70 115 132 155 184 120 C235 87 308 120 328 171 C395 175 405 218 350 228 H50 C-6 228-25 204 0 175Z"/>
-  <path d="M560 156 C610 110 676 125 702 164 C743 126 831 136 855 187 C905 184 933 218 892 237 H568 C516 231 518 183 560 156Z"/>
-  <path d="M1002 111 C1048 76 1125 95 1147 138 C1197 101 1275 114 1295 165 C1342 165 1370 196 1332 216 H1000 C955 207 955 146 1002 111Z"/>
+<rect width="1920" height="1080" fill="url(#sky)"/>
+<ellipse cx="1650" cy="285" rx="250" ry="250" fill="url(#sunGlow)" filter="url(#blur20)"/>
+<circle cx="1650" cy="285" r="61" fill="#fff6c8"/>
+<g fill="#fff" opacity=".17" filter="url(#blur8)">
+  <path d="M0 175 C90 105 180 151 240 111 C306 68 398 111 420 168 C490 170 525 212 474 238 H48 C-18 237-25 201 0 175Z"/>
+  <path d="M640 190 C726 102 825 138 863 190 C917 147 1023 168 1048 227 C1108 231 1127 268 1081 290 H651 C593 273 594 224 640 190Z"/>
+  <path d="M1128 111 C1202 55 1294 85 1328 139 C1399 93 1509 111 1536 177 C1593 177 1619 215 1569 234 H1132 C1077 220 1080 149 1128 111Z"/>
 </g>
 
-<!-- distant mountains -->
-<g>
-  <path d="M0 503 L155 329 278 486 400 298 537 475 700 246 866 484 1045 288 1189 474 1355 318 1536 477 V613 H0Z" fill="url(#farMount)"/>
-  <path d="M0 565 L230 348 374 518 532 242 680 491 842 328 1006 498 1159 252 1322 488 1468 308 1536 393 V625 H0Z" fill="url(#mount)"/>
-  <path d="M502 245 L532 242 680 491 620 430 558 358Z" fill="#d8e8ec" opacity=".86"/>
-  <path d="M1290 384 L1355 318 1420 419 1372 394Z" fill="#dae9eb" opacity=".8"/>
-</g>
+<!-- distant ridge -->
+<path d="M0 552 C120 470 198 406 318 497 C414 370 508 422 615 508 C744 385 867 407 955 510 C1081 398 1226 407 1315 503 C1412 413 1530 424 1605 506 C1708 394 1830 420 1920 492 V685 H0Z" fill="url(#distant)"/>
+<!-- main mountains with curved silhouettes -->
+<path d="M0 602 C133 534 216 462 340 535 C434 440 533 314 644 479 C755 286 824 232 915 351 C1002 463 1056 527 1138 542 C1250 454 1344 345 1425 470 C1521 356 1609 301 1699 438 C1760 515 1841 514 1920 468 V690 H0Z" fill="url(#mountain)" filter="url(#texture)"/>
+<!-- snow caps -->
+<path d="M560 470 C653 336 727 262 789 230 C833 278 855 320 903 383 C858 365 835 381 802 405 C764 347 735 318 706 311 C658 356 635 411 560 470Z" fill="url(#snow)" opacity=".95"/>
+<path d="M1530 431 C1599 347 1650 302 1698 264 C1732 311 1762 359 1798 409 C1744 390 1707 401 1671 436 C1624 390 1598 373 1569 377Z" fill="url(#snow)" opacity=".86"/>
+<path d="M120 554 C194 504 252 469 311 472 C280 510 247 549 218 592Z" fill="#bcd3d7" opacity=".34"/>
+<!-- mountain light faces -->
+<path d="M793 229 C846 282 877 351 920 418 L856 361 804 317 744 367 719 343Z" fill="#9ab8c0" opacity=".22"/>
+<path d="M1697 264 C1736 320 1760 363 1800 411 L1720 361 1667 329Z" fill="#a4c1c6" opacity=".22"/>
+
+<!-- haze -->
+<path d="M0 565 Q390 515 795 571 T1560 566 T1920 550 V700 Q1518 621 1120 678 T345 671 T0 696Z" fill="#dbe7dc" opacity=".11" filter="url(#blur20)"/>
 
 <!-- valley -->
-<path d="M0 566 Q240 500 446 558 T815 532 T1134 556 T1536 503 V1024 H0Z" fill="#183d35"/>
-<path d="M0 590 Q244 525 486 587 T944 572 T1536 538 V1024 H0Z" fill="url(#ground)"/>
-
-<!-- roads and fields -->
-<g opacity=".4" fill="#70935b">
-  <ellipse cx="270" cy="676" rx="185" ry="60"/><ellipse cx="585" cy="644" rx="170" ry="55"/><ellipse cx="1007" cy="654" rx="230" ry="60"/>
-  <ellipse cx="1250" cy="722" rx="185" ry="52"/>
+<path d="M0 620 C270 563 462 614 690 594 C941 571 1105 596 1287 573 C1482 549 1716 552 1920 592 V1080 H0Z" fill="url(#valley)"/>
+<!-- layered fields -->
+<g fill="#4c7c4e" opacity=".42">
+  <ellipse cx="250" cy="705" rx="214" ry="68"/><ellipse cx="564" cy="673" rx="176" ry="56"/><ellipse cx="980" cy="684" rx="248" ry="66"/><ellipse cx="1412" cy="660" rx="225" ry="63"/>
 </g>
-<path d="M0 861 C200 780 350 817 490 760 S795 726 930 786 1265 840 1536 756" fill="none" stroke="#b58d5b" stroke-opacity=".48" stroke-width="18"/>
-<path d="M0 854 C220 775 353 813 490 758 S795 720 930 781 1265 836 1536 748" fill="none" stroke="#6f4f34" stroke-opacity=".65" stroke-width="7"/>
+<g fill="none" stroke="#75945d" stroke-opacity=".36" stroke-width="16">
+  <path d="M0 763 C223 675 384 724 576 699 S908 659 1124 725 1542 738 1920 663"/>
+  <path d="M0 816 C240 751 404 786 588 753 S924 722 1176 774 1570 785 1920 718"/>
+</g>
 
-<!-- sea -->
-<path d="M1005 585 Q1260 503 1536 570 V1024 H1050 Q1125 927 1050 839 T1005 585Z" fill="url(#lake)"/>
-<path d="M1005 585 Q1260 503 1536 570 V1024 H1050 Q1125 927 1050 839 T1005 585Z" fill="url(#waterLines)"/>
+<!-- river/water basin -->
+<path d="M1160 608 C1400 540 1680 520 1920 588 V1080 H1272 C1326 1005 1312 936 1241 869 C1181 812 1154 732 1160 608Z" fill="url(#water)"/>
+<path d="M1160 608 C1400 540 1680 520 1920 588 V1080 H1272 C1326 1005 1312 936 1241 869 C1181 812 1154 732 1160 608Z" fill="url(#ripples)"/>
+<!-- waterfall -->
+<path d="M1050 596 C1077 703 1031 797 985 871" fill="none" stroke="#bff4ee" stroke-opacity=".54" stroke-width="34" filter="url(#blur8)"/>
+<path d="M1050 597 C1076 704 1030 796 985 871" fill="none" stroke="#e7fbf8" stroke-opacity=".78" stroke-width="7"/>
 
-<!-- distant peninsula -->
-<path d="M1035 697 Q1215 621 1400 690 Q1468 716 1536 676 V766 Q1343 742 1125 775 Q1069 756 1035 697Z" fill="#375c45"/>
-<!-- city -->
+<!-- city peninsula -->
+<path d="M1252 650 C1410 579 1571 591 1740 632 C1805 647 1861 631 1920 608 V742 C1730 713 1562 741 1364 760 C1295 730 1264 694 1252 650Z" fill="#365b42" opacity=".96"/>
 <g filter="url(#shadow)">
   <g fill="url(#castle)">
-    <rect x="1091" y="598" width="48" height="90" rx="2"/><rect x="1148" y="566" width="65" height="122" rx="2"/>
-    <rect x="1221" y="622" width="42" height="66" rx="2"/><rect x="1273" y="548" width="69" height="140" rx="2"/>
-    <rect x="1351" y="591" width="50" height="97" rx="2"/><rect x="1410" y="612" width="38" height="76" rx="2"/>
+    <rect x="1320" y="575" width="55" height="105" rx="3"/><rect x="1387" y="533" width="74" height="147" rx="3"/>
+    <rect x="1470" y="588" width="45" height="92" rx="3"/><rect x="1526" y="502" width="77" height="178" rx="3"/>
+    <rect x="1617" y="560" width="59" height="120" rx="3"/><rect x="1690" y="590" width="44" height="90" rx="3"/>
   </g>
-  <g fill="#f5ca69">
-    <rect x="1102" y="625" width="9" height="14"/><rect x="1161" y="591" width="11" height="16"/><rect x="1161" y="626" width="11" height="16"/>
-    <rect x="1192" y="591" width="11" height="16"/><rect x="1288" y="573" width="12" height="18"/><rect x="1316" y="573" width="12" height="18"/>
-    <rect x="1288" y="611" width="12" height="18"/><rect x="1316" y="611" width="12" height="18"/><rect x="1365" y="618" width="10" height="14"/>
-    <rect x="1365" y="650" width="10" height="14"/>
+  <g fill="#f6cf75">
+    <rect x="1334" y="603" width="11" height="17"/><rect x="1334" y="636" width="11" height="17"/>
+    <rect x="1402" y="570" width="13" height="18"/><rect x="1402" y="605" width="13" height="18"/><rect x="1435" y="570" width="13" height="18"/><rect x="1435" y="605" width="13" height="18"/>
+    <rect x="1543" y="535" width="13" height="18"/><rect x="1574" y="535" width="13" height="18"/><rect x="1543" y="571" width="13" height="18"/><rect x="1574" y="571" width="13" height="18"/><rect x="1543" y="607" width="13" height="18"/><rect x="1574" y="607" width="13" height="18"/>
+    <rect x="1632" y="592" width="11" height="17"/><rect x="1632" y="626" width="11" height="17"/>
   </g>
-  <path d="M1252 548 L1308 470 1364 548Z" fill="#47403c"/>
-  <rect x="1277" y="490" width="61" height="198" fill="url(#castle)"/>
-  <path d="M1260 490 L1307 417 1356 490Z" fill="#403a36"/>
-  <rect x="1297" y="528" width="20" height="27" fill="#f8d06b"/><rect x="1297" y="578" width="20" height="27" fill="#f8d06b"/><rect x="1297" y="628" width="20" height="27" fill="#f8d06b"/>
+  <path d="M1495 503 L1564 421 1631 503Z" fill="#433d39"/>
+  <rect x="1521" y="448" width="86" height="232" fill="url(#castle)"/>
+  <path d="M1500 449 L1563 360 1629 449Z" fill="#403a35"/>
+  <rect x="1549" y="494" width="28" height="37" fill="#f9d071"/><rect x="1549" y="548" width="28" height="37" fill="#f9d071"/><rect x="1549" y="602" width="28" height="37" fill="#f9d071"/>
+  <path d="M1320 575 L1348 539 1375 575Z M1387 533 L1424 487 1461 533Z M1617 560 L1646 521 1676 560Z M1690 590 L1712 557 1734 590Z" fill="#403a35"/>
 </g>
+<!-- bridge -->
+<path d="M1235 737 Q1414 706 1608 727" fill="none" stroke="#6f5135" stroke-width="15" stroke-linecap="round"/>
+<path d="M1244 726 Q1415 704 1598 718" fill="none" stroke="#9d7b55" stroke-width="3"/>
 
-<!-- waterfalls -->
-<path d="M705 647 Q720 757 665 894" fill="none" stroke="#b8f0ef" stroke-opacity=".75" stroke-width="18" filter="url(#soft)"/>
-<path d="M711 650 Q724 764 670 892" fill="none" stroke="#dff9f7" stroke-opacity=".66" stroke-width="5"/>
-
-<!-- trees -->
-<g>
-  <g transform="translate(85 570) scale(1.6)"><rect x="30" y="80" width="12" height="55" fill="#39271d"/><circle cx="35" cy="55" r="40" fill="#2c643e"/><circle cx="12" cy="70" r="25" fill="#3c7748"/><circle cx="56" cy="72" r="29" fill="#245837"/></g>
-  <g transform="translate(250 500) scale(1.1)"><rect x="30" y="80" width="11" height="54" fill="#38261d"/><circle cx="35" cy="58" r="36" fill="#2c663d"/><circle cx="10" cy="73" r="23" fill="#3d7b48"/><circle cx="57" cy="74" r="25" fill="#245836"/></g>
-  <g transform="translate(442 585) scale(1.35)"><rect x="30" y="80" width="12" height="56" fill="#38261d"/><circle cx="36" cy="57" r="42" fill="#2e6b40"/><circle cx="11" cy="74" r="26" fill="#3f7c49"/><circle cx="63" cy="73" r="27" fill="#245837"/></g>
-  <g transform="translate(1364 565) scale(1.55)"><rect x="30" y="80" width="12" height="55" fill="#39271d"/><circle cx="36" cy="56" r="41" fill="#2e6a40"/><circle cx="9" cy="72" r="25" fill="#3f7b48"/><circle cx="62" cy="73" r="29" fill="#245836"/></g>
+<!-- forest -->
+<g opacity=".98">
+  <use href="#tree" x="35" y="650" transform="scale(1.5)"/>
+  <use href="#tree" x="188" y="585" transform="scale(1.15)"/>
+  <use href="#tree" x="365" y="678" transform="scale(1.35)"/>
+  <use href="#tree" x="690" y="654" transform="scale(1.05)"/>
+  <use href="#tree" x="895" y="696" transform="scale(.9)"/>
+  <use href="#tree" x="1730" y="658" transform="scale(1.45)"/>
+  <use href="#tree" x="1830" y="714" transform="scale(1.08)"/>
+</g>
+<!-- foreground vegetation -->
+<path d="M0 930 C170 856 305 874 470 922 S790 976 1005 895 S1384 862 1600 916 S1830 944 1920 899 V1080 H0Z" fill="#081c19"/>
+<g fill="#5d7746" opacity=".72">
+  <ellipse cx="94" cy="945" rx="120" ry="34"/><ellipse cx="305" cy="995" rx="142" ry="38"/><ellipse cx="544" cy="951" rx="180" ry="42"/><ellipse cx="810" cy="1001" rx="160" ry="44"/>
 </g>
 
 <!-- ships -->
-<g transform="translate(1440 625) scale(.8)" fill="#5e4636"><path d="M0 74 H120 Q105 102 24 102Z"/><path d="M42 73 V0 H47 V73Z"/><path d="M49 8 L94 58 H49Z" fill="#d5d9d5"/><path d="M45 18 L8 58 H45Z" fill="#9d7e5e"/></g>
-<g transform="translate(1220 826) scale(.55)" fill="#5e4636"><path d="M0 74 H120 Q105 102 24 102Z"/><path d="M42 73 V0 H47 V73Z"/><path d="M49 8 L94 58 H49Z" fill="#d5d9d5"/><path d="M45 18 L8 58 H45Z" fill="#9d7e5e"/></g>
+<g filter="url(#shadow)">
+  <g transform="translate(1664 692) scale(.9)">
+    <path d="M0 62 H126 Q111 94 22 94Z" fill="#58402f"/><path d="M47 63 V0 H53 V63Z" fill="#49362a"/>
+    <path d="M56 7 L101 55 H56Z" fill="#e3e6dd"/><path d="M51 18 L10 55 H51Z" fill="#aa8055"/>
+  </g>
+  <g transform="translate(1436 820) scale(.55)">
+    <path d="M0 62 H126 Q111 94 22 94Z" fill="#58402f"/><path d="M47 63 V0 H53 V63Z" fill="#49362a"/>
+    <path d="M56 7 L101 55 H56Z" fill="#e3e6dd"/><path d="M51 18 L10 55 H51Z" fill="#aa8055"/>
+  </g>
+</g>
 
 <!-- foreground rocks -->
-<g fill="#6a5c45">
-  <ellipse cx="74" cy="916" rx="104" ry="47"/><ellipse cx="210" cy="962" rx="114" ry="52"/><ellipse cx="400" cy="937" rx="137" ry="58"/><ellipse cx="620" cy="965" rx="152" ry="63"/><ellipse cx="840" cy="951" rx="170" ry="69"/>
+<g fill="#5c513f" filter="url(#shadow)">
+  <path d="M0 1006 Q75 903 173 961 Q250 993 272 1080 H0Z"/><path d="M172 1080 Q210 934 330 950 Q420 967 470 1080Z"/>
+  <path d="M386 1080 Q440 921 592 950 Q690 972 735 1080Z"/><path d="M660 1080 Q748 917 898 963 Q985 987 1023 1080Z"/>
 </g>
-<g fill="#8b7955" opacity=".65">
-  <ellipse cx="69" cy="900" rx="53" ry="24"/><ellipse cx="204" cy="944" rx="54" ry="26"/><ellipse cx="395" cy="914" rx="72" ry="31"/><ellipse cx="613" cy="938" rx="80" ry="34"/><ellipse cx="842" cy="922" rx="88" ry="36"/>
+<g fill="#8c7850" opacity=".55">
+  <path d="M31 984 Q84 942 144 970 Q110 991 57 998Z"/><path d="M231 1004 Q287 969 337 985 Q315 1010 260 1019Z"/>
+  <path d="M470 1001 Q541 960 604 987 Q556 1010 489 1019Z"/><path d="M754 1000 Q822 960 883 985 Q848 1012 778 1019Z"/>
 </g>
 
 <!-- hero -->
-<g transform="translate(544 682)" filter="url(#shadow)">
-  <path d="M38 65 L110 68 131 220 78 196 16 221Z" fill="url(#cloak)"/>
-  <path d="M57 20 Q77 0 97 20 L101 47 H52Z" fill="#11181f"/>
-  <circle cx="77" cy="37" r="21" fill="#3b291f"/>
-  <path d="M48 55 Q77 40 106 55 L111 122 H44Z" fill="url(#cloak)" stroke="#5b6870"/>
-  <rect x="48" y="118" width="22" height="86" rx="7" fill="#11171b" transform="rotate(6 48 118)"/>
-  <rect x="82" y="118" width="22" height="86" rx="7" fill="#11171b" transform="rotate(-6 82 118)"/>
-  <rect x="105" y="48" width="7" height="108" rx="4" fill="#e7eeee" transform="rotate(25 105 48)"/>
-  <rect x="97" y="74" width="23" height="7" rx="3" fill="#a97939" transform="rotate(25 97 74)"/>
-  <rect x="53" y="67" width="44" height="39" rx="6" fill="#2b343c" stroke="#65727a"/>
-  <path d="M53 70 L44 96 61 103Z" fill="#202831"/>
+<g transform="translate(554 682)" filter="url(#shadow)">
+  <path d="M42 65 Q80 41 116 70 L135 226 Q92 204 70 191 Q42 207 8 225Z" fill="url(#cloak)"/>
+  <path d="M54 53 Q77 34 101 53 L104 112 Q78 126 50 110Z" fill="#182129" stroke="#61717a"/>
+  <path d="M53 26 Q77 2 99 27 L101 54 H49Z" fill="#10171d"/>
+  <circle cx="76" cy="42" r="20" fill="#3a281e"/>
+  <rect x="47" y="111" width="22" height="89" rx="7" fill="#10171c" transform="rotate(6 47 111)"/>
+  <rect x="83" y="111" width="22" height="89" rx="7" fill="#10171c" transform="rotate(-6 83 111)"/>
+  <rect x="105" y="45" width="7" height="118" rx="4" fill="#edf4f1" transform="rotate(24 105 45)"/>
+  <rect x="96" y="76" width="24" height="7" rx="3" fill="#a77a3b" transform="rotate(24 96 76)"/>
 </g>
 
 <!-- birds -->
-<g fill="none" stroke="#18262c" stroke-width="4" stroke-linecap="round" opacity=".8">
-  <path d="M1164 285 q18 -16 36 0 q18 -16 36 0"/>
-  <path d="M1242 247 q12 -11 24 0 q12 -11 24 0"/>
-  <path d="M1314 322 q15 -13 30 0 q15 -13 30 0"/>
+<g fill="none" stroke="#17272f" stroke-width="4" stroke-linecap="round" opacity=".8">
+  <path d="M1260 290 q22 -20 44 0 q22 -20 44 0"/><path d="M1360 245 q16 -14 32 0 q16 -14 32 0"/><path d="M1450 330 q18 -16 36 0 q18 -16 36 0"/>
 </g>
+<!-- atmospheric light -->
+<path d="M1500 250 L1240 930 L1370 930 L1585 260Z" fill="#ffe3a1" opacity=".045" filter="url(#blur20)"/>
+<path d="M1735 290 L1580 900 L1660 900 L1790 305Z" fill="#fff1bd" opacity=".04" filter="url(#blur20)"/>
+<rect width="1920" height="1080" fill="#102a27" opacity=".06"/>
 </svg>
 
 <div class="ui">
   <div class="logo">OPEN<span class="gold">WORLD</span><small>AN UNFORGETTABLE ADVENTURE</small></div>
   <div class="topline">EXPLORE &nbsp; • &nbsp; BUILD &nbsp; • &nbsp; SURVIVE</div>
-
   <div class="controls">
-    <button class="menu-btn play" onclick="startGame()"><span class="icon">▶</span> PLAY<span class="sub">ENTER THE WORLD</span></button>
+    <button class="menu-btn" onclick="startGame()"><span class="icon">▶</span> PLAY<span class="sub">ENTER THE WORLD</span></button>
     <button class="menu-btn settings" onclick="openSettings()"><span class="icon">⚙</span> SETTINGS<span class="sub">CUSTOMIZE YOUR EXPERIENCE</span></button>
   </div>
-
   <div class="bottom">A VAST WORLD AWAITS...</div>
   <div class="compass"><span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">W</span><div class="needle"></div></div>
 </div>
@@ -183,5 +214,6 @@ function startGame(){alert("The Open World game will start here!")}
 function openSettings(){document.getElementById("settings").style.display="flex"}
 function closeSettings(){document.getElementById("settings").style.display="none"}
 </script>
+</div>
 </body>
 </html>
