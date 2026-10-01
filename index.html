@@ -7,38 +7,717 @@
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08141d}
-body{font-family:Georgia,"Times New Roman",serif}
+body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .screen{position:relative;width:100vw;height:100vh;overflow:hidden;background:#08141d}
+.hidden{display:none !important}
+
+/* ============ MENU ============ */
 .hero-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
 .hit{position:absolute;z-index:10;border:0;background:transparent;cursor:pointer}
 .hit:hover{background:rgba(80,240,220,.08);box-shadow:0 0 28px rgba(80,240,220,.22)}
 .play{left:5.5%;top:45.8%;width:min(430px,33vw);height:10%}
 .settings{left:5.5%;top:59%;width:min(430px,33vw);height:10%}
 .modal{display:none;position:absolute;inset:0;z-index:30;align-items:center;justify-content:center;background:rgba(0,0,0,.78);backdrop-filter:blur(8px)}
+.modal.show{display:flex}
 .panel{width:min(520px,86vw);padding:38px;border:1px solid #7897a0;border-radius:14px;background:linear-gradient(145deg,#0b1d29,#08131d);box-shadow:0 25px 80px rgba(0,0,0,.82);color:#fff}
 .panel h2{margin:0 0 12px;color:#f5cc74;font-size:36px}
 .panel p{margin:0 0 24px;font:400 16px/1.7 Arial,sans-serif;color:#cbd7dc}
-.close{padding:11px 25px;border:1px solid #73929b;border-radius:7px;background:#14323c;color:white;cursor:pointer;font-size:16px}
+.close{padding:11px 25px;border:1px solid #73929b;border-radius:7px;background:#14323c;color:white;cursor:pointer;font-size:16px;transition:background .2s}
+.close:hover{background:#1d4a57}
 @media(max-width:700px){.play{left:5%;top:42%;width:60vw}.settings{left:5%;top:56%;width:60vw}}
+
+/* ============ GAME (Earth view) ============ */
+#game{background:#000}
+#canvas-container{position:absolute;inset:0}
+#canvas-container canvas{display:block}
+
+.hud{position:absolute;z-index:20;pointer-events:none;font-family:Arial,Helvetica,sans-serif}
+.hud > *{pointer-events:auto}
+
+/* Top bar */
+.top-bar{top:0;left:0;right:0;padding:18px 26px;display:flex;justify-content:space-between;align-items:center;
+  background:linear-gradient(180deg,rgba(8,20,29,.85),rgba(8,20,29,0));}
+.brand{font-family:Georgia,serif;font-size:22px;color:#f5cc74;letter-spacing:2px;text-transform:uppercase}
+.brand small{display:block;font-family:Arial,sans-serif;font-size:11px;color:#7fa0ab;letter-spacing:3px;text-transform:uppercase;margin-top:2px}
+.stats{display:flex;gap:14px;align-items:center}
+.stat-chip{padding:9px 16px;border:1px solid #2c4a55;border-radius:8px;background:rgba(11,29,41,.7);backdrop-filter:blur(6px);
+  font-size:13px;color:#cbd7dc;display:flex;align-items:center;gap:8px}
+.stat-chip b{color:#f5cc74;font-size:15px;font-family:Georgia,serif}
+.stat-chip .icon{font-size:16px}
+
+/* Bottom hint bar */
+.bottom-bar{bottom:0;left:0;right:0;padding:14px 26px;display:flex;justify-content:space-between;align-items:flex-end;
+  background:linear-gradient(0deg,rgba(8,20,29,.85),rgba(8,20,29,0));}
+.controls-hint{display:flex;gap:18px;font-size:12px;color:#9bb4bd;font-family:Arial,sans-serif;letter-spacing:.5px}
+.controls-hint span b{color:#f5cc74;display:inline-block;padding:2px 8px;border:1px solid #2c4a55;border-radius:4px;margin-right:6px;font-weight:400;background:rgba(11,29,41,.6)}
+.zoom-meter{font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;text-align:right;letter-spacing:.5px}
+.zoom-meter .label{text-transform:uppercase;color:#5e7d87;font-size:10px;letter-spacing:2px;margin-bottom:4px}
+.zoom-meter .value{color:#f5cc74;font-size:18px;font-family:Georgia,serif}
+.zoom-bar{width:180px;height:4px;background:#1a3340;border-radius:2px;margin-top:8px;overflow:hidden}
+.zoom-bar .fill{height:100%;background:linear-gradient(90deg,#f5cc74,#50f0da);width:0%;transition:width .15s}
+
+/* Back button */
+.back-btn{position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:25;
+  padding:9px 20px;border:1px solid #2c4a55;border-radius:8px;background:rgba(11,29,41,.8);backdrop-filter:blur(6px);
+  color:#cbd7dc;font-family:Arial,sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.back-btn:hover{background:rgba(29,74,87,.8);color:#f5cc74}
+
+/* Plot tooltip */
+.plot-tip{position:absolute;z-index:22;pointer-events:none;padding:8px 12px;border:1px solid #2c4a55;border-radius:6px;
+  background:rgba(8,20,29,.95);color:#e8eef0;font-family:Arial,sans-serif;font-size:12px;transform:translate(-50%,-130%);
+  white-space:nowrap;display:none;box-shadow:0 6px 20px rgba(0,0,0,.6)}
+.plot-tip .price{color:#f5cc74;font-weight:bold;margin-left:6px}
+.plot-tip.owned .price{color:#7fffd4}
+
+/* Plot modal (buy dialog) */
+.plot-modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(10px)}
+.plot-modal.show{display:flex}
+.plot-card{width:min(440px,90vw);padding:32px;border:1px solid #2c4a55;border-radius:14px;
+  background:linear-gradient(145deg,#0b1d29,#08131d);box-shadow:0 25px 80px rgba(0,0,0,.85);color:#fff}
+.plot-card .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-family:Arial,sans-serif;
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.plot-card .badge.available{background:rgba(80,240,160,.15);color:#7fffd4;border:1px solid #2c4a55}
+.plot-card .badge.owned{background:rgba(245,204,116,.15);color:#f5cc74;border:1px solid #6b5320}
+.plot-card .badge.locked{background:rgba(255,80,80,.12);color:#ff8080;border:1px solid #5a2424}
+.plot-card h2{margin:0 0 6px;color:#f5cc74;font-size:28px;font-family:Georgia,serif}
+.plot-card .coords{font-family:Arial,sans-serif;font-size:12px;color:#7fa0ab;margin-bottom:22px;letter-spacing:1px}
+.plot-card .price-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-top:1px solid #1a3340;border-bottom:1px solid #1a3340;margin-bottom:22px}
+.plot-card .price-label{font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;text-transform:uppercase;letter-spacing:2px}
+.plot-card .price-value{font-family:Georgia,serif;font-size:30px;color:#f5cc74}
+.plot-card .price-value small{font-size:14px;color:#9bb4bd}
+.plot-card .actions{display:flex;gap:10px}
+.plot-card .btn{flex:1;padding:13px;border-radius:8px;border:1px solid #2c4a55;cursor:pointer;font-family:Arial,sans-serif;
+  font-size:13px;letter-spacing:2px;text-transform:uppercase;transition:all .2s;background:#14323c;color:#cbd7dc}
+.plot-card .btn:hover{background:#1d4a57}
+.plot-card .btn.primary{background:linear-gradient(135deg,#f5cc74,#d4a44a);color:#08141d;border-color:#f5cc74;font-weight:bold}
+.plot-card .btn.primary:hover{filter:brightness(1.1)}
+.plot-card .btn.primary:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.plot-card .desc{font-family:Arial,sans-serif;font-size:13px;line-height:1.6;color:#9bb4bd;margin-bottom:18px}
+
+/* Loading overlay */
+.loader{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#08141d;transition:opacity .8s}
+.loader.hide{opacity:0;pointer-events:none}
+.loader .ring{width:60px;height:60px;border:3px solid #1a3340;border-top-color:#f5cc74;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:18px}
+.loader .text{font-family:Georgia,serif;color:#f5cc74;font-size:16px;letter-spacing:3px;text-transform:uppercase}
+.loader .sub{font-family:Arial,sans-serif;color:#5e7d87;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Toast */
+.toast{position:absolute;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);z-index:35;
+  padding:12px 22px;border-radius:8px;background:rgba(11,29,41,.95);border:1px solid #2c4a55;
+  color:#f5cc74;font-family:Arial,sans-serif;font-size:13px;letter-spacing:1px;opacity:0;transition:all .35s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:#3a8b6a;color:#7fffd4}
+
+@media(max-width:700px){
+  .top-bar{padding:12px 14px}
+  .brand{font-size:16px}
+  .brand small{font-size:9px}
+  .stat-chip{padding:7px 10px;font-size:11px}
+  .stat-chip b{font-size:13px}
+  .controls-hint{font-size:10px;gap:10px;flex-direction:column}
+  .zoom-bar{width:120px}
+}
 </style>
 </head>
 <body>
-<div class="screen">
+
+<!-- ============ MENU SCREEN ============ -->
+<div id="menu" class="screen">
   <img class="hero-image" src="assets/home-screen.webp?v=2" alt="Open World cinematic home screen">
-  <button class="hit play" aria-label="Play" onclick="startGame()"></button>
+  <button class="hit play" aria-label="Play" onclick="enterGame()"></button>
   <button class="hit settings" aria-label="Settings" onclick="openSettings()"></button>
   <div class="modal" id="settings">
     <div class="panel">
       <h2>Settings</h2>
-      <p>Your adventure settings will live here as the game is built.</p>
+      <p>Your adventure settings will live here as the game is built. For now, click PLAY to enter the Open World — a living Earth you can explore from space down to the ground, where every plot of land is yours to claim.</p>
       <button class="close" onclick="closeSettings()">CLOSE</button>
     </div>
   </div>
 </div>
-<script>
-function startGame(){alert("The Open World game will start here!")}
-function openSettings(){document.getElementById("settings").style.display="flex"}
-function closeSettings(){document.getElementById("settings").style.display="none"}
+
+<!-- ============ GAME SCREEN (3D Earth) ============ -->
+<div id="game" class="screen hidden">
+  <div id="canvas-container"></div>
+
+  <div class="hud">
+    <div class="top-bar">
+      <div class="brand">Open World<small>Earth Edition</small></div>
+      <div class="stats">
+        <div class="stat-chip"><span class="icon">💰</span><span>Budget</span><b id="money">$1,000,000</b></div>
+        <div class="stat-chip"><span class="icon">🌍</span><span>Owned</span><b id="owned-count">0</b></div>
+      </div>
+    </div>
+
+    <button class="back-btn" onclick="exitGame()">← Back to Menu</button>
+
+    <div class="bottom-bar">
+      <div class="controls-hint">
+        <span><b>Drag</b>Rotate</span>
+        <span><b>Scroll</b>Zoom</span>
+        <span><b>Click</b>Buy plot</span>
+      </div>
+      <div class="zoom-meter">
+        <div class="label">Altitude</div>
+        <div class="value" id="altitude">— km</div>
+        <div class="zoom-bar"><div class="fill" id="zoom-fill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="plot-tip" id="plot-tip"></div>
+
+  <div class="plot-modal" id="plot-modal">
+    <div class="plot-card" id="plot-card">
+      <!-- filled dynamically -->
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="loader" id="loader">
+    <div class="ring"></div>
+    <div class="text">Loading Earth</div>
+    <div class="sub">Generating world plots</div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ====================================================================
+// STATE
+// ====================================================================
+const STATE = {
+  money: 1_000_000,
+  owned: new Set(),
+  plots: [],
+  hoveredPlot: null,
+  selectedPlot: null,
+  radius: 1.0,                // Earth radius in scene units
+  zoomMin: 1.22,              // closest (just above surface — safe for rendering)
+  zoomMax: 6.0,               // farthest (space view)
+  plotRevealDist: 3.2,        // camera distance at which plots begin to appear
+  plotFullDist: 1.8,          // camera distance at which plots are fully visible
+  // Convert scene units to km for display. Earth radius ≈ 6371 km.
+  unitToKm: 6371
+};
+
+const EARTH_RADIUS = STATE.radius;
+
+// ====================================================================
+// SCENE SETUP
+// ====================================================================
+let scene, camera, renderer, controls;
+let earth, atmosphere, starField;
+let raycaster, pointer;
+let canvasContainer;
+
+function initScene() {
+  canvasContainer = document.getElementById('canvas-container');
+
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000);
+  camera.position.set(0, 0, STATE.zoomMax);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x05080d, 1);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+  canvasContainer.appendChild(renderer.domElement);
+
+  // Lighting — sun + soft ambient
+  const sun = new THREE.DirectionalLight(0xfff6e0, 2.2);
+  sun.position.set(5, 2, 4);
+  scene.add(sun);
+
+  const ambient = new THREE.AmbientLight(0x4a6a85, 0.55);
+  scene.add(ambient);
+  // Subtle fill light from opposite side so the night side is never fully black
+  const fill = new THREE.DirectionalLight(0x5577aa, 0.35);
+  fill.position.set(-5, -2, -4);
+  scene.add(fill);
+
+  // Controls
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.rotateSpeed = 0.45;
+  controls.zoomSpeed = 1.1;
+  controls.minDistance = STATE.zoomMin;
+  controls.maxDistance = STATE.zoomMax;
+  controls.enablePan = false;
+  // Track drag state for auto-rotate pause
+  controls.addEventListener('start', () => { controls._isInteracting = true; });
+  controls.addEventListener('end',   () => { controls._isInteracting = false; });
+
+  raycaster = new THREE.Raycaster();
+  pointer = new THREE.Vector2();
+
+  buildStarField();
+  buildEarth();
+  buildAtmosphere();
+  generatePlots();
+
+  window.addEventListener('resize', onResize);
+  renderer.domElement.addEventListener('pointermove', onPointerMove);
+  renderer.domElement.addEventListener('click', onPointerClick);
+
+  animate();
+}
+
+// ====================================================================
+// STAR FIELD
+// ====================================================================
+function buildStarField() {
+  const starGeo = new THREE.BufferGeometry();
+  const starCount = 6000;
+  const positions = new Float32Array(starCount * 3);
+  const colors = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount; i++) {
+    const r = 80 + Math.random() * 120;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    positions[i * 3 + 2] = r * Math.cos(phi);
+    const t = Math.random();
+    // mostly white, some warm/cool
+    colors[i * 3]     = 0.9 + t * 0.1;
+    colors[i * 3 + 1] = 0.9 + t * 0.1;
+    colors[i * 3 + 2] = 1.0;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  starGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const starMat = new THREE.PointsMaterial({
+    size: 0.45, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.9
+  });
+  starField = new THREE.Points(starGeo, starMat);
+  scene.add(starField);
+}
+
+// ====================================================================
+// EARTH
+// ====================================================================
+function buildEarth() {
+  const geo = new THREE.SphereGeometry(EARTH_RADIUS, 96, 96);
+
+  const loader = new THREE.TextureLoader();
+  loader.crossOrigin = 'anonymous';
+
+  const mapTex     = loader.load('https://unpkg.com/three-globe@2.31.0/example/img/earth-blue-marble.jpg', hideLoader, undefined, hideLoader);
+  const bumpTex    = loader.load('https://unpkg.com/three-globe@2.31.0/example/img/earth-topology.png');
+  const specularTex= loader.load('https://unpkg.com/three-globe@2.31.0/example/img/earth-water.png');
+
+  const mat = new THREE.MeshPhongMaterial({
+    map: mapTex,
+    bumpMap: bumpTex,
+    bumpScale: 0.015,
+    specularMap: specularTex,
+    specular: new THREE.Color(0x2a4a5a),
+    shininess: 18
+  });
+
+  earth = new THREE.Mesh(geo, mat);
+  earth.name = 'earth';
+  earth.frustumCulled = false;   // never cull — camera gets very close
+  scene.add(earth);
+}
+
+function buildAtmosphere() {
+  // Glow shell slightly larger than Earth
+  const geo = new THREE.SphereGeometry(EARTH_RADIUS * 1.025, 64, 64);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { glowColor: { value: new THREE.Color(0x6cc8ff) } },
+    vertexShader: `
+      varying vec3 vNormal;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 glowColor;
+      varying vec3 vNormal;
+      void main() {
+        float intensity = pow(0.72 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.5);
+        gl_FragColor = vec4(glowColor, 1.0) * intensity;
+      }`,
+    side: THREE.BackSide,
+    blending: THREE.AdditiveBlending,
+    transparent: true
+  });
+  atmosphere = new THREE.Mesh(geo, mat);
+  atmosphere.frustumCulled = false;
+  scene.add(atmosphere);
+}
+
+function hideLoader() {
+  // Called on first texture load (or error). Hide loader after a short beat.
+  setTimeout(() => {
+    const loader = document.getElementById('loader');
+    if (loader) loader.classList.add('hide');
+  }, 600);
+}
+
+// ====================================================================
+// PLOTS — distributed across the globe
+// ====================================================================
+function generatePlots() {
+  // Spread plots using a fibonacci sphere distribution for even coverage.
+  const PLOT_COUNT = 480;
+  const plotGroup = new THREE.Group();
+  plotGroup.name = 'plots';
+
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < PLOT_COUNT; i++) {
+    const y = 1 - (i / (PLOT_COUNT - 1)) * 2;       // y from 1 to -1
+    const r = Math.sqrt(1 - y * y);
+    const theta = goldenAngle * i;
+    const x = Math.cos(theta) * r;
+    const z = Math.sin(theta) * r;
+
+    const dir = new THREE.Vector3(x, y, z).normalize();
+    // Convert to lat/lon BEFORE applying any parent rotation
+    // (we add plots as children of earth, so they rotate with it)
+    const lat = Math.asin(y) * 180 / Math.PI;
+    const lon = Math.atan2(z, x) * 180 / Math.PI;
+
+    // Price by latitude (poles cheap, tropics prime)
+    const absLat = Math.abs(lat);
+    let basePrice = 5000;
+    if (absLat < 23) basePrice = 35000;        // tropics
+    else if (absLat < 45) basePrice = 22000;   // subtropics/temperate
+    else if (absLat < 66) basePrice = 12000;   // temperate
+    else basePrice = 4000;                      // polar
+    // Add variance
+    const price = Math.round((basePrice + Math.random() * basePrice * 0.6) / 100) * 100;
+
+    // Plot size — slightly varied
+    const size = 0.022 + Math.random() * 0.012;
+
+    const geo = new THREE.PlaneGeometry(size, size);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x50f0a0,
+      transparent: true,
+      opacity: 0.0,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    // Position on sphere, then orient outward
+    const pos = dir.clone().multiplyScalar(EARTH_RADIUS * 1.002);
+    mesh.position.copy(pos);
+    mesh.lookAt(0, 0, 0);
+    mesh.rotateY(Math.PI); // face outward
+    mesh.userData = {
+      isPlot: true,
+      id: i,
+      lat, lon,
+      price,
+      size,
+      owned: false,
+      name: plotName(lat, lon),
+      baseColor: 0x50f0a0,
+      baseOpacity: 0
+    };
+    plotGroup.add(mesh);
+    STATE.plots.push(mesh);
+  }
+  // IMPORTANT: attach plots to Earth so they rotate WITH the planet.
+  // This keeps plot positions geographically consistent as Earth spins.
+  earth.add(plotGroup);
+}
+
+function plotName(lat, lon) {
+  // Simple region naming
+  const ns = lat >= 0 ? 'N' : 'S';
+  const ew = lon >= 0 ? 'E' : 'W';
+  const region = regionName(lat, lon);
+  return `${region} ${Math.abs(lat).toFixed(2)}°${ns} ${Math.abs(lon).toFixed(2)}°${ew}`;
+}
+
+function regionName(lat, lon) {
+  // Very rough continent-ish labels for flavor
+  if (lat > 5 && lat < 80 && lon > -170 && lon < -50) return 'Americas Sector';
+  if (lat > -35 && lat < 75 && lon > -10 && lon < 60) return 'Euro-Africa Tract';
+  if (lat > -50 && lat < 75 && lon > 60 && lon < 150) return 'Asian Steppes';
+  if (lat < -10 && lon > 110 && lon < 180) return 'Oceania Atolls';
+  if (lat < -60) return 'Antarctic Reach';
+  if (lat > 75) return 'Arctic Reach';
+  return 'Open Reach';
+}
+
+// ====================================================================
+// VISIBILITY — fade plots based on camera distance
+// ====================================================================
+// Reusable temp vectors (avoid per-frame allocation)
+const _tmpWorldPos = new THREE.Vector3();
+const _tmpCamDir = new THREE.Vector3();
+const _tmpWorldQuat = new THREE.Quaternion();
+const _tmpUp = new THREE.Vector3(0, 0, 1);
+
+function updatePlotVisibility() {
+  const dist = camera.position.length();
+  // 0 when far (zoomMax), 1 when close (plotFullDist)
+  const t = 1 - THREE.MathUtils.clamp((dist - STATE.plotFullDist) / (STATE.plotRevealDist - STATE.plotFullDist), 0, 1);
+  const targetOpacity = t;
+  const visible = t > 0.02;
+
+  for (const p of STATE.plots) {
+    // World-space facing check: hide plots on the far side of Earth
+    p.getWorldPosition(_tmpWorldPos);
+    _tmpCamDir.subVectors(camera.position, _tmpWorldPos).normalize();
+    p.getWorldQuaternion(_tmpWorldQuat);
+    _tmpUp.set(0, 0, 1).applyQuaternion(_tmpWorldQuat);
+    const facing = _tmpUp.dot(_tmpCamDir);
+
+    if (!p.userData.owned) {
+      p.material.opacity = facing > 0.1 ? targetOpacity * 0.6 : 0;
+      p.visible = visible && facing > 0.1;
+    } else {
+      // Owned plots glow gold and stay visible on the near side
+      p.material.opacity = facing > 0.05 ? Math.max(targetOpacity * 0.95, 0.35) : 0;
+      p.visible = facing > 0.05;
+    }
+  }
+}
+
+// ====================================================================
+// INTERACTION
+// ====================================================================
+function onPointerMove(e) {
+  lastInteractionTime = performance.now();
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  // Ensure matrices are current (Earth rotates each frame)
+  if (earth) earth.updateMatrixWorld(true);
+
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(STATE.plots, false);
+
+  // Find the FIRST hit that is actually visible (opacity > 0.05).
+  // intersectObjects does NOT skip invisible objects, and a ray may pass through
+  // near-side plots then continue to hit far-side plots. We want the closest
+  // VISIBLE plot under the cursor.
+  let hitPlot = null;
+  for (const h of hits) {
+    if (h.object.material.opacity > 0.05) { hitPlot = h.object; break; }
+  }
+
+  const tip = document.getElementById('plot-tip');
+  if (hitPlot) {
+    STATE.hoveredPlot = hitPlot;
+    renderer.domElement.style.cursor = 'pointer';
+    tip.style.display = 'block';
+    tip.style.left = e.clientX + 'px';
+    tip.style.top = e.clientY + 'px';
+    const owned = hitPlot.userData.owned;
+    tip.classList.toggle('owned', owned);
+    tip.innerHTML = `${hitPlot.userData.name}<span class="price">${owned ? 'OWNED' : '$' + hitPlot.userData.price.toLocaleString()}</span>`;
+  } else {
+    STATE.hoveredPlot = null;
+    renderer.domElement.style.cursor = 'grab';
+    tip.style.display = 'none';
+  }
+}
+
+function onPointerClick(e) {
+  lastInteractionTime = performance.now();
+  // Re-run the raycast at click time so we don't depend on hover state being fresh
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  if (earth) earth.updateMatrixWorld(true);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(STATE.plots, false);
+  for (const h of hits) {
+    if (h.object.material.opacity > 0.05) {
+      openPlotModal(h.object);
+      return;
+    }
+  }
+  // Fallback: try previously-hovered plot
+  if (STATE.hoveredPlot) openPlotModal(STATE.hoveredPlot);
+}
+
+// ====================================================================
+// PLOT MODAL (BUY)
+// ====================================================================
+function openPlotModal(plot) {
+  STATE.selectedPlot = plot;
+  const card = document.getElementById('plot-card');
+  const owned = plot.userData.owned;
+  const affordable = STATE.money >= plot.userData.price;
+  const status = owned ? 'owned' : (affordable ? 'available' : 'locked');
+
+  let actionBtn;
+  if (owned) {
+    actionBtn = `<button class="btn primary" onclick="closePlotModal()">Owned — Close</button>`;
+  } else if (affordable) {
+    actionBtn = `<button class="btn primary" onclick="buySelectedPlot()">Buy Plot</button>`;
+  } else {
+    actionBtn = `<button class="btn primary" disabled>Insufficient Funds</button>`;
+  }
+
+  card.innerHTML = `
+    <span class="badge ${status}">${status}</span>
+    <h2>${plot.userData.name}</h2>
+    <div class="coords">LAT ${plot.userData.lat.toFixed(4)}° · LON ${plot.userData.lon.toFixed(4)}° · PLOT #${plot.userData.id.toString().padStart(4,'0')}</div>
+    <div class="desc">A ${plot.userData.size > 0.03 ? 'prime' : 'standard'} parcel in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Watch it glow from orbit.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}</div>
+    <div class="price-row">
+      <span class="price-label">${owned ? 'Acquired For' : 'Asking Price'}</span>
+      <span class="price-value">$${plot.userData.price.toLocaleString()}<small> USD</small></span>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="closePlotModal()">Cancel</button>
+      ${actionBtn}
+    </div>
+  `;
+  document.getElementById('plot-modal').classList.add('show');
+}
+
+window.closePlotModal = function() {
+  document.getElementById('plot-modal').classList.remove('show');
+  STATE.selectedPlot = null;
+};
+
+window.buySelectedPlot = function() {
+  const p = STATE.selectedPlot;
+  if (!p || p.userData.owned) return;
+  if (STATE.money < p.userData.price) {
+    showToast('Insufficient funds!', false);
+    return;
+  }
+  STATE.money -= p.userData.price;
+  p.userData.owned = true;
+  STATE.owned.add(p.userData.id);
+  // Color & visibility
+  p.material.color.setHex(0xf5cc74);
+  p.material.opacity = 0.85;
+  p.visible = true;
+  // Resize slightly for emphasis
+  p.scale.setScalar(1.15);
+
+  updateHUD();
+  closePlotModal();
+  showToast(`Acquired ${p.userData.name} for $${p.userData.price.toLocaleString()}`, true);
+};
+
+// ====================================================================
+// HUD UPDATES
+// ====================================================================
+function updateHUD() {
+  document.getElementById('money').textContent = '$' + STATE.money.toLocaleString();
+  document.getElementById('owned-count').textContent = STATE.owned.size;
+}
+
+function updateZoomMeter() {
+  const dist = camera.position.length();
+  // Altitude above surface (km)
+  const altUnits = Math.max(0, dist - EARTH_RADIUS);
+  const altKm = altUnits * STATE.unitToKm;
+  const altEl = document.getElementById('altitude');
+  if (altKm > 1000) {
+    altEl.textContent = (altKm / 1000).toFixed(1) + ' Mm';
+  } else if (altKm > 1) {
+    altEl.textContent = Math.round(altKm).toLocaleString() + ' km';
+  } else {
+    altEl.textContent = 'Surface';
+  }
+  // Zoom bar fill: 0% at zoomMax, 100% at zoomMin
+  const t = 1 - THREE.MathUtils.clamp((dist - STATE.zoomMin) / (STATE.zoomMax - STATE.zoomMin), 0, 1);
+  document.getElementById('zoom-fill').style.width = (t * 100).toFixed(1) + '%';
+}
+
+// ====================================================================
+// TOAST
+// ====================================================================
+let toastTimer;
+function showToast(msg, success) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('success', !!success);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ====================================================================
+// ANIMATION LOOP
+// ====================================================================
+let earthAutoRotate = true;
+let lastInteractionTime = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  // Slow auto-rotate, paused while user is interacting OR hovering the canvas
+  // (so they can reliably click plots without the world drifting).
+  const sinceInteract = performance.now() - lastInteractionTime;
+  const paused = controls._isInteracting || sinceInteract < 1500;
+  if (earthAutoRotate && !paused) {
+    earth.rotation.y += 0.0004;
+  }
+  controls.update();
+  updatePlotVisibility();
+  updateZoomMeter();
+  renderer.render(scene, camera);
+}
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ====================================================================
+// MENU <-> GAME TRANSITIONS
+// ====================================================================
+let gameInitialized = false;
+window.enterGame = function() {
+  document.getElementById('menu').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  if (!gameInitialized) {
+    gameInitialized = true;
+    initScene();
+    updateHUD();
+  } else {
+    // re-fit on resume
+    onResize();
+  }
+};
+
+window.exitGame = function() {
+  document.getElementById('game').classList.add('hidden');
+  document.getElementById('menu').classList.remove('hidden');
+};
+
+window.openSettings = function() { document.getElementById('settings').classList.add('show'); };
+window.closeSettings = function() { document.getElementById('settings').classList.remove('show'); };
+window.startGame = window.enterGame; // legacy
+
+// ESC closes modals
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    window.closePlotModal();
+    window.closeSettings();
+  }
+});
 </script>
 </body>
 </html>
