@@ -98,6 +98,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .plot-card .meta-row{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
 .plot-card .meta-chip{padding:6px 12px;border:1px solid #1a3340;border-radius:6px;background:rgba(20,50,60,.5);font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;text-transform:uppercase;letter-spacing:1px}
 .plot-card .meta-chip b{color:#f5cc74;font-weight:600;margin-left:4px;text-transform:none;letter-spacing:0}
+.plot-card .meta-shape{display:inline-flex;align-items:center}
 
 /* Loading overlay */
 .loader{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -208,6 +209,7 @@ const STATE = {
   money: 1_000_000,
   owned: new Set(),
   plots: [],
+  visiblePlots: [],             // updated each frame; subset of plots currently on near side
   hoveredPlot: null,
   selectedPlot: null,
   radius: 1.0,                // Earth radius in scene units
@@ -381,45 +383,65 @@ function hideLoader() {
 // ====================================================================
 // PLOTS — distributed across the globe
 // ====================================================================
+// Shape catalog: 18 shapes (basic polygons + stars + curved + composite)
+// Each shape has a `build(sizeA, sizeB)` returning a unit BufferGeometry.
+// `premium` is a price multiplier (rarer shapes cost more).
+// `weight` is the random-pick probability (normalized at runtime).
+// `rotation` flag — whether to apply random Z-rotation for organic look.
+const SHAPES = [
+  { kind: 'square',        premium: 1.00, weight: 0.16, rotate: false, build: (a, b) => new THREE.PlaneGeometry(a, a) },
+  { kind: 'rectangle',     premium: 1.05, weight: 0.14, rotate: true,  build: (a, b) => new THREE.PlaneGeometry(a, b) },
+  { kind: 'parallelogram', premium: 1.10, weight: 0.07, rotate: true,  build: (a, b) => makeParallelogram(a, b) },
+  { kind: 'trapezoid',     premium: 1.12, weight: 0.07, rotate: true,  build: (a, b) => makeTrapezoid(a, b) },
+  { kind: 'triangle',      premium: 1.20, weight: 0.08, rotate: true,  build: (a) => makePolygon(3, a, -Math.PI / 2) },
+  { kind: 'diamond',       premium: 1.15, weight: 0.06, rotate: false, build: (a) => makePolygon(4, a, Math.PI / 4) },
+  { kind: 'pentagon',      premium: 1.25, weight: 0.06, rotate: false, build: (a) => makePolygon(5, a, Math.PI / 2) },
+  { kind: 'hexagon',       premium: 1.30, weight: 0.06, rotate: false, build: (a) => makePolygon(6, a, 0) },
+  { kind: 'heptagon',      premium: 1.40, weight: 0.04, rotate: false, build: (a) => makePolygon(7, a, 0) },
+  { kind: 'octagon',       premium: 1.45, weight: 0.04, rotate: false, build: (a) => makePolygon(8, a, Math.PI / 8) },
+  { kind: 'star5',         premium: 1.60, weight: 0.05, rotate: true,  build: (a) => makeStar(5, a, a * 0.45, -Math.PI / 2) },
+  { kind: 'star6',         premium: 1.65, weight: 0.04, rotate: false, build: (a) => makeStar(6, a, a * 0.5, 0) },
+  { kind: 'star8',         premium: 1.70, weight: 0.02, rotate: false, build: (a) => makeStar(8, a, a * 0.5, 0) },
+  { kind: 'cross',         premium: 1.55, weight: 0.04, rotate: false, build: (a) => makeCross(a) },
+  { kind: 'lShape',        premium: 1.50, weight: 0.03, rotate: true,  build: (a) => makeLShape(a) },
+  { kind: 'tShape',        premium: 1.50, weight: 0.03, rotate: true,  build: (a) => makeTShape(a) },
+  { kind: 'circle',        premium: 1.60, weight: 0.04, rotate: false, build: (a) => new THREE.CircleGeometry(a * 0.6, 32) },
+  { kind: 'semicircle',    premium: 1.50, weight: 0.03, rotate: true,  build: (a) => makeSemicircle(a * 0.7) },
+  { kind: 'annulus',       premium: 1.80, weight: 0.02, rotate: false, build: (a) => makeAnnulus(a * 0.7, a * 0.3) },
+  { kind: 'heart',         premium: 1.90, weight: 0.02, rotate: false, build: (a) => makeHeart(a * 0.7) },
+  { kind: 'arrow',         premium: 1.75, weight: 0.02, rotate: true,  build: (a) => makeArrow(a) },
+  { kind: 'crescent',      premium: 1.85, weight: 0.02, rotate: true,  build: (a) => makeCrescent(a * 0.7) },
+];
+
+// Size tiers — bigger tier = bigger footprint = pricier plot
+const SIZE_TIERS = [
+  { name: 'cottage',   size: 0.020, weight: 0.40 },
+  { name: 'standard',  size: 0.028, weight: 0.28 },
+  { name: 'estate',    size: 0.038, weight: 0.16 },
+  { name: 'province',  size: 0.052, weight: 0.10 },
+  { name: 'territory', size: 0.072, weight: 0.06 },
+];
+
+function pickWeighted(items, weights) {
+  const total = weights.reduce((s, w) => s + w, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return items[i];
+  }
+  return items[items.length - 1];
+}
+
 function generatePlots() {
   // Spread plots using a fibonacci sphere distribution for even coverage.
-  // Bumped count from 480 → 1800 for denser, more varied coverage.
-  const PLOT_COUNT = 1800;
+  // 3500 plots gives strong Earth coverage without sacrificing framerate.
+  const PLOT_COUNT = 3500;
   const plotGroup = new THREE.Group();
   plotGroup.name = 'plots';
 
-  // Shape catalog — each entry: { kind, build(sizeA, sizeB) → BufferGeometry, premium }
-  // Premium is a multiplier applied AFTER area-based price (rare shapes cost more).
-  const SHAPE_CATALOG = [
-    { kind: 'square',    premium: 1.00, build: (a, b) => new THREE.PlaneGeometry(a, a) },
-    { kind: 'rectangle', premium: 1.05, build: (a, b) => new THREE.PlaneGeometry(a, b) },
-    { kind: 'diamond',   premium: 1.15, build: (a)   => makePolygonGeometry(4, a, Math.PI / 4) },
-    { kind: 'hexagon',   premium: 1.35, build: (a)   => makePolygonGeometry(6, a, 0) },
-    { kind: 'triangle',  premium: 1.45, build: (a)   => makePolygonGeometry(3, a, -Math.PI / 2) },
-    { kind: 'circle',    premium: 1.65, build: (a)   => new THREE.CircleGeometry(a * 0.6, 32) },
-  ];
-  // Probability weights — squares most common, rare shapes rare
-  const SHAPE_WEIGHTS = [0.40, 0.28, 0.12, 0.10, 0.06, 0.04];
-
-  // Size tiers — (name, base radius, weight, area multiplier for display)
-  // Bigger tier = bigger footprint = pricier plot
-  const SIZE_TIERS = [
-    { name: 'cottage',  size: 0.018, weight: 0.45 },
-    { name: 'standard', size: 0.026, weight: 0.30 },
-    { name: 'estate',   size: 0.036, weight: 0.15 },
-    { name: 'province', size: 0.050, weight: 0.07 },
-    { name: 'territory',size: 0.070, weight: 0.03 },
-  ];
-
-  function pickWeighted(items, weights) {
-    const total = weights.reduce((s, w) => s + w, 0);
-    let r = Math.random() * total;
-    for (let i = 0; i < items.length; i++) {
-      r -= weights[i];
-      if (r <= 0) return items[i];
-    }
-    return items[items.length - 1];
-  }
+  const shapeWeights = SHAPES.map(s => s.weight);
+  const sizeWeights  = SIZE_TIERS.map(t => t.weight);
+  const REF_AREA = 0.020 * 0.020;  // cottage square reference
 
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < PLOT_COUNT; i++) {
@@ -430,53 +452,58 @@ function generatePlots() {
     const z = Math.sin(theta) * r;
 
     const dir = new THREE.Vector3(x, y, z).normalize();
-    // Convert to lat/lon BEFORE applying any parent rotation
-    // (we add plots as children of earth, so they rotate with it)
     const lat = Math.asin(y) * 180 / Math.PI;
     const lon = Math.atan2(z, x) * 180 / Math.PI;
 
-    // Pick shape and size for this plot
-    const shape = pickWeighted(SHAPE_CATALOG, SHAPE_WEIGHTS);
-    const tier  = pickWeighted(SIZE_TIERS, SIZE_TIERS.map(t => t.weight));
-    // Jitter the actual size ±15% around the tier base for organic variety
+    // Pick shape and size tier
+    const shape = pickWeighted(SHAPES, shapeWeights);
+    const tier  = pickWeighted(SIZE_TIERS, sizeWeights);
+    // Jitter the size ±15% for organic variety
     const sizeA = tier.size * (0.85 + Math.random() * 0.30);
-    // For rectangles, pick an aspect ratio (1.4 to 2.4)
     const aspect = shape.kind === 'rectangle' ? (1.4 + Math.random() * 1.0) : 1.0;
     const sizeB = sizeA * aspect;
 
-    // Build the geometry for this shape
-    const geo = shape.build(sizeA, sizeB);
-
-    // Compute "area units" (relative) for pricing
+    // Compute area for pricing
     let area;
-    if (shape.kind === 'square')    area = sizeA * sizeA;
-    else if (shape.kind === 'rectangle') area = sizeA * sizeB;
-    else if (shape.kind === 'circle')   area = Math.PI * (sizeA * 0.6) ** 2;
-    else if (shape.kind === 'hexagon')  area = (3 * Math.sqrt(3) / 2) * sizeA ** 2;
-    else if (shape.kind === 'triangle') area = (3 * Math.sqrt(3) / 4) * sizeA ** 2;
-    else if (shape.kind === 'diamond')  area = (1 / 2) * (sizeA * Math.SQRT2) ** 2; // square rotated
-    else area = sizeA * sizeA;
+    switch (shape.kind) {
+      case 'square':       area = sizeA * sizeA; break;
+      case 'rectangle':    area = sizeA * sizeB; break;
+      case 'parallelogram':area = sizeA * sizeB; break;
+      case 'trapezoid':    area = (sizeA + sizeA * 0.6) / 2 * sizeB; break;
+      case 'circle':       area = Math.PI * (sizeA * 0.6) ** 2; break;
+      case 'semicircle':   area = 0.5 * Math.PI * (sizeA * 0.7) ** 2; break;
+      case 'annulus':      area = Math.PI * ((sizeA * 0.7) ** 2 - (sizeA * 0.3) ** 2); break;
+      case 'heart':        area = sizeA * sizeA * 0.7; break;  // approx
+      case 'crescent':     area = sizeA * sizeA * 0.5; break;  // approx
+      case 'arrow':        area = sizeA * sizeA * 0.65; break; // approx
+      case 'cross':        area = sizeA * sizeA * 0.5; break;
+      case 'lShape':       area = sizeA * sizeA * 0.4; break;
+      case 'tShape':       area = sizeA * sizeA * 0.45; break;
+      case 'star5':        area = 0.5 * 5 * (sizeA * 0.45) * Math.sin(Math.PI / 5) * 2 * sizeA; break;
+      case 'star6':        area = 0.5 * 6 * (sizeA * 0.5) * Math.sin(Math.PI / 3) * 2 * sizeA; break;
+      case 'star8':        area = 0.5 * 8 * (sizeA * 0.5) * Math.sin(Math.PI / 4) * 2 * sizeA; break;
+      default: { // polygon (triangle, diamond, pentagon, hexagon, heptagon, octagon)
+        const sides = parseInt(shape.kind.replace(/[^0-9]/g, '')) || 6;
+        const n = ({ triangle: 3, diamond: 4, pentagon: 5, hexagon: 6, heptagon: 7, octagon: 8 })[shape.kind] || 6;
+        area = (n / 2) * sizeA * sizeA * Math.sin(2 * Math.PI / n);
+      }
+    }
 
     // === Pricing ===
-    // Base by latitude (tropics prime, polar cheap)
     const absLat = Math.abs(lat);
     let basePrice;
-    if (absLat < 23)      basePrice = 35000;   // tropics
-    else if (absLat < 45) basePrice = 22000;   // subtropics/temperate
-    else if (absLat < 66) basePrice = 12000;   // temperate
-    else                  basePrice = 4000;    // polar
+    if (absLat < 23)      basePrice = 35000;
+    else if (absLat < 45) basePrice = 22000;
+    else if (absLat < 66) basePrice = 12000;
+    else                  basePrice = 4000;
 
-    // Area scaling: normalize area to a "size tier" multiplier.
-    // Reference area = cottage square (0.018² ≈ 0.000324).
-    // A territory-tier plot is roughly 15× larger → ~15× the price.
-    const REF_AREA = 0.018 * 0.018;
-    const areaMultiplier = area / REF_AREA;  // ~1.0 for smallest, ~15 for largest
-
-    // Final price = base × area multiplier × shape premium × ±15% jitter
+    const areaMultiplier = area / REF_AREA;
     const jitter = 0.85 + Math.random() * 0.30;
     const rawPrice = basePrice * areaMultiplier * shape.premium * jitter;
     const price = Math.max(500, Math.round(rawPrice / 100) * 100);
 
+    // Build geometry and mesh
+    const geo = shape.build(sizeA, sizeB);
     const mat = new THREE.MeshBasicMaterial({
       color: 0x50f0a0,
       transparent: true,
@@ -485,14 +512,11 @@ function generatePlots() {
       depthWrite: false
     });
     const mesh = new THREE.Mesh(geo, mat);
-    // Position on sphere, then orient outward
     const pos = dir.clone().multiplyScalar(EARTH_RADIUS * 1.002);
     mesh.position.copy(pos);
     mesh.lookAt(0, 0, 0);
     mesh.rotateY(Math.PI); // face outward
-    // Random rotation around the outward normal for visual variety
-    // (only matters for non-radially-symmetric shapes like rectangles/triangles)
-    if (shape.kind === 'rectangle' || shape.kind === 'triangle' || shape.kind === 'diamond') {
+    if (shape.rotate) {
       mesh.rotateZ(Math.random() * Math.PI * 2);
     }
     mesh.userData = {
@@ -508,30 +532,188 @@ function generatePlots() {
       sizeA, sizeB,
       owned: false,
       name: plotName(lat, lon),
-      baseColor: 0x50f0a0,
-      baseOpacity: 0
+      // Pre-computed local direction (in Earth's local space) for fast facing checks.
+      // This never changes since the plot is a child of Earth.
+      localDir: dir.clone(),
+      baseColor: 0x50f0a0
     };
     plotGroup.add(mesh);
     STATE.plots.push(mesh);
   }
-  // IMPORTANT: attach plots to Earth so they rotate WITH the planet.
-  // This keeps plot positions geographically consistent as Earth spins.
+  // Attach to Earth so plots rotate WITH the planet.
   earth.add(plotGroup);
 }
 
-// Helper: build a regular N-gon geometry inscribed in a circle of radius r,
-// oriented so vertex 0 sits at the given rotation angle.
-function makePolygonGeometry(sides, radius, rotation) {
+// ====================================================================
+// SHAPE BUILDERS
+// ====================================================================
+function makePolygon(sides, radius, rotation) {
   const shape = new THREE.Shape();
   for (let i = 0; i < sides; i++) {
     const a = rotation + (i / sides) * Math.PI * 2;
     const x = Math.cos(a) * radius;
     const y = Math.sin(a) * radius;
-    if (i === 0) shape.moveTo(x, y);
-    else         shape.lineTo(x, y);
+    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
   }
   shape.closePath();
   return new THREE.ShapeGeometry(shape);
+}
+
+function makeStar(points, outerR, innerR, rotation) {
+  const shape = new THREE.Shape();
+  const total = points * 2;
+  for (let i = 0; i < total; i++) {
+    const a = rotation + (i / total) * Math.PI * 2;
+    const r = i % 2 === 0 ? outerR : innerR;
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r;
+    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+  }
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape);
+}
+
+function makeCross(size) {
+  // Plus/cross: 12 vertices
+  const s = size * 0.35;  // arm half-width
+  const l = size;          // arm half-length
+  const shape = new THREE.Shape();
+  shape.moveTo(-s, -l); shape.lineTo(s, -l);
+  shape.lineTo(s, -s);  shape.lineTo(l, -s);
+  shape.lineTo(l, s);   shape.lineTo(s, s);
+  shape.lineTo(s, l);   shape.lineTo(-s, l);
+  shape.lineTo(-s, s);  shape.lineTo(-l, s);
+  shape.lineTo(-l, -s); shape.lineTo(-s, -s);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape);
+}
+
+function makeLShape(size) {
+  const s = size;
+  const t = size * 0.4;
+  const shape = new THREE.Shape();
+  shape.moveTo(-s, -s);     shape.lineTo(-s + t, -s);
+  shape.lineTo(-s + t, s - t); shape.lineTo(s, s - t);
+  shape.lineTo(s, s);       shape.lineTo(-s, s);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape);
+}
+
+function makeTShape(size) {
+  const s = size;
+  const t = size * 0.4;
+  const shape = new THREE.Shape();
+  shape.moveTo(-s, s);     shape.lineTo(s, s);
+  shape.lineTo(s, s - t);  shape.lineTo(t / 2, s - t);
+  shape.lineTo(t / 2, -s); shape.lineTo(-t / 2, -s);
+  shape.lineTo(-t / 2, s - t); shape.lineTo(-s, s - t);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape);
+}
+
+function makeParallelogram(a, b) {
+  const skew = a * 0.3;
+  const shape = new THREE.Shape();
+  shape.moveTo(-a / 2 + skew, -b / 2);
+  shape.lineTo( a / 2 + skew, -b / 2);
+  shape.lineTo( a / 2 - skew,  b / 2);
+  shape.lineTo(-a / 2 - skew,  b / 2);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape);
+}
+
+function makeTrapezoid(a, b) {
+  const top = a * 0.6;
+  const shape = new THREE.Shape();
+  shape.moveTo(-a / 2, -b / 2);
+  shape.lineTo( a / 2, -b / 2);
+  shape.lineTo( top / 2,  b / 2);
+  shape.lineTo(-top / 2,  b / 2);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape);
+}
+
+function makeSemicircle(radius) {
+  const shape = new THREE.Shape();
+  shape.moveTo(-radius, 0);
+  shape.lineTo(radius, 0);
+  shape.absarc(0, 0, radius, 0, Math.PI, true);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape);
+}
+
+function makeAnnulus(outerR, innerR) {
+  const outerShape = new THREE.Shape();
+  outerShape.absarc(0, 0, outerR, 0, Math.PI * 2, false);
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, innerR, 0, Math.PI * 2, true);
+  outerShape.holes.push(hole);
+  return new THREE.ShapeGeometry(outerShape);
+}
+
+function makeHeart(size) {
+  const s = size * 0.6;
+  const shape = new THREE.Shape();
+  shape.moveTo(0, s * 0.3);
+  shape.bezierCurveTo(-s * 0.5, -s * 0.2, -s, s * 0.3, 0, s);
+  shape.bezierCurveTo(s, s * 0.3, s * 0.5, -s * 0.2, 0, s * 0.3);
+  return new THREE.ShapeGeometry(shape);
+}
+
+function makeArrow(size) {
+  const s = size;
+  const t = size * 0.4;
+  const shape = new THREE.Shape();
+  shape.moveTo(0, s);          shape.lineTo(s * 0.6, s * 0.2);
+  shape.lineTo(t, s * 0.2);    shape.lineTo(t, -s);
+  shape.lineTo(-t, -s);        shape.lineTo(-t, s * 0.2);
+  shape.lineTo(-s * 0.6, s * 0.2);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape);
+}
+
+function makeCrescent(size) {
+  // Outer circle minus offset inner circle (creates crescent moon)
+  const outerShape = new THREE.Shape();
+  outerShape.absarc(0, 0, size, 0, Math.PI * 2, false);
+  const hole = new THREE.Path();
+  hole.absarc(size * 0.35, 0, size * 0.85, 0, Math.PI * 2, true);
+  outerShape.holes.push(hole);
+  return new THREE.ShapeGeometry(outerShape);
+}
+
+// ====================================================================
+// SHAPE SVG ICON (for plot modal)
+// Returns a small inline SVG of the plot's shape, scaled to 14x14.
+// ====================================================================
+function shapeIconSVG(kind) {
+  const stroke = 'stroke="#f5cc74" stroke-width="1.5" fill="rgba(245,204,116,0.18)"';
+  const svg = (inner) => `<svg width="14" height="14" viewBox="-10 -10 20 20" style="vertical-align:middle;margin-right:4px;">${inner}</svg>`;
+  switch (kind) {
+    case 'square':       return svg(`<rect x="-7" y="-7" width="14" height="14" ${stroke}/>`);
+    case 'rectangle':    return svg(`<rect x="-9" y="-5" width="18" height="10" ${stroke}/>`);
+    case 'parallelogram':return svg(`<polygon points="-9,5 -3,-5 9,-5 3,5" ${stroke}/>`);
+    case 'trapezoid':    return svg(`<polygon points="-8,5 8,5 5,-5 -5,-5" ${stroke}/>`);
+    case 'triangle':     return svg(`<polygon points="0,-8 7,5 -7,5" ${stroke}/>`);
+    case 'diamond':      return svg(`<polygon points="0,-8 8,0 0,8 -8,0" ${stroke}/>`);
+    case 'pentagon':     return svg(`<polygon points="0,-8 7.6,-2.5 4.7,6.5 -4.7,6.5 -7.6,-2.5" ${stroke}/>`);
+    case 'hexagon':      return svg(`<polygon points="0,-8 7,-4 7,4 0,8 -7,4 -7,-4" ${stroke}/>`);
+    case 'heptagon':     return svg(`<polygon points="0,-8 6.5,-2.8 7,4.3 1.7,7.6 -5.4,5.9 -7.6,-1.2 -3.5,-7.4" ${stroke}/>`);
+    case 'octagon':      return svg(`<polygon points="0,-8 5.7,-5.7 8,0 5.7,5.7 0,8 -5.7,5.7 -8,0 -5.7,-5.7" ${stroke}/>`);
+    case 'star5':        return svg(`<polygon points="0,-8 2.4,-2.5 8,-2.5 3.5,1 5.3,7 0,3.5 -5.3,7 -3.5,1 -8,-2.5 -2.4,-2.5" ${stroke}/>`);
+    case 'star6':        return svg(`<polygon points="0,-8 2,-2.7 7.5,-2.7 3.5,1.3 5,6.5 0,3.5 -5,6.5 -3.5,1.3 -7.5,-2.7 -2,-2.7" ${stroke}/>`);
+    case 'star8':        return svg(`<polygon points="0,-8 1.8,-3.5 5.7,-5.7 3.5,-1.8 8,0 3.5,1.8 5.7,5.7 1.8,3.5 0,8 -1.8,3.5 -5.7,5.7 -3.5,1.8 -8,0 -3.5,-1.8 -5.7,-5.7 -1.8,-3.5" ${stroke}/>`);
+    case 'cross':        return svg(`<polygon points="-3,-8 3,-8 3,-3 8,-3 8,3 3,3 3,8 -3,8 -3,3 -8,3 -8,-3 -3,-3" ${stroke}/>`);
+    case 'lShape':       return svg(`<polygon points="-8,-8 -5,-8 -5,5 8,5 8,8 -8,8" ${stroke}/>`);
+    case 'tShape':       return svg(`<polygon points="-8,8 8,8 8,5 -2,5 -2,-8 2,-8 2,5 8,5 8,8" ${stroke}/>`);
+    case 'circle':       return svg(`<circle cx="0" cy="0" r="7" ${stroke}/>`);
+    case 'semicircle':   return svg(`<path d="M -7 0 A 7 7 0 0 1 7 0 Z" ${stroke}/>`);
+    case 'annulus':      return svg(`<path d="M -7 0 A 7 7 0 1 0 7 0 A 7 7 0 1 0 -7 0 Z M -3 0 A 3 3 0 1 1 3 0 A 3 3 0 1 1 -3 0 Z" fill-rule="evenodd" ${stroke}/>`);
+    case 'heart':        return svg(`<path d="M 0 -3 C -3 -7, -8 -2, 0 6 C 8 -2, 3 -7, 0 -3 Z" ${stroke}/>`);
+    case 'arrow':        return svg(`<polygon points="0,-8 5,0 3,0 3,8 -3,8 -3,0 -5,0" ${stroke}/>`);
+    case 'crescent':     return svg(`<path d="M -6 -6 A 8 8 0 1 0 -6 6 A 6 6 0 1 1 -6 -6 Z" ${stroke}/>`);
+    default:             return svg(`<rect x="-7" y="-7" width="14" height="14" ${stroke}/>`);
+  }
 }
 
 function plotName(lat, lon) {
@@ -556,34 +738,66 @@ function regionName(lat, lon) {
 // ====================================================================
 // VISIBILITY — fade plots based on camera distance
 // ====================================================================
-// Reusable temp vectors (avoid per-frame allocation)
-const _tmpWorldPos = new THREE.Vector3();
-const _tmpCamDir = new THREE.Vector3();
-const _tmpWorldQuat = new THREE.Quaternion();
-const _tmpUp = new THREE.Vector3(0, 0, 1);
+// OPTIMIZATION: With 3500 plots we can't afford per-frame matrix math
+// (getWorldPosition/getWorldQuaternion). Instead we precompute each plot's
+// local direction (in Earth's local space) at creation time, then each frame
+// we just transform the CAMERA into Earth's local space once, and do a cheap
+// dot-product per plot.
+//
+// Per-frame work scales with the number of CURRENTLY VISIBLE plots (not total).
+// When zoomed out, almost all plots are hidden, so the loop is cheap.
+// Opacity only updates when the zoom "bucket" changes (every 5% of zoom range).
+const _camLocal = new THREE.Vector3();
+let _lastOpacityBucket = -1;
 
 function updatePlotVisibility() {
   const dist = camera.position.length();
   // 0 when far (zoomMax), 1 when close (plotFullDist)
   const t = 1 - THREE.MathUtils.clamp((dist - STATE.plotFullDist) / (STATE.plotRevealDist - STATE.plotFullDist), 0, 1);
-  const targetOpacity = t;
-  const visible = t > 0.02;
+  const baseOpacity = t;
+  const showAny = t > 0.02;
 
-  for (const p of STATE.plots) {
-    // World-space facing check: hide plots on the far side of Earth
-    p.getWorldPosition(_tmpWorldPos);
-    _tmpCamDir.subVectors(camera.position, _tmpWorldPos).normalize();
-    p.getWorldQuaternion(_tmpWorldQuat);
-    _tmpUp.set(0, 0, 1).applyQuaternion(_tmpWorldQuat);
-    const facing = _tmpUp.dot(_tmpCamDir);
+  // Only update opacity when bucket changes (20 buckets across the zoom range)
+  const bucket = Math.round(t * 20);
+  const opacityChanged = bucket !== _lastOpacityBucket;
+  if (opacityChanged) _lastOpacityBucket = bucket;
+
+  // Transform camera position into Earth's local space (Earth is the parent of plots)
+  _camLocal.copy(camera.position);
+  earth.worldToLocal(_camLocal);
+  const camLen = _camLocal.length();
+  const dotThreshold = 0.06 * camLen;
+  const dotThresholdOwned = 0.03 * camLen;
+
+  // Reset visiblePlots array (reuse to avoid GC)
+  STATE.visiblePlots.length = 0;
+
+  // Cache values for the inner loop
+  const unownedOpacity = baseOpacity * 0.6;
+  const ownedOpacity = Math.max(baseOpacity * 0.95, 0.4);
+
+  for (let i = 0; i < STATE.plots.length; i++) {
+    const p = STATE.plots[i];
+    const dir = p.userData.localDir;
+    const dot = dir.x * _camLocal.x + dir.y * _camLocal.y + dir.z * _camLocal.z;
 
     if (!p.userData.owned) {
-      p.material.opacity = facing > 0.1 ? targetOpacity * 0.6 : 0;
-      p.visible = visible && facing > 0.1;
+      if (showAny && dot > dotThreshold) {
+        if (opacityChanged) p.material.opacity = unownedOpacity;
+        p.visible = true;
+        STATE.visiblePlots.push(p);
+      } else {
+        p.visible = false;
+      }
     } else {
       // Owned plots glow gold and stay visible on the near side
-      p.material.opacity = facing > 0.05 ? Math.max(targetOpacity * 0.95, 0.35) : 0;
-      p.visible = facing > 0.05;
+      if (dot > dotThresholdOwned) {
+        if (opacityChanged) p.material.opacity = ownedOpacity;
+        p.visible = true;
+        STATE.visiblePlots.push(p);
+      } else {
+        p.visible = false;
+      }
     }
   }
 }
@@ -600,13 +814,11 @@ function onPointerMove(e) {
   // Ensure matrices are current (Earth rotates each frame)
   if (earth) earth.updateMatrixWorld(true);
 
+  // Raycast ONLY against currently-visible plots (perf optimization for 5000 plots)
   raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(STATE.plots, false);
+  const hits = raycaster.intersectObjects(STATE.visiblePlots, false);
 
-  // Find the FIRST hit that is actually visible (opacity > 0.05).
-  // intersectObjects does NOT skip invisible objects, and a ray may pass through
-  // near-side plots then continue to hit far-side plots. We want the closest
-  // VISIBLE plot under the cursor.
+  // Find the first hit with non-trivial opacity
   let hitPlot = null;
   for (const h of hits) {
     if (h.object.material.opacity > 0.05) { hitPlot = h.object; break; }
@@ -631,13 +843,12 @@ function onPointerMove(e) {
 
 function onPointerClick(e) {
   lastInteractionTime = performance.now();
-  // Re-run the raycast at click time so we don't depend on hover state being fresh
   const rect = renderer.domElement.getBoundingClientRect();
   pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   if (earth) earth.updateMatrixWorld(true);
   raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(STATE.plots, false);
+  const hits = raycaster.intersectObjects(STATE.visiblePlots, false);
   for (const h of hits) {
     if (h.object.material.opacity > 0.05) {
       openPlotModal(h.object);
@@ -672,7 +883,7 @@ function openPlotModal(plot) {
     <h2>${plot.userData.name}</h2>
     <div class="coords">LAT ${plot.userData.lat.toFixed(4)}° · LON ${plot.userData.lon.toFixed(4)}° · PLOT #${plot.userData.id.toString().padStart(4,'0')}</div>
     <div class="meta-row">
-      <span class="meta-chip">Shape <b>${plot.userData.shape}</b></span>
+      <span class="meta-chip meta-shape">${shapeIconSVG(plot.userData.shape)} Shape <b>${plot.userData.shape}</b></span>
       <span class="meta-chip">Tier <b>${plot.userData.sizeName}</b></span>
       <span class="meta-chip">Area <b>${plot.userData.areaMultiplier.toFixed(1)}×</b></span>
     </div>
