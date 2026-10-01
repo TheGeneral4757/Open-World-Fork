@@ -381,116 +381,198 @@ function hideLoader() {
 }
 
 // ====================================================================
-// PLOTS — distributed across the globe
+// PLOTS — spherical Voronoi tessellation
 // ====================================================================
-// Shape catalog: 18 shapes (basic polygons + stars + curved + composite)
-// Each shape has a `build(sizeA, sizeB)` returning a unit BufferGeometry.
-// `premium` is a price multiplier (rarer shapes cost more).
-// `weight` is the random-pick probability (normalized at runtime).
-// `rotation` flag — whether to apply random Z-rotation for organic look.
-const SHAPES = [
-  { kind: 'square',        premium: 1.00, weight: 0.16, rotate: false, build: (a, b) => new THREE.PlaneGeometry(a, a) },
-  { kind: 'rectangle',     premium: 1.05, weight: 0.14, rotate: true,  build: (a, b) => new THREE.PlaneGeometry(a, b) },
-  { kind: 'parallelogram', premium: 1.10, weight: 0.07, rotate: true,  build: (a, b) => makeParallelogram(a, b) },
-  { kind: 'trapezoid',     premium: 1.12, weight: 0.07, rotate: true,  build: (a, b) => makeTrapezoid(a, b) },
-  { kind: 'triangle',      premium: 1.20, weight: 0.08, rotate: true,  build: (a) => makePolygon(3, a, -Math.PI / 2) },
-  { kind: 'diamond',       premium: 1.15, weight: 0.06, rotate: false, build: (a) => makePolygon(4, a, Math.PI / 4) },
-  { kind: 'pentagon',      premium: 1.25, weight: 0.06, rotate: false, build: (a) => makePolygon(5, a, Math.PI / 2) },
-  { kind: 'hexagon',       premium: 1.30, weight: 0.06, rotate: false, build: (a) => makePolygon(6, a, 0) },
-  { kind: 'heptagon',      premium: 1.40, weight: 0.04, rotate: false, build: (a) => makePolygon(7, a, 0) },
-  { kind: 'octagon',       premium: 1.45, weight: 0.04, rotate: false, build: (a) => makePolygon(8, a, Math.PI / 8) },
-  { kind: 'star5',         premium: 1.60, weight: 0.05, rotate: true,  build: (a) => makeStar(5, a, a * 0.45, -Math.PI / 2) },
-  { kind: 'star6',         premium: 1.65, weight: 0.04, rotate: false, build: (a) => makeStar(6, a, a * 0.5, 0) },
-  { kind: 'star8',         premium: 1.70, weight: 0.02, rotate: false, build: (a) => makeStar(8, a, a * 0.5, 0) },
-  { kind: 'cross',         premium: 1.55, weight: 0.04, rotate: false, build: (a) => makeCross(a) },
-  { kind: 'lShape',        premium: 1.50, weight: 0.03, rotate: true,  build: (a) => makeLShape(a) },
-  { kind: 'tShape',        premium: 1.50, weight: 0.03, rotate: true,  build: (a) => makeTShape(a) },
-  { kind: 'circle',        premium: 1.60, weight: 0.04, rotate: false, build: (a) => new THREE.CircleGeometry(a * 0.6, 32) },
-  { kind: 'semicircle',    premium: 1.50, weight: 0.03, rotate: true,  build: (a) => makeSemicircle(a * 0.7) },
-  { kind: 'annulus',       premium: 1.80, weight: 0.02, rotate: false, build: (a) => makeAnnulus(a * 0.7, a * 0.3) },
-  { kind: 'heart',         premium: 1.90, weight: 0.02, rotate: false, build: (a) => makeHeart(a * 0.7) },
-  { kind: 'arrow',         premium: 1.75, weight: 0.02, rotate: true,  build: (a) => makeArrow(a) },
-  { kind: 'crescent',      premium: 1.85, weight: 0.02, rotate: true,  build: (a) => makeCrescent(a * 0.7) },
-];
+// Each plot is an irregular polygonal cell on the Earth surface.
+// Cells are computed via spherical Voronoi: for each seed point, we
+// compute the cell as the intersection of half-spaces defined by the
+// perpendicular bisectors with its nearest neighbors.
+//
+// Properties:
+//   - Non-overlapping (cells fit together perfectly — no overlap, no gaps)
+//   - Full Earth coverage (every point on the globe belongs to exactly one cell)
+//   - Irregular polygon shapes (3-12 sides, varied edge lengths and angles)
+//   - Natural size variation (cells in jittered-sparse areas are bigger)
+//   - More visually detailed than basic regular shapes
+//
+// Algorithm:
+//   1. Generate N seed points via fibonacci sphere with jitter (for organic variation)
+//   2. For each seed p_i, compute its Voronoi cell:
+//      a. Build a tangent plane at p_i with basis vectors (uAxis, wAxis)
+//      b. Find nearest ~16 neighbors of p_i
+//      c. For each neighbor p_j, compute the perpendicular bisector in the tangent plane
+//         (this is a line because gnomonic projection maps great circles to lines)
+//      d. Start with a large square polygon in the tangent plane
+//      e. Clip the polygon by each neighbor's bisector (half-space intersection)
+//      f. Result is the Voronoi cell as a 2D polygon in the tangent plane
+//   3. Build THREE.Shape from the 2D polygon, place on sphere at p_i, orient outward
+//   4. Add a thin outline (LineSegments) for visual separation between cells
 
-// Size tiers — bigger tier = bigger footprint = pricier plot
-const SIZE_TIERS = [
-  { name: 'cottage',   size: 0.020, weight: 0.40 },
-  { name: 'standard',  size: 0.028, weight: 0.28 },
-  { name: 'estate',    size: 0.038, weight: 0.16 },
-  { name: 'province',  size: 0.052, weight: 0.10 },
-  { name: 'territory', size: 0.072, weight: 0.06 },
-];
-
-function pickWeighted(items, weights) {
-  const total = weights.reduce((s, w) => s + w, 0);
-  let r = Math.random() * total;
-  for (let i = 0; i < items.length; i++) {
-    r -= weights[i];
-    if (r <= 0) return items[i];
-  }
-  return items[items.length - 1];
-}
+const UP_VEC = new THREE.Vector3(0, 1, 0);
+const RIGHT_VEC = new THREE.Vector3(1, 0, 0);
 
 function generatePlots() {
-  // Spread plots using a fibonacci sphere distribution for even coverage.
-  // 3500 plots gives strong Earth coverage without sacrificing framerate.
-  const PLOT_COUNT = 3500;
+  const PLOT_COUNT = 2200;  // sweet spot: dense coverage, fast perf, irregular cells
   const plotGroup = new THREE.Group();
   plotGroup.name = 'plots';
 
-  const shapeWeights = SHAPES.map(s => s.weight);
-  const sizeWeights  = SIZE_TIERS.map(t => t.weight);
-  const REF_AREA = 0.020 * 0.020;  // cottage square reference
+  // Reference area: average cell area on unit sphere = 4π / N
+  const REF_AREA = (4 * Math.PI / PLOT_COUNT) * 0.5;
 
+  // ---- Step 1: Generate jittered fibonacci seed points ----
+  const seeds = [];      // array of { dir: Vector3 (unit), lat, lon }
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  const typicalNN = Math.sqrt(4 * Math.PI / PLOT_COUNT);  // typical nearest-neighbor angle
+  const jitterStrength = typicalNN * 0.45;  // jitter up to 45% of NN distance for size variety
+
   for (let i = 0; i < PLOT_COUNT; i++) {
-    const y = 1 - (i / (PLOT_COUNT - 1)) * 2;       // y from 1 to -1
+    const y = 1 - (i / (PLOT_COUNT - 1)) * 2;
     const r = Math.sqrt(1 - y * y);
     const theta = goldenAngle * i;
     const x = Math.cos(theta) * r;
     const z = Math.sin(theta) * r;
 
     const dir = new THREE.Vector3(x, y, z).normalize();
-    const lat = Math.asin(y) * 180 / Math.PI;
-    const lon = Math.atan2(z, x) * 180 / Math.PI;
 
-    // Pick shape and size tier
-    const shape = pickWeighted(SHAPES, shapeWeights);
-    const tier  = pickWeighted(SIZE_TIERS, sizeWeights);
-    // Jitter the size ±15% for organic variety
-    const sizeA = tier.size * (0.85 + Math.random() * 0.30);
-    const aspect = shape.kind === 'rectangle' ? (1.4 + Math.random() * 1.0) : 1.0;
-    const sizeB = sizeA * aspect;
+    // Apply random tangent offset for organic size variation
+    const ref = Math.abs(dir.y) < 0.9 ? UP_VEC : RIGHT_VEC;
+    const tangent = new THREE.Vector3().crossVectors(dir, ref).normalize();
+    const angle = Math.random() * Math.PI * 2;
+    const offsetMag = jitterStrength * (0.3 + Math.random() * 0.7);
+    const offset = tangent.clone().applyAxisAngle(dir, angle).multiplyScalar(offsetMag);
+    dir.add(offset).normalize();
 
-    // Compute area for pricing
-    let area;
-    switch (shape.kind) {
-      case 'square':       area = sizeA * sizeA; break;
-      case 'rectangle':    area = sizeA * sizeB; break;
-      case 'parallelogram':area = sizeA * sizeB; break;
-      case 'trapezoid':    area = (sizeA + sizeA * 0.6) / 2 * sizeB; break;
-      case 'circle':       area = Math.PI * (sizeA * 0.6) ** 2; break;
-      case 'semicircle':   area = 0.5 * Math.PI * (sizeA * 0.7) ** 2; break;
-      case 'annulus':      area = Math.PI * ((sizeA * 0.7) ** 2 - (sizeA * 0.3) ** 2); break;
-      case 'heart':        area = sizeA * sizeA * 0.7; break;  // approx
-      case 'crescent':     area = sizeA * sizeA * 0.5; break;  // approx
-      case 'arrow':        area = sizeA * sizeA * 0.65; break; // approx
-      case 'cross':        area = sizeA * sizeA * 0.5; break;
-      case 'lShape':       area = sizeA * sizeA * 0.4; break;
-      case 'tShape':       area = sizeA * sizeA * 0.45; break;
-      case 'star5':        area = 0.5 * 5 * (sizeA * 0.45) * Math.sin(Math.PI / 5) * 2 * sizeA; break;
-      case 'star6':        area = 0.5 * 6 * (sizeA * 0.5) * Math.sin(Math.PI / 3) * 2 * sizeA; break;
-      case 'star8':        area = 0.5 * 8 * (sizeA * 0.5) * Math.sin(Math.PI / 4) * 2 * sizeA; break;
-      default: { // polygon (triangle, diamond, pentagon, hexagon, heptagon, octagon)
-        const sides = parseInt(shape.kind.replace(/[^0-9]/g, '')) || 6;
-        const n = ({ triangle: 3, diamond: 4, pentagon: 5, hexagon: 6, heptagon: 7, octagon: 8 })[shape.kind] || 6;
-        area = (n / 2) * sizeA * sizeA * Math.sin(2 * Math.PI / n);
-      }
+    const lat = Math.asin(dir.y) * 180 / Math.PI;
+    const lon = Math.atan2(dir.z, dir.x) * 180 / Math.PI;
+    seeds.push({ dir, lat, lon });
+  }
+
+  // ---- Step 2: For each seed, compute its Voronoi cell ----
+  for (let i = 0; i < PLOT_COUNT; i++) {
+    const seed = seeds[i];
+    const p_i = seed.dir;
+
+    // Tangent plane basis at p_i
+    const ref = Math.abs(p_i.y) < 0.9 ? UP_VEC : RIGHT_VEC;
+    const uAxis = new THREE.Vector3().crossVectors(p_i, ref).normalize();
+    const wAxis = new THREE.Vector3().crossVectors(p_i, uAxis).normalize();
+
+    // Find candidate neighbors (within ~35° of p_i — s > 0.82)
+    // We need to consider all near neighbors for accurate cell boundaries.
+    const neighbors = [];
+    for (let j = 0; j < PLOT_COUNT; j++) {
+      if (j === i) continue;
+      const s = p_i.dot(seeds[j].dir);
+      if (s < 0.82) continue;  // skip points farther than ~35°
+      neighbors.push({ s, dir: seeds[j].dir });
+    }
+    // Sort by distance (closest first)
+    neighbors.sort((a, b) => b.s - a.s);
+    // Take nearest 18 neighbors — typically enough for accurate cell
+    const N_NEIGHBORS = Math.min(18, neighbors.length);
+
+    // Compute bisector for each neighbor (in tangent plane 2D coords)
+    // Bisector line: u * u_j + w * w_j = d_j
+    // where (u_j, w_j) = gnomonic projection of p_j, d_j = 1/s - 1
+    const bisectors = [];
+    for (let k = 0; k < N_NEIGHBORS; k++) {
+      const n = neighbors[k];
+      const s = n.s;
+      const u_j = n.dir.dot(uAxis) / s;
+      const w_j = n.dir.dot(wAxis) / s;
+      const d_j = 1 / s - 1;
+      bisectors.push({ u: u_j, w: w_j, d: d_j });
     }
 
-    // === Pricing ===
-    const absLat = Math.abs(lat);
+    // Initialize cell as large square (covers full tangent plane area we care about)
+    const BIG = 1.5;
+    let cell = [
+      { u: -BIG, w: -BIG },
+      { u:  BIG, w: -BIG },
+      { u:  BIG, w:  BIG },
+      { u: -BIG, w:  BIG }
+    ];
+
+    // Clip cell by each bisector (Sutherland-Hodgman polygon clipping)
+    for (const b of bisectors) {
+      const newCell = [];
+      const n = cell.length;
+      for (let k = 0; k < n; k++) {
+        const p1 = cell[k];
+        const p2 = cell[(k + 1) % n];
+        const d1 = p1.u * b.u + p1.w * b.w - b.d;  // negative = inside
+        const d2 = p2.u * b.u + p2.w * b.w - b.d;
+        if (d1 <= 0 && d2 <= 0) {
+          newCell.push(p2);
+        } else if (d1 <= 0 && d2 > 0) {
+          const t = d1 / (d1 - d2);
+          newCell.push({ u: p1.u + t * (p2.u - p1.u), w: p1.w + t * (p2.w - p1.w) });
+        } else if (d1 > 0 && d2 <= 0) {
+          const t = d1 / (d1 - d2);
+          newCell.push({ u: p1.u + t * (p2.u - p1.u), w: p1.w + t * (p2.w - p1.w) });
+          newCell.push(p2);
+        }
+      }
+      cell = newCell;
+      if (cell.length < 3) break;
+    }
+    if (cell.length < 3) continue;
+
+    // ---- Step 3: Build spherical polygon mesh ----
+    // Each cell is rendered as a triangle fan on the sphere surface:
+    //   - Centroid = p_i (on sphere)
+    //   - Boundary vertices = sphere-projected from tangent plane
+    //   - Triangles: (centroid, v_k, v_{k+1}) for each edge
+    // This ensures all geometry is ON the sphere, eliminating inter-cell
+    // overlap caused by flat tangent-plane approximation.
+    const vertexRadius = EARTH_RADIUS * 1.004;
+    const centroid3D = p_i.clone().multiplyScalar(vertexRadius);
+    const sphereVerts = [];
+    for (let k = 0; k < cell.length; k++) {
+      const v = cell[k];
+      const pos3D = new THREE.Vector3()
+        .addScaledVector(p_i, 1.0)
+        .addScaledVector(uAxis, v.u)
+        .addScaledVector(wAxis, v.w);
+      pos3D.normalize().multiplyScalar(vertexRadius);
+      sphereVerts.push(pos3D);
+    }
+
+    // Build BufferGeometry: triangle fan from centroid to each edge
+    const fanPositions = [];
+    for (let k = 0; k < sphereVerts.length; k++) {
+      const v1 = sphereVerts[k];
+      const v2 = sphereVerts[(k + 1) % sphereVerts.length];
+      fanPositions.push(centroid3D.x, centroid3D.y, centroid3D.z);
+      fanPositions.push(v1.x, v1.y, v1.z);
+      fanPositions.push(v2.x, v2.y, v2.z);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(fanPositions, 3));
+    geo.computeVertexNormals();
+
+    // Build 2D polygon for area computation (shoelace on tangent plane)
+    let area = 0;
+    for (let k = 0; k < cell.length; k++) {
+      const p1 = cell[k];
+      const p2 = cell[(k + 1) % cell.length];
+      area += p1.u * p2.w - p2.u * p1.w;
+    }
+    area = Math.abs(area / 2);
+
+    // For the outline, build LineSegments along the boundary edges in 3D
+    const edgePositions = [];
+    for (let k = 0; k < sphereVerts.length; k++) {
+      const v1 = sphereVerts[k];
+      const v2 = sphereVerts[(k + 1) % sphereVerts.length];
+      edgePositions.push(v1.x, v1.y, v1.z);
+      edgePositions.push(v2.x, v2.y, v2.z);
+    }
+    const edgesGeo = new THREE.BufferGeometry();
+    edgesGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
+
+    // ---- Pricing ----
+    const absLat = Math.abs(seed.lat);
     let basePrice;
     if (absLat < 23)      basePrice = 35000;
     else if (absLat < 45) basePrice = 22000;
@@ -498,222 +580,83 @@ function generatePlots() {
     else                  basePrice = 4000;
 
     const areaMultiplier = area / REF_AREA;
+    // Cells with more sides are slightly rarer/more interesting
+    const sidesPremium = 1 + Math.max(0, cell.length - 4) * 0.04;
     const jitter = 0.85 + Math.random() * 0.30;
-    const rawPrice = basePrice * areaMultiplier * shape.premium * jitter;
+    const rawPrice = basePrice * areaMultiplier * sidesPremium * jitter;
     const price = Math.max(500, Math.round(rawPrice / 100) * 100);
 
-    // Build geometry and mesh
-    const geo = shape.build(sizeA, sizeB);
+    // Tier name based on area
+    let sizeName;
+    if (areaMultiplier < 0.65)      sizeName = 'cottage';
+    else if (areaMultiplier < 1.2)  sizeName = 'standard';
+    else if (areaMultiplier < 2.2)  sizeName = 'estate';
+    else if (areaMultiplier < 3.5)  sizeName = 'province';
+    else                            sizeName = 'territory';
+
+    // Slight per-plot color tint for visual variety (shades of teal-green)
+    const hueShift = (Math.random() - 0.5) * 0.05;
+    const baseColor = new THREE.Color().setHSL(0.42 + hueShift, 0.65, 0.55);
+
     const mat = new THREE.MeshBasicMaterial({
-      color: 0x50f0a0,
+      color: baseColor,
       transparent: true,
       opacity: 0.0,
       side: THREE.DoubleSide,
       depthWrite: false
     });
     const mesh = new THREE.Mesh(geo, mat);
-    const pos = dir.clone().multiplyScalar(EARTH_RADIUS * 1.002);
-    mesh.position.copy(pos);
-    mesh.lookAt(0, 0, 0);
-    mesh.rotateY(Math.PI); // face outward
-    if (shape.rotate) {
-      mesh.rotateZ(Math.random() * Math.PI * 2);
-    }
+    // Mesh stays at origin with identity rotation — geometry vertices are
+    // already in Earth-local 3D coords (will be transformed by Earth parent).
+
+    // Outline uses the pre-built edge geometry (already in 3D coords)
+    const edgesMat = new THREE.LineBasicMaterial({
+      color: 0x2a8b6f,
+      transparent: true,
+      opacity: 0.0,
+      depthWrite: false
+    });
+    const edges = new THREE.LineSegments(edgesGeo, edgesMat);
+
     mesh.userData = {
       isPlot: true,
       id: i,
-      lat, lon,
+      lat: seed.lat, lon: seed.lon,
       price,
       area,
       areaMultiplier,
-      shape: shape.kind,
-      shapePremium: shape.premium,
-      sizeName: tier.name,
-      sizeA, sizeB,
+      shape: 'voronoi',
+      sides: cell.length,
+      sidesPremium,
+      sizeName,
       owned: false,
-      name: plotName(lat, lon),
-      // Pre-computed local direction (in Earth's local space) for fast facing checks.
-      // This never changes since the plot is a child of Earth.
-      localDir: dir.clone(),
-      baseColor: 0x50f0a0
+      name: plotName(seed.lat, seed.lon),
+      localDir: p_i.clone(),
+      baseColor: baseColor.getHex(),
+      outline: edges
     };
     plotGroup.add(mesh);
+    plotGroup.add(edges);  // outline as sibling so it shares Earth's transform
     STATE.plots.push(mesh);
   }
-  // Attach to Earth so plots rotate WITH the planet.
   earth.add(plotGroup);
 }
 
 // ====================================================================
-// SHAPE BUILDERS
-// ====================================================================
-function makePolygon(sides, radius, rotation) {
-  const shape = new THREE.Shape();
-  for (let i = 0; i < sides; i++) {
-    const a = rotation + (i / sides) * Math.PI * 2;
-    const x = Math.cos(a) * radius;
-    const y = Math.sin(a) * radius;
-    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
-  }
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-function makeStar(points, outerR, innerR, rotation) {
-  const shape = new THREE.Shape();
-  const total = points * 2;
-  for (let i = 0; i < total; i++) {
-    const a = rotation + (i / total) * Math.PI * 2;
-    const r = i % 2 === 0 ? outerR : innerR;
-    const x = Math.cos(a) * r;
-    const y = Math.sin(a) * r;
-    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
-  }
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-function makeCross(size) {
-  // Plus/cross: 12 vertices
-  const s = size * 0.35;  // arm half-width
-  const l = size;          // arm half-length
-  const shape = new THREE.Shape();
-  shape.moveTo(-s, -l); shape.lineTo(s, -l);
-  shape.lineTo(s, -s);  shape.lineTo(l, -s);
-  shape.lineTo(l, s);   shape.lineTo(s, s);
-  shape.lineTo(s, l);   shape.lineTo(-s, l);
-  shape.lineTo(-s, s);  shape.lineTo(-l, s);
-  shape.lineTo(-l, -s); shape.lineTo(-s, -s);
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-function makeLShape(size) {
-  const s = size;
-  const t = size * 0.4;
-  const shape = new THREE.Shape();
-  shape.moveTo(-s, -s);     shape.lineTo(-s + t, -s);
-  shape.lineTo(-s + t, s - t); shape.lineTo(s, s - t);
-  shape.lineTo(s, s);       shape.lineTo(-s, s);
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-function makeTShape(size) {
-  const s = size;
-  const t = size * 0.4;
-  const shape = new THREE.Shape();
-  shape.moveTo(-s, s);     shape.lineTo(s, s);
-  shape.lineTo(s, s - t);  shape.lineTo(t / 2, s - t);
-  shape.lineTo(t / 2, -s); shape.lineTo(-t / 2, -s);
-  shape.lineTo(-t / 2, s - t); shape.lineTo(-s, s - t);
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-function makeParallelogram(a, b) {
-  const skew = a * 0.3;
-  const shape = new THREE.Shape();
-  shape.moveTo(-a / 2 + skew, -b / 2);
-  shape.lineTo( a / 2 + skew, -b / 2);
-  shape.lineTo( a / 2 - skew,  b / 2);
-  shape.lineTo(-a / 2 - skew,  b / 2);
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-function makeTrapezoid(a, b) {
-  const top = a * 0.6;
-  const shape = new THREE.Shape();
-  shape.moveTo(-a / 2, -b / 2);
-  shape.lineTo( a / 2, -b / 2);
-  shape.lineTo( top / 2,  b / 2);
-  shape.lineTo(-top / 2,  b / 2);
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-function makeSemicircle(radius) {
-  const shape = new THREE.Shape();
-  shape.moveTo(-radius, 0);
-  shape.lineTo(radius, 0);
-  shape.absarc(0, 0, radius, 0, Math.PI, true);
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-function makeAnnulus(outerR, innerR) {
-  const outerShape = new THREE.Shape();
-  outerShape.absarc(0, 0, outerR, 0, Math.PI * 2, false);
-  const hole = new THREE.Path();
-  hole.absarc(0, 0, innerR, 0, Math.PI * 2, true);
-  outerShape.holes.push(hole);
-  return new THREE.ShapeGeometry(outerShape);
-}
-
-function makeHeart(size) {
-  const s = size * 0.6;
-  const shape = new THREE.Shape();
-  shape.moveTo(0, s * 0.3);
-  shape.bezierCurveTo(-s * 0.5, -s * 0.2, -s, s * 0.3, 0, s);
-  shape.bezierCurveTo(s, s * 0.3, s * 0.5, -s * 0.2, 0, s * 0.3);
-  return new THREE.ShapeGeometry(shape);
-}
-
-function makeArrow(size) {
-  const s = size;
-  const t = size * 0.4;
-  const shape = new THREE.Shape();
-  shape.moveTo(0, s);          shape.lineTo(s * 0.6, s * 0.2);
-  shape.lineTo(t, s * 0.2);    shape.lineTo(t, -s);
-  shape.lineTo(-t, -s);        shape.lineTo(-t, s * 0.2);
-  shape.lineTo(-s * 0.6, s * 0.2);
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-function makeCrescent(size) {
-  // Outer circle minus offset inner circle (creates crescent moon)
-  const outerShape = new THREE.Shape();
-  outerShape.absarc(0, 0, size, 0, Math.PI * 2, false);
-  const hole = new THREE.Path();
-  hole.absarc(size * 0.35, 0, size * 0.85, 0, Math.PI * 2, true);
-  outerShape.holes.push(hole);
-  return new THREE.ShapeGeometry(outerShape);
-}
-
-// ====================================================================
 // SHAPE SVG ICON (for plot modal)
-// Returns a small inline SVG of the plot's shape, scaled to 14x14.
+// Draws an N-sided polygon icon based on cell vertex count.
 // ====================================================================
-function shapeIconSVG(kind) {
+function shapeIconSVG(sides) {
+  const n = Math.max(3, Math.min(12, sides || 6));
   const stroke = 'stroke="#f5cc74" stroke-width="1.5" fill="rgba(245,204,116,0.18)"';
-  const svg = (inner) => `<svg width="14" height="14" viewBox="-10 -10 20 20" style="vertical-align:middle;margin-right:4px;">${inner}</svg>`;
-  switch (kind) {
-    case 'square':       return svg(`<rect x="-7" y="-7" width="14" height="14" ${stroke}/>`);
-    case 'rectangle':    return svg(`<rect x="-9" y="-5" width="18" height="10" ${stroke}/>`);
-    case 'parallelogram':return svg(`<polygon points="-9,5 -3,-5 9,-5 3,5" ${stroke}/>`);
-    case 'trapezoid':    return svg(`<polygon points="-8,5 8,5 5,-5 -5,-5" ${stroke}/>`);
-    case 'triangle':     return svg(`<polygon points="0,-8 7,5 -7,5" ${stroke}/>`);
-    case 'diamond':      return svg(`<polygon points="0,-8 8,0 0,8 -8,0" ${stroke}/>`);
-    case 'pentagon':     return svg(`<polygon points="0,-8 7.6,-2.5 4.7,6.5 -4.7,6.5 -7.6,-2.5" ${stroke}/>`);
-    case 'hexagon':      return svg(`<polygon points="0,-8 7,-4 7,4 0,8 -7,4 -7,-4" ${stroke}/>`);
-    case 'heptagon':     return svg(`<polygon points="0,-8 6.5,-2.8 7,4.3 1.7,7.6 -5.4,5.9 -7.6,-1.2 -3.5,-7.4" ${stroke}/>`);
-    case 'octagon':      return svg(`<polygon points="0,-8 5.7,-5.7 8,0 5.7,5.7 0,8 -5.7,5.7 -8,0 -5.7,-5.7" ${stroke}/>`);
-    case 'star5':        return svg(`<polygon points="0,-8 2.4,-2.5 8,-2.5 3.5,1 5.3,7 0,3.5 -5.3,7 -3.5,1 -8,-2.5 -2.4,-2.5" ${stroke}/>`);
-    case 'star6':        return svg(`<polygon points="0,-8 2,-2.7 7.5,-2.7 3.5,1.3 5,6.5 0,3.5 -5,6.5 -3.5,1.3 -7.5,-2.7 -2,-2.7" ${stroke}/>`);
-    case 'star8':        return svg(`<polygon points="0,-8 1.8,-3.5 5.7,-5.7 3.5,-1.8 8,0 3.5,1.8 5.7,5.7 1.8,3.5 0,8 -1.8,3.5 -5.7,5.7 -3.5,1.8 -8,0 -3.5,-1.8 -5.7,-5.7 -1.8,-3.5" ${stroke}/>`);
-    case 'cross':        return svg(`<polygon points="-3,-8 3,-8 3,-3 8,-3 8,3 3,3 3,8 -3,8 -3,3 -8,3 -8,-3 -3,-3" ${stroke}/>`);
-    case 'lShape':       return svg(`<polygon points="-8,-8 -5,-8 -5,5 8,5 8,8 -8,8" ${stroke}/>`);
-    case 'tShape':       return svg(`<polygon points="-8,8 8,8 8,5 -2,5 -2,-8 2,-8 2,5 8,5 8,8" ${stroke}/>`);
-    case 'circle':       return svg(`<circle cx="0" cy="0" r="7" ${stroke}/>`);
-    case 'semicircle':   return svg(`<path d="M -7 0 A 7 7 0 0 1 7 0 Z" ${stroke}/>`);
-    case 'annulus':      return svg(`<path d="M -7 0 A 7 7 0 1 0 7 0 A 7 7 0 1 0 -7 0 Z M -3 0 A 3 3 0 1 1 3 0 A 3 3 0 1 1 -3 0 Z" fill-rule="evenodd" ${stroke}/>`);
-    case 'heart':        return svg(`<path d="M 0 -3 C -3 -7, -8 -2, 0 6 C 8 -2, 3 -7, 0 -3 Z" ${stroke}/>`);
-    case 'arrow':        return svg(`<polygon points="0,-8 5,0 3,0 3,8 -3,8 -3,0 -5,0" ${stroke}/>`);
-    case 'crescent':     return svg(`<path d="M -6 -6 A 8 8 0 1 0 -6 6 A 6 6 0 1 1 -6 -6 Z" ${stroke}/>`);
-    default:             return svg(`<rect x="-7" y="-7" width="14" height="14" ${stroke}/>`);
+  const points = [];
+  for (let i = 0; i < n; i++) {
+    // Slight irregularity for visual interest (matches Voronoi aesthetic)
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const r = 7 + (i % 2 === 0 ? 0.5 : -0.5);
+    points.push(`${(Math.cos(angle) * r).toFixed(1)},${(Math.sin(angle) * r).toFixed(1)}`);
   }
+  return `<svg width="14" height="14" viewBox="-10 -10 20 20" style="vertical-align:middle;margin-right:4px;"><polygon points="${points.join(' ')}" ${stroke}/></svg>`;
 }
 
 function plotName(lat, lon) {
@@ -775,28 +718,41 @@ function updatePlotVisibility() {
   // Cache values for the inner loop
   const unownedOpacity = baseOpacity * 0.6;
   const ownedOpacity = Math.max(baseOpacity * 0.95, 0.4);
+  // Outline opacity scales a bit higher than fill so cells remain visible
+  const unownedOutline = baseOpacity * 0.9;
+  const ownedOutline = Math.max(baseOpacity * 1.0, 0.7);
 
   for (let i = 0; i < STATE.plots.length; i++) {
     const p = STATE.plots[i];
     const dir = p.userData.localDir;
     const dot = dir.x * _camLocal.x + dir.y * _camLocal.y + dir.z * _camLocal.z;
+    const outline = p.userData.outline;
 
     if (!p.userData.owned) {
       if (showAny && dot > dotThreshold) {
-        if (opacityChanged) p.material.opacity = unownedOpacity;
+        if (opacityChanged) {
+          p.material.opacity = unownedOpacity;
+          if (outline) outline.material.opacity = unownedOutline;
+        }
         p.visible = true;
+        if (outline) outline.visible = true;
         STATE.visiblePlots.push(p);
       } else {
         p.visible = false;
+        if (outline) outline.visible = false;
       }
     } else {
       // Owned plots glow gold and stay visible on the near side
       if (dot > dotThresholdOwned) {
-        if (opacityChanged) p.material.opacity = ownedOpacity;
+        if (opacityChanged && !p.userData._ownedOverride) {
+          // owned plots have their opacity set by buySelectedPlot; don't override
+        }
         p.visible = true;
+        if (outline) outline.visible = true;
         STATE.visiblePlots.push(p);
       } else {
         p.visible = false;
+        if (outline) outline.visible = false;
       }
     }
   }
@@ -883,11 +839,11 @@ function openPlotModal(plot) {
     <h2>${plot.userData.name}</h2>
     <div class="coords">LAT ${plot.userData.lat.toFixed(4)}° · LON ${plot.userData.lon.toFixed(4)}° · PLOT #${plot.userData.id.toString().padStart(4,'0')}</div>
     <div class="meta-row">
-      <span class="meta-chip meta-shape">${shapeIconSVG(plot.userData.shape)} Shape <b>${plot.userData.shape}</b></span>
+      <span class="meta-chip meta-shape">${shapeIconSVG(plot.userData.sides)} Cell <b>${plot.userData.sides}-sided</b></span>
       <span class="meta-chip">Tier <b>${plot.userData.sizeName}</b></span>
       <span class="meta-chip">Area <b>${plot.userData.areaMultiplier.toFixed(1)}×</b></span>
     </div>
-    <div class="desc">A <b>${plot.userData.sizeName}</b>-tier <b>${plot.userData.shape}</b> parcel in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Watch it glow from orbit.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}</div>
+    <div class="desc">An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Watch it glow from orbit.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}</div>
     <div class="price-row">
       <span class="price-label">${owned ? 'Acquired For' : 'Asking Price'}</span>
       <span class="price-value">$${plot.userData.price.toLocaleString()}<small> USD</small></span>
@@ -915,12 +871,18 @@ window.buySelectedPlot = function() {
   STATE.money -= p.userData.price;
   p.userData.owned = true;
   STATE.owned.add(p.userData.id);
-  // Color & visibility
+  // Color & visibility — turn gold
   p.material.color.setHex(0xf5cc74);
   p.material.opacity = 0.85;
   p.visible = true;
   // Resize slightly for emphasis
-  p.scale.setScalar(1.15);
+  p.scale.setScalar(1.05);
+  // Recolor outline to bright gold too
+  if (p.userData.outline) {
+    p.userData.outline.material.color.setHex(0xf5cc74);
+    p.userData.outline.material.opacity = 0.9;
+    p.userData.outline.scale.setScalar(1.05);
+  }
 
   updateHUD();
   closePlotModal();
