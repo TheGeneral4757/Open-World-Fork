@@ -35,13 +35,13 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .hud > *{pointer-events:auto}
 
 /* Top bar */
-.top-bar{top:0;left:0;right:0;padding:18px 26px;display:flex;justify-content:space-between;align-items:center;
+.top-bar{top:0;left:0;right:0;padding:14px 26px;display:flex;justify-content:space-between;align-items:center;gap:16px;
   background:linear-gradient(180deg,rgba(8,20,29,.85),rgba(8,20,29,0));}
-.brand{font-family:Georgia,serif;font-size:22px;color:#f5cc74;letter-spacing:2px;text-transform:uppercase}
+.brand{font-family:Georgia,serif;font-size:22px;color:#f5cc74;letter-spacing:2px;text-transform:uppercase;text-align:center;flex:0 1 auto}
 .brand small{display:block;font-family:Arial,sans-serif;font-size:11px;color:#7fa0ab;letter-spacing:3px;text-transform:uppercase;margin-top:2px}
-.stats{display:flex;gap:14px;align-items:center}
+.stats{display:flex;gap:14px;align-items:center;flex-shrink:0}
 .stat-chip{padding:9px 16px;border:1px solid #2c4a55;border-radius:8px;background:rgba(11,29,41,.7);backdrop-filter:blur(6px);
-  font-size:13px;color:#cbd7dc;display:flex;align-items:center;gap:8px}
+  font-size:13px;color:#cbd7dc;display:flex;align-items:center;gap:8px;white-space:nowrap}
 .stat-chip b{color:#f5cc74;font-size:15px;font-family:Georgia,serif}
 .stat-chip .icon{font-size:16px}
 
@@ -56,9 +56,9 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .zoom-bar{width:180px;height:4px;background:#1a3340;border-radius:2px;margin-top:8px;overflow:hidden}
 .zoom-bar .fill{height:100%;background:linear-gradient(90deg,#f5cc74,#50f0da);width:0%;transition:width .15s}
 
-/* Back button */
-.back-btn{position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:25;
-  padding:9px 20px;border:1px solid #2c4a55;border-radius:8px;background:rgba(11,29,41,.8);backdrop-filter:blur(6px);
+/* Back button — now a flex item in the top bar (left side) */
+.back-btn{flex-shrink:0;
+  padding:9px 18px;border:1px solid #2c4a55;border-radius:8px;background:rgba(11,29,41,.8);backdrop-filter:blur(6px);
   color:#cbd7dc;font-family:Arial,sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s}
 .back-btn:hover{background:rgba(29,74,87,.8);color:#f5cc74}
 
@@ -117,11 +117,15 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .toast.success{border-color:#3a8b6a;color:#7fffd4}
 
 @media(max-width:700px){
-  .top-bar{padding:12px 14px}
-  .brand{font-size:16px}
+  .top-bar{padding:10px 12px;gap:8px;flex-wrap:wrap}
+  .brand{font-size:14px;order:3;flex-basis:100%;text-align:center;margin-top:4px}
   .brand small{font-size:9px}
-  .stat-chip{padding:7px 10px;font-size:11px}
-  .stat-chip b{font-size:13px}
+  .back-btn{padding:7px 12px;font-size:11px;order:1}
+  .stats{gap:8px;order:2;margin-left:auto}
+  .stat-chip{padding:6px 9px;font-size:10px;gap:5px}
+  .stat-chip b{font-size:12px}
+  .stat-chip .icon{font-size:13px}
+  .stat-chip span:not(.icon){display:none}
   .controls-hint{font-size:10px;gap:10px;flex-direction:column}
   .zoom-bar{width:120px}
 }
@@ -149,14 +153,13 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 
   <div class="hud">
     <div class="top-bar">
+      <button class="back-btn" onclick="exitGame()">← Menu</button>
       <div class="brand">Open World<small>Live · Earth Edition</small></div>
       <div class="stats">
         <div class="stat-chip"><span class="icon">💰</span><span>Budget</span><b id="money">$1,000,000</b></div>
         <div class="stat-chip"><span class="icon">🌍</span><span>Owned</span><b id="owned-count">0</b></div>
       </div>
     </div>
-
-    <button class="back-btn" onclick="exitGame()">← Back to Menu</button>
 
     <div class="bottom-bar">
       <div class="controls-hint">
