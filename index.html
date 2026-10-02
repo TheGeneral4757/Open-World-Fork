@@ -1257,6 +1257,7 @@ function buildStarField() {
 // ====================================================================
 let _waterMaskCanvas = null;   // offscreen canvas with earth-water.png data
 let _waterMaskData = null;     // ImageData for pixel sampling
+let _topologyData = null;      // ImageData for elevation sampling (mountain detection)
 
 function buildEarth() {
   const geo = new THREE.SphereGeometry(EARTH_RADIUS, 96, 96);
@@ -1300,15 +1301,39 @@ function loadWaterMask() {
     _waterMaskData = ctx.getImageData(0, 0, img.width, img.height);
     // Now that we have the mask, classify all existing plots
     classifyPlotsByTerrain();
+    // Load topology mask next (for mountain detection / region bonuses)
+    loadTopologyMask();
   };
   img.onerror = () => {
     console.warn('Water mask failed to load — all plots default to land');
     // Default all plots to land (Oil Rigs won't be buildable)
     for (const p of STATE.plots) {
       p.userData.isWater = false;
+      p.userData.region = classifyRegion(p);
     }
   };
   img.src = 'https://unpkg.com/three-globe@2.31.0/example/img/earth-water.png';
+}
+
+// Load the earth-topology.png for elevation/mountain detection
+function loadTopologyMask() {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    _topologyData = ctx.getImageData(0, 0, img.width, img.height);
+    // Re-classify now that we have elevation data (mountains/highlands)
+    classifyPlotsByTerrain();
+  };
+  img.onerror = () => {
+    console.warn('Topology mask failed to load — no mountain detection');
+    // Regions already set by water mask classification; mountains won't be detected
+  };
+  img.src = 'https://unpkg.com/three-globe@2.31.0/example/img/earth-topology.png';
 }
 
 // Sample the water mask at a given lat/lon. Returns true if water.
@@ -1325,10 +1350,90 @@ function isWaterAt(lat, lon) {
   return brightness > 128;
 }
 
-// Classify all plots as water or land based on the water mask
+// Sample the topology (elevation) at a given lat/lon. Returns 0-255 brightness.
+// Higher = more elevated (mountains). Only meaningful on land.
+function elevationAt(lat, lon) {
+  if (!_topologyData) return 0;
+  const x = Math.floor(((lon + 180) / 360) * _topologyData.width) % _topologyData.width;
+  const y = Math.floor(((90 - lat) / 180) * _topologyData.height);
+  const idx = (Math.max(0, Math.min(_topologyData.height - 1, y)) * _topologyData.width + Math.max(0, Math.min(_topologyData.width - 1, x))) * 4;
+  return _topologyData.data[idx];  // red channel (grayscale)
+}
+
+// Determine the climate zone for a plot based on latitude.
+// Returns: 'tropical' (|lat| < 23.5), 'temperate' (23.5-50), 'polar' (>50)
+function climateZone(lat) {
+  const a = Math.abs(lat);
+  if (a < 23.5) return 'tropical';
+  if (a < 50) return 'temperate';
+  return 'polar';
+}
+
+// Classify a plot into a region for bonus purposes.
+// Regions: 'tropical', 'temperate', 'polar', 'mountain', 'ocean-coastal', 'ocean-deep'
+function classifyRegion(plot) {
+  const lat = plot.userData.lat;
+  const isWater = plot.userData.isWater;
+  const climate = climateZone(lat);
+
+  if (isWater) {
+    // Deep ocean = far from any landmass (sample center of large water bodies)
+    // For simplicity, use latitude: tropical oceans = deep, polar oceans = coastal/arctic
+    if (climate === 'polar') return 'arctic-ocean';
+    return 'ocean-deep';
+  }
+
+  // On land — check elevation for mountains
+  const elev = elevationAt(lat, plot.userData.lon);
+  if (elev > 160) return 'mountain';        // high elevation
+  if (elev > 110) return 'highland';        // medium elevation
+
+  // Flat land — classify by climate
+  if (climate === 'tropical') return 'tropical';
+  if (climate === 'temperate') return 'temperate';
+  return 'polar';
+}
+
+// Region bonus multipliers per business type.
+// Each entry: { regions: { regionId: multiplier }, default: 1.0 }
+// Multiplier of 1.5 = +50% production, 0.5 = -50%, etc.
+const REGION_BONUSES = {
+  farm:     { regions: { temperate: 1.5, tropical: 1.2, highland: 0.8, polar: 0.3, mountain: 0.2 }, default: 1.0 },
+  mine:     { regions: { mountain: 2.0, highland: 1.5, polar: 0.7, tropical: 0.6 }, default: 1.0 },
+  factory:  { regions: { temperate: 1.3, highland: 1.1, tropical: 0.9, polar: 0.5 }, default: 1.0 },
+  resort:   { regions: { tropical: 2.0, 'ocean-deep': 1.3, temperate: 0.8, polar: 0.1, 'arctic-ocean': 0.1 }, default: 1.0 },
+  oilrig:   { regions: { 'ocean-deep': 1.8, 'arctic-ocean': 1.2 }, default: 1.0 },
+  casino:   { regions: { tropical: 1.4, temperate: 1.2, polar: 0.6, mountain: 0.5 }, default: 1.0 },
+  bank:     { regions: { temperate: 1.3, tropical: 1.2, highland: 1.0, polar: 0.7 }, default: 1.0 },
+  techhub:  { regions: { temperate: 1.4, highland: 1.2, tropical: 1.0, polar: 0.5 }, default: 1.0 },
+};
+
+// Region display names and icons
+const REGION_INFO = {
+  'tropical':      { name: 'Tropical',       icon: '🌴', color: '#7cb342' },
+  'temperate':     { name: 'Temperate',      icon: '🌳', color: '#558b2f' },
+  'polar':         { name: 'Polar',          icon: '❄️', color: '#90caf9' },
+  'mountain':      { name: 'Mountain',       icon: '⛰️', color: '#a1887f' },
+  'highland':      { name: 'Highland',       icon: '🏔️', color: '#8d6e63' },
+  'ocean-deep':    { name: 'Deep Ocean',     icon: '🌊', color: '#1565c0' },
+  'arctic-ocean':  { name: 'Arctic Ocean',   icon: '🧊', color: '#81d4fa' },
+};
+
+// Get the region bonus multiplier for a business on a plot
+function getRegionBonus(businessId, plot) {
+  const config = REGION_BONUSES[businessId];
+  if (!config) return 1.0;
+  const region = plot.userData.region;
+  if (!region) return config.default;
+  return config.regions[region] !== undefined ? config.regions[region] : config.default;
+}
+
+// Classify all plots as water or land based on the water mask,
+// and assign region for bonus purposes
 function classifyPlotsByTerrain() {
   for (const p of STATE.plots) {
     p.userData.isWater = isWaterAt(p.userData.lat, p.userData.lon);
+    p.userData.region = classifyRegion(p);
   }
 }
 
@@ -1810,8 +1915,11 @@ function onPointerMove(e) {
     } else if (owned && biz) {
       const bt = getBusinessType(biz.type);
       const mat = getMaterial(bt.produces);
-      const rate = (bt.rate * hitPlot.userData.areaMultiplier).toFixed(1);
-      tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name} +${rate} ${mat.icon}/s</span>`;
+      const regionBonus = getRegionBonus(bt.id, hitPlot);
+      const effectiveRate = bt.rate * hitPlot.userData.areaMultiplier * regionBonus;
+      const bonusPct = Math.round((regionBonus - 1) * 100);
+      const bonusTag = bonusPct !== 0 ? ` (${bonusPct > 0 ? '+' : ''}${bonusPct}%)` : '';
+      tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name} +${effectiveRate.toFixed(1)} ${mat.icon}/s${bonusTag}</span>`;
       tip.classList.add('owned');
     } else if (owned) {
       tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">OWNED — build ready</span>`;
@@ -1877,25 +1985,33 @@ function openPlotModal(plot) {
       // Show existing business info + option to demolish
       const bt = getBusinessType(existing.type);
       const mat = getMaterial(bt.produces);
-      const rate = bt.rate * plot.userData.areaMultiplier;
+      const regionBonus = getRegionBonus(bt.id, plot);
+      const regionInfo = REGION_INFO[plot.userData.region] || REGION_INFO['temperate'];
+      const baseRate = bt.rate * plot.userData.areaMultiplier;
+      const effectiveRate = baseRate * regionBonus;
       const price = STATE.marketPrices[bt.produces] || mat.basePrice;
       const trend = STATE.marketTrend[bt.produces] || 'stable';
       const trendIcon = trend === 'up' ? '▲' : (trend === 'down' ? '▼' : '◆');
       const trendClass = trend === 'up' ? 'up' : (trend === 'down' ? 'down' : 'stable');
+      const bonusPct = Math.round((regionBonus - 1) * 100);
+      const bonusLabel = bonusPct > 0 ? `+${bonusPct}%` : `${bonusPct}%`;
+      const bonusColor = bonusPct > 0 ? '#7fffd4' : (bonusPct < 0 ? '#ff8080' : '#9bb4bd');
       businessPanel = `
         <div class="business-panel">
           <div class="business-current">
             <div class="biz-icon">${bt.icon}</div>
             <div class="biz-info">
               <div class="biz-name">${bt.name} <span style="color:#9bb4bd;font-size:13px;font-weight:normal">→ ${mat.icon} ${mat.name}</span></div>
-              <div class="biz-income">+${rate.toFixed(2)}/s × plot area → <b>+${rate.toFixed(2)} ${mat.icon}/s</b></div>
+              <div class="biz-income">+${baseRate.toFixed(2)}/s × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b> → <b>+${effectiveRate.toFixed(2)} ${mat.icon}/s</b></div>
             </div>
           </div>
           <div class="biz-desc">${bt.desc}</div>
           <div class="biz-market-info" style="font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;margin-bottom:12px;padding:8px;border:1px solid #1a3340;border-radius:6px;background:rgba(20,50,60,.4)">
-            <span>Market: <b style="color:#f5cc74">$${Math.round(price).toLocaleString()}</b>/unit</span>
+            <span>Region: <b style="color:${regionInfo.color}">${regionInfo.icon} ${regionInfo.name}</b></span>
+            <span style="margin-left:12px">Bonus: <b style="color:${bonusColor}">${bonusLabel}</b></span>
+            <span style="margin-left:12px">Market: <b style="color:#f5cc74">$${Math.round(price).toLocaleString()}</b>/unit</span>
             <span class="mat-trend ${trendClass}" style="margin-left:8px">${trendIcon} ${trend}</span>
-            <span style="margin-left:12px">Value: <b style="color:#7fffd4">$${Math.round(rate * price).toLocaleString()}/s</b></span>
+            <div style="margin-top:4px">Value: <b style="color:#7fffd4">$${Math.round(effectiveRate * price).toLocaleString()}/s</b></div>
           </div>
           <button class="btn demolish" onclick="demolishBusiness()">Demolish Business</button>
         </div>
@@ -1904,9 +2020,12 @@ function openPlotModal(plot) {
       // Show business options to build
       const isWater = plot.userData.isWater;
       const terrainLabel = isWater ? 'Ocean' : 'Land';
+      const regionInfo = REGION_INFO[plot.userData.region] || REGION_INFO['temperate'];
       const options = BUSINESS_TYPES.map(b => {
         const effCost = Math.round(b.buildCost * plot.userData.areaMultiplier);
-        const rate = b.rate * plot.userData.areaMultiplier;
+        const baseRate = b.rate * plot.userData.areaMultiplier;
+        const regionBonus = getRegionBonus(b.id, plot);
+        const effRate = baseRate * regionBonus;
         const mat = getMaterial(b.produces);
         const canAfford = STATE.money >= effCost;
         // Terrain restriction: Oil Rig only on water, everything else only on land
@@ -1916,21 +2035,26 @@ function openPlotModal(plot) {
           ? (needsWater ? 'Ocean only' : 'Land only')
           : null;
         const canBuild = canAfford && terrainOk;
+        // Bonus label
+        const bonusPct = Math.round((regionBonus - 1) * 100);
+        const bonusLabel = bonusPct > 0 ? `+${bonusPct}%` : (bonusPct < 0 ? `${bonusPct}%` : '');
+        const bonusColor = bonusPct > 0 ? '#7fffd4' : (bonusPct < 0 ? '#ff8080' : '#9bb4bd');
+        const bonusDisplay = bonusLabel ? ` · <span style="color:${bonusColor}">${bonusLabel}</span>` : '';
         return `
           <button class="biz-option ${canBuild ? '' : 'disabled'}" ${canBuild ? '' : 'disabled'} onclick="buildBusiness('${b.id}')">
             <div class="biz-icon">${b.icon}</div>
             <div class="biz-info">
               <div class="biz-name">${b.name} <span style="color:#9bb4bd;font-size:11px">→ ${mat.icon} ${mat.name}</span></div>
-              <div class="biz-cost">$${effCost.toLocaleString()} build${terrainReason ? ` · <span style="color:#ff8080">${terrainReason}</span>` : ''}</div>
+              <div class="biz-cost">$${effCost.toLocaleString()} build${terrainReason ? ` · <span style="color:#ff8080">${terrainReason}</span>` : ''}${bonusDisplay}</div>
             </div>
-            <div class="biz-income">+${rate.toFixed(1)}/s</div>
+            <div class="biz-income">+${effRate.toFixed(1)}/s</div>
           </button>
         `;
       }).join('');
       businessPanel = `
         <div class="business-panel">
           <div class="biz-title">Build a Business</div>
-          <div class="biz-hint">Terrain: <b style="color:#7fffd4">${terrainLabel}</b>. Oil Rigs require ocean; all other businesses require land. Cost &amp; rate scale with plot area (${plot.userData.areaMultiplier.toFixed(2)}×).</div>
+          <div class="biz-hint">Region: <b style="color:${regionInfo.color}">${regionInfo.icon} ${regionInfo.name}</b>. Bonuses shown next to each business. Oil Rigs require ocean; all other businesses require land.</div>
           <div class="biz-list">${options}</div>
         </div>
       `;
@@ -2285,7 +2409,8 @@ function tickProduction() {
     if (p.userData.business) {
       const bt = getBusinessType(p.userData.business.type);
       if (bt) {
-        const produced = bt.rate * p.userData.areaMultiplier * dt;
+        const regionBonus = getRegionBonus(bt.id, p);
+        const produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
         STATE.inventory[bt.produces] = (STATE.inventory[bt.produces] || 0) + produced;
         anyProduced = true;
       }
