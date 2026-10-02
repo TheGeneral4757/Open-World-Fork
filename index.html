@@ -126,6 +126,31 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .close{padding:11px 25px;border:1px solid #73929b;border-radius:7px;background:#14323c;color:white;cursor:pointer;font-size:16px;transition:background .2s}
 .close:hover{background:#1d4a57}
 
+/* Leaderboard */
+.leaderboard-panel{width:min(500px,92vw);max-height:88vh;overflow-y:auto}
+.leaderboard-sub{font-family:Arial,sans-serif;font-size:12px;color:#7fa0ab;margin:0 0 20px;letter-spacing:1px}
+.leaderboard-tabs{display:flex;gap:4px;margin-bottom:18px;background:rgba(8,19,29,.6);border:1px solid #1a3340;border-radius:8px;padding:4px}
+.leaderboard-tab{flex:1;padding:10px 8px;border:none;border-radius:6px;background:transparent;color:#9bb4bd;cursor:pointer;font-family:Arial,sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;transition:all .15s}
+.leaderboard-tab:hover{color:#e8eef0}
+.leaderboard-tab.active{background:linear-gradient(135deg,#f5cc74,#d4a44a);color:#08141d;font-weight:bold}
+.leaderboard-body{margin-bottom:18px}
+.lb-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid #1a3340;border-radius:8px;background:rgba(20,50,60,.4);margin-bottom:6px;transition:all .15s}
+.lb-row.me{border-color:#f5cc74;background:rgba(245,204,116,.1)}
+.lb-row:hover{background:rgba(29,74,87,.5)}
+.lb-rank{font-family:Georgia,serif;font-size:18px;color:#7fa0ab;width:32px;text-align:center;flex-shrink:0}
+.lb-rank.gold{color:#f5cc74;font-size:22px}
+.lb-rank.silver{color:#cbd7dc;font-size:20px}
+.lb-rank.bronze{color:#cd7f32;font-size:20px}
+.lb-avatar{font-size:20px;flex-shrink:0;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1a4d6e,#082640);display:flex;align-items:center;justify-content:center;color:#50f0da;font-weight:bold;font-family:Georgia,serif;border:1px solid #2c4a55}
+.lb-row.me .lb-avatar{background:linear-gradient(135deg,#f5cc74,#d4a44a);color:#08141d;border-color:#f5cc74}
+.lb-info{flex:1;min-width:0}
+.lb-name{font-family:Arial,sans-serif;font-size:14px;color:#e8eef0;font-weight:600}
+.lb-row.me .lb-name{color:#f5cc74}
+.lb-meta{font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;margin-top:2px}
+.lb-value{font-family:Georgia,serif;font-size:18px;color:#f5cc74;flex-shrink:0;text-align:right;white-space:nowrap}
+.lb-row.me .lb-value{color:#7fffd4}
+.lb-empty{font-family:Arial,sans-serif;font-size:13px;color:#5e7d87;padding:24px;text-align:center}
+
 /* ============ GAME (Earth view) ============ */
 #game{background:#000}
 #canvas-container{position:absolute;inset:0}
@@ -371,6 +396,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
       <div class="menu-buttons">
         <button class="menu-btn-play" onclick="enterGame()">Enter World</button>
         <div class="menu-btn-row">
+          <button class="menu-btn-secondary" onclick="openLeaderboard()">🏆 Leaderboard</button>
           <button class="menu-btn-secondary" onclick="openSettings()">Settings</button>
           <button class="menu-btn-secondary" onclick="logout()">Logout</button>
         </div>
@@ -400,6 +426,20 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
       <h2>Settings</h2>
       <p>Your adventure settings will live here as the game is built. For now, click <b>Enter World</b> to dive into the Open World — a living Earth you can explore from space down to the ground, where every plot of land is yours to claim, develop, and profit from.</p>
       <button class="close" onclick="closeSettings()">CLOSE</button>
+    </div>
+  </div>
+
+  <div class="modal" id="leaderboard-modal">
+    <div class="panel leaderboard-panel">
+      <h2>🏆 Leaderboard</h2>
+      <p class="leaderboard-sub">Top commanders on this device</p>
+      <div class="leaderboard-tabs">
+        <button class="leaderboard-tab active" onclick="setLeaderboardTab('money')">💰 Money</button>
+        <button class="leaderboard-tab" onclick="setLeaderboardTab('plots')">🌍 Plots</button>
+        <button class="leaderboard-tab" onclick="setLeaderboardTab('businesses')">🏭 Businesses</button>
+      </div>
+      <div id="leaderboard-body" class="leaderboard-body"></div>
+      <button class="close" onclick="closeLeaderboard()">CLOSE</button>
     </div>
   </div>
 </div>
@@ -810,6 +850,106 @@ function updateMenuWelcome() {
   } else {
     statsEl.innerHTML = `<div class="menu-welcome-stat">New commander — your journey begins now<b>$1,000,000</b></div>`;
   }
+}
+
+// ====================================================================
+// LEADERBOARD
+// ====================================================================
+let _lbTab = 'money';  // 'money', 'plots', or 'businesses'
+
+// Gather all saves from localStorage and return as array of {name, money, plots, businesses}
+function getLeaderboardData() {
+  const profiles = getProfiles();
+  const entries = profiles.map(name => {
+    const save = getSave(name) || {};
+    return {
+      name,
+      money: Math.floor(save.money || 0),
+      plots: (save.ownedPlotIds || []).length,
+      businesses: (save.businesses || []).length,
+      savedAt: save.savedAt || 0
+    };
+  });
+  return entries;
+}
+
+window.openLeaderboard = function() {
+  document.getElementById('leaderboard-modal').classList.add('show');
+  renderLeaderboard();
+};
+
+window.closeLeaderboard = function() {
+  document.getElementById('leaderboard-modal').classList.remove('show');
+};
+
+window.setLeaderboardTab = function(tab) {
+  _lbTab = tab;
+  // Update active tab styling
+  document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
+  const tabs = document.querySelectorAll('.leaderboard-tab');
+  if (tabs[0] && tab === 'money') tabs[0].classList.add('active');
+  if (tabs[1] && tab === 'plots') tabs[1].classList.add('active');
+  if (tabs[2] && tab === 'businesses') tabs[2].classList.add('active');
+  renderLeaderboard();
+};
+
+function renderLeaderboard() {
+  const body = document.getElementById('leaderboard-body');
+  if (!body) return;
+
+  const data = getLeaderboardData();
+  if (data.length === 0) {
+    body.innerHTML = '<div class="lb-empty">No commanders yet. Create an account to appear on the leaderboard.</div>';
+    return;
+  }
+
+  // Sort by selected metric
+  const metric = _lbTab;
+  data.sort((a, b) => {
+    if (metric === 'money') return b.money - a.money;
+    if (metric === 'plots') return b.plots - a.plots;
+    if (metric === 'businesses') return b.businesses - a.businesses;
+    return 0;
+  });
+
+  const formatVal = (entry) => {
+    if (metric === 'money') return '$' + entry.money.toLocaleString();
+    if (metric === 'plots') return entry.plots.toLocaleString();
+    if (metric === 'businesses') return entry.businesses.toLocaleString();
+    return '';
+  };
+
+  const formatMeta = (entry) => {
+    const parts = [];
+    if (metric !== 'money') parts.push('$' + entry.money.toLocaleString());
+    if (metric !== 'plots') parts.push(entry.plots + ' plots');
+    if (metric !== 'businesses') parts.push(entry.businesses + ' biz');
+    if (entry.savedAt) {
+      const date = new Date(entry.savedAt);
+      parts.push(date.toLocaleDateString());
+    }
+    return parts.join(' · ');
+  };
+
+  const rows = data.map((entry, i) => {
+    const rank = i + 1;
+    const rankClass = rank === 1 ? 'gold' : (rank === 2 ? 'silver' : (rank === 3 ? 'bronze' : ''));
+    const rankDisplay = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : rank));
+    const isMe = entry.name === CURRENT_USER;
+    return `
+      <div class="lb-row ${isMe ? 'me' : ''}">
+        <div class="lb-rank ${rankClass}">${rankDisplay}</div>
+        <div class="lb-avatar">${entry.name.charAt(0).toUpperCase()}</div>
+        <div class="lb-info">
+          <div class="lb-name">${entry.name}${isMe ? ' (You)' : ''}</div>
+          <div class="lb-meta">${formatMeta(entry)}</div>
+        </div>
+        <div class="lb-value">${formatVal(entry)}</div>
+      </div>
+    `;
+  }).join('');
+
+  body.innerHTML = rows;
 }
 
 window.logout = function() {
@@ -2144,6 +2284,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     window.closePlotModal();
     window.closeMarketModal();
+    window.closeLeaderboard();
     window.closeSettings();
   }
 });
