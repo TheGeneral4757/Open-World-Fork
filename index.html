@@ -44,7 +44,47 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
   font-size:13px;color:#cbd7dc;display:flex;align-items:center;gap:8px;white-space:nowrap}
 .stat-chip b{color:#f5cc74;font-size:15px;font-family:Georgia,serif}
 .stat-chip .icon{font-size:16px}
-.income-chip b{color:#7fffd4 !important}  /* income shows in teal-green to distinguish from gold budget */
+.stock-chip{cursor:pointer;transition:all .15s}
+.stock-chip:hover{background:rgba(20,50,60,.9) !important;border-color:#4a7a85 !important}
+.stock-chip b{color:#7fffd4 !important}  /* stock value shows in teal-green */
+
+/* Market button in top bar */
+.market-btn{flex-shrink:0;padding:9px 16px;border:1px solid #2c4a55;border-radius:8px;
+  background:linear-gradient(135deg,rgba(11,29,41,.85),rgba(20,50,60,.85));backdrop-filter:blur(6px);
+  color:#f5cc74;font-family:Arial,sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.market-btn:hover{background:linear-gradient(135deg,rgba(29,74,87,.9),rgba(40,90,100,.9));transform:translateY(-1px)}
+
+/* Market modal */
+.market-card{width:min(560px,92vw);max-height:88vh;overflow-y:auto}
+.market-card h2{margin:0 0 4px;color:#f5cc74;font-size:26px}
+.market-card .market-sub{font-family:Arial,sans-serif;font-size:12px;color:#7fa0ab;margin-bottom:16px;letter-spacing:.5px}
+.market-card .market-sub b{color:#f5cc74}
+.market-card .market-countdown{color:#7fffd4}
+.mat-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #1a3340;border-radius:8px;
+  background:rgba(20,50,60,.4);margin-bottom:8px}
+.mat-row .mat-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center}
+.mat-row .mat-info{flex:1;min-width:0}
+.mat-row .mat-name{font-family:Arial,sans-serif;font-size:14px;color:#e8eef0;font-weight:600}
+.mat-row .mat-meta{font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;margin-top:2px}
+.mat-row .mat-price{font-family:Georgia,serif;font-size:15px;color:#f5cc74;flex-shrink:0;text-align:right;white-space:nowrap}
+.mat-row .mat-trend{font-size:11px;margin-top:2px}
+.mat-trend.up{color:#7fffd4}
+.mat-trend.down{color:#ff8080}
+.mat-trend.stable{color:#9bb4bd}
+.mat-row .mat-stock{font-family:Arial,sans-serif;font-size:11px;color:#7fffd4;text-align:right;margin-top:2px}
+.mat-row .mat-sell{flex-shrink:0;padding:8px 14px;border:1px solid #2c4a55;border-radius:6px;
+  background:rgba(29,74,87,.6);color:#f5cc74;cursor:pointer;font-family:Arial,sans-serif;font-size:11px;
+  letter-spacing:1px;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.mat-row .mat-sell:hover:not(:disabled){background:rgba(40,100,110,.8)}
+.mat-row .mat-sell:disabled{opacity:.3;cursor:not-allowed}
+.mat-row .mat-sell.all{background:linear-gradient(135deg,#f5cc74,#d4a44a);color:#08141d;border-color:#f5cc74;font-weight:bold}
+.mat-row .mat-sell.all:hover:not(:disabled){filter:brightness(1.1)}
+.market-actions{display:flex;gap:10px;margin-top:14px}
+.market-actions .btn{flex:1;padding:13px;border-radius:8px;border:1px solid #2c4a55;cursor:pointer;font-family:Arial,sans-serif;
+  font-size:13px;letter-spacing:2px;text-transform:uppercase;transition:all .2s;background:#14323c;color:#cbd7dc}
+.market-actions .btn:hover{background:#1d4a57}
+.market-actions .btn.primary{background:linear-gradient(135deg,#7fffd4,#4dd0a8);color:#08141d;border-color:#7fffd4;font-weight:bold}
+.market-actions .btn.primary:hover{filter:brightness(1.1)}
 
 /* Bottom hint bar */
 .bottom-bar{bottom:0;left:0;right:0;padding:14px 26px;display:flex;justify-content:space-between;align-items:flex-end;
@@ -185,8 +225,9 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
       <div class="brand">Open World<small>Live · Earth Edition</small></div>
       <div class="stats">
         <div class="stat-chip"><span class="icon">💰</span><span>Budget</span><b id="money">$1,000,000</b></div>
-        <div class="stat-chip income-chip"><span class="icon">📈</span><span>Income</span><b id="income">$0/s</b></div>
+        <div class="stat-chip stock-chip" onclick="openMarketModal()" title="Open Market"><span class="icon">📦</span><span>Stock</span><b id="stock-value">$0</b></div>
         <div class="stat-chip"><span class="icon">🌍</span><span>Owned</span><b id="owned-count">0</b></div>
+        <button class="market-btn" onclick="openMarketModal()">📈 Market</button>
       </div>
     </div>
 
@@ -208,6 +249,12 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 
   <div class="plot-modal" id="plot-modal">
     <div class="plot-card" id="plot-card">
+      <!-- filled dynamically -->
+    </div>
+  </div>
+
+  <div class="plot-modal" id="market-modal">
+    <div class="plot-card market-card" id="market-card">
       <!-- filled dynamically -->
     </div>
   </div>
@@ -244,8 +291,12 @@ const STATE = {
   visiblePlots: [],             // updated each frame; subset of plots currently on near side
   hoveredPlot: null,
   selectedPlot: null,
-  totalIncome: 0,               // $ per second from all businesses
-  lastIncomeTime: 0,            // timestamp of last income tick
+  inventory: {},                // { materialId: quantity (float) }
+  marketPrices: {},             // { materialId: current price per unit }
+  marketTrend: {},              // { materialId: 'up'|'down'|'stable' }
+  lastMarketUpdate: 0,          // timestamp of last market price change
+  lastProductionTime: 0,        // timestamp of last production tick
+  marketUpdateInterval: 5 * 60 * 1000,  // 5 minutes in ms
   radius: 1.0,                // Earth radius in scene units
   zoomMin: 1.22,              // closest (just above surface — safe for rendering)
   zoomMax: 6.0,               // farthest (space view)
@@ -258,61 +309,86 @@ const STATE = {
 const EARTH_RADIUS = STATE.radius;
 
 // ====================================================================
+// MATERIALS CATALOG
+// ====================================================================
+// Each material is produced by a specific business type.
+// basePrice is the reference price; actual market price fluctuates ±50%.
+const MATERIALS = [
+  { id: 'food',     name: 'Food',          icon: '🌾', basePrice: 50,   color: 0x7cb342, producedBy: 'farm' },
+  { id: 'ore',      name: 'Ore',           icon: '⛏️', basePrice: 120,  color: 0x8d6e63, producedBy: 'mine' },
+  { id: 'goods',    name: 'Goods',         icon: '📦', basePrice: 400,  color: 0x546e7a, producedBy: 'factory' },
+  { id: 'tourism',  name: 'Tourism',       icon: '✈️', basePrice: 600,  color: 0x4dd0e1, producedBy: 'resort' },
+  { id: 'oil',      name: 'Oil',           icon: '🛢️', basePrice: 900,  color: 0x37474f, producedBy: 'oilrig' },
+  { id: 'fun',      name: 'Entertainment', icon: '🎰', basePrice: 1400, color: 0xd32f2f, producedBy: 'casino' },
+  { id: 'capital',  name: 'Capital',       icon: '💼', basePrice: 2500, color: 0xf5cc74, producedBy: 'bank' },
+  { id: 'tech',     name: 'Electronics',   icon: '💻', basePrice: 6000, color: 0x7c4dff, producedBy: 'techhub' },
+];
+
+// ====================================================================
 // BUSINESS CATALOG
 // ====================================================================
-// Each business has: id, name, icon (emoji), buildCost, income ($/sec),
-// color (hex), shape (3D primitive type), description.
-// Income scales with plot area — bigger plots earn proportionally more.
+// Each business produces a specific material at a given rate (units/sec).
+// Rate scales with plot area — bigger plots produce proportionally more.
 const BUSINESS_TYPES = [
   {
     id: 'farm', name: 'Farm', icon: '🌾',
-    buildCost: 8000, income: 60,
+    buildCost: 8000, produces: 'food', rate: 1.2,
     color: 0x7cb342, shape: 'cone',
-    desc: 'Modest crops. Slow but reliable income.'
+    desc: 'Grows food. Slow but steady production.'
   },
   {
     id: 'mine', name: 'Mine', icon: '⛏️',
-    buildCost: 20000, income: 180,
+    buildCost: 20000, produces: 'ore', rate: 1.5,
     color: 0x8d6e63, shape: 'cylinder',
-    desc: 'Extracts minerals from the earth.'
+    desc: 'Extracts ore from the earth.'
   },
   {
     id: 'factory', name: 'Factory', icon: '🏭',
-    buildCost: 60000, income: 650,
+    buildCost: 60000, produces: 'goods', rate: 1.6,
     color: 0x546e7a, shape: 'box',
-    desc: 'Mass production. Solid mid-tier income.'
+    desc: 'Manufactures goods from raw materials.'
   },
   {
     id: 'resort', name: 'Resort', icon: '🏖️',
-    buildCost: 90000, income: 950,
+    buildCost: 90000, produces: 'tourism', rate: 1.6,
     color: 0x4dd0e1, shape: 'dome',
-    desc: 'Tourist destination. Tropical plots preferred.'
+    desc: 'Generates tourism revenue from visitors.'
   },
   {
     id: 'oilrig', name: 'Oil Rig', icon: '🛢️',
-    buildCost: 140000, income: 1600,
+    buildCost: 140000, produces: 'oil', rate: 1.8,
     color: 0x37474f, shape: 'pyramid',
-    desc: 'Black gold. High income, environmental cost.'
+    desc: 'Pumps crude oil. High-value material.'
   },
   {
     id: 'casino', name: 'Casino', icon: '🎰',
-    buildCost: 180000, income: 2400,
+    buildCost: 180000, produces: 'fun', rate: 1.7,
     color: 0xd32f2f, shape: 'sphere',
-    desc: 'High-stakes entertainment. Risky but lucrative.'
+    desc: 'Sells entertainment to high rollers.'
   },
   {
     id: 'bank', name: 'Bank', icon: '🏦',
-    buildCost: 300000, income: 4500,
+    buildCost: 300000, produces: 'capital', rate: 1.8,
     color: 0xf5cc74, shape: 'cylinder',
-    desc: 'Financial hub. Money makes money.'
+    desc: 'Generates financial capital services.'
   },
   {
     id: 'techhub', name: 'Tech Hub', icon: '💻',
-    buildCost: 600000, income: 11000,
+    buildCost: 600000, produces: 'tech', rate: 1.8,
     color: 0x7c4dff, shape: 'octahedron',
-    desc: 'Cutting-edge innovation. Top-tier income.'
+    desc: 'Produces cutting-edge electronics.'
   },
 ];
+
+// Helper: get material by id
+function getMaterial(id) {
+  return MATERIALS.find(m => m.id === id);
+}
+
+// Helper: get business type by id
+function getBusinessType(id) {
+  return BUSINESS_TYPES.find(b => b.id === id);
+}
 
 // Build the 3D mesh for a business type at a given scale.
 // Returns a THREE.Mesh positioned at origin (caller positions it).
@@ -909,9 +985,10 @@ function onPointerMove(e) {
     const biz = hitPlot.userData.business;
     let tipText;
     if (owned && biz) {
-      const bt = BUSINESS_TYPES.find(b => b.id === biz.type);
-      const inc = Math.round(bt.income * hitPlot.userData.areaMultiplier);
-      tipText = `${hitPlot.userData.name}<span class="price">${bt.icon} ${bt.name} +$${inc.toLocaleString()}/s</span>`;
+      const bt = getBusinessType(biz.type);
+      const mat = getMaterial(bt.produces);
+      const rate = (bt.rate * hitPlot.userData.areaMultiplier).toFixed(1);
+      tipText = `${hitPlot.userData.name}<span class="price">${bt.icon} ${bt.name} +${rate} ${mat.icon}/s</span>`;
       tip.classList.add('owned');
     } else if (owned) {
       tipText = `${hitPlot.userData.name}<span class="price">OWNED — build ready</span>`;
@@ -971,42 +1048,54 @@ function openPlotModal(plot) {
     const existing = plot.userData.business;
     if (existing) {
       // Show existing business info + option to demolish
-      const bt = BUSINESS_TYPES.find(b => b.id === existing.type);
+      const bt = getBusinessType(existing.type);
+      const mat = getMaterial(bt.produces);
+      const rate = bt.rate * plot.userData.areaMultiplier;
+      const price = STATE.marketPrices[bt.produces] || mat.basePrice;
+      const trend = STATE.marketTrend[bt.produces] || 'stable';
+      const trendIcon = trend === 'up' ? '▲' : (trend === 'down' ? '▼' : '◆');
+      const trendClass = trend === 'up' ? 'up' : (trend === 'down' ? 'down' : 'stable');
       businessPanel = `
         <div class="business-panel">
           <div class="business-current">
             <div class="biz-icon">${bt.icon}</div>
             <div class="biz-info">
-              <div class="biz-name">${bt.name}</div>
-              <div class="biz-income">+${bt.income.toLocaleString()}/s × ${plot.userData.areaMultiplier.toFixed(2)} = <b>+$${Math.round(bt.income * plot.userData.areaMultiplier).toLocaleString()}/s</b></div>
+              <div class="biz-name">${bt.name} <span style="color:#9bb4bd;font-size:13px;font-weight:normal">→ ${mat.icon} ${mat.name}</span></div>
+              <div class="biz-income">+${rate.toFixed(2)}/s × plot area → <b>+${rate.toFixed(2)} ${mat.icon}/s</b></div>
             </div>
           </div>
           <div class="biz-desc">${bt.desc}</div>
+          <div class="biz-market-info" style="font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;margin-bottom:12px;padding:8px;border:1px solid #1a3340;border-radius:6px;background:rgba(20,50,60,.4)">
+            <span>Market: <b style="color:#f5cc74">$${Math.round(price).toLocaleString()}</b>/unit</span>
+            <span class="mat-trend ${trendClass}" style="margin-left:8px">${trendIcon} ${trend}</span>
+            <span style="margin-left:12px">Value: <b style="color:#7fffd4">$${Math.round(rate * price).toLocaleString()}/s</b></span>
+          </div>
           <button class="btn demolish" onclick="demolishBusiness()">Demolish Business</button>
         </div>
       `;
     } else {
       // Show business options to build
       const options = BUSINESS_TYPES.map(b => {
-        // Effective cost & income scale with plot area
         const effCost = Math.round(b.buildCost * plot.userData.areaMultiplier);
-        const effIncome = Math.round(b.income * plot.userData.areaMultiplier);
+        const rate = b.rate * plot.userData.areaMultiplier;
+        const mat = getMaterial(b.produces);
+        const price = STATE.marketPrices[b.produces] || mat.basePrice;
         const canAfford = STATE.money >= effCost;
         return `
           <button class="biz-option ${canAfford ? '' : 'disabled'}" ${canAfford ? '' : 'disabled'} onclick="buildBusiness('${b.id}')">
             <div class="biz-icon">${b.icon}</div>
             <div class="biz-info">
-              <div class="biz-name">${b.name}</div>
-              <div class="biz-cost">$${effCost.toLocaleString()}</div>
+              <div class="biz-name">${b.name} <span style="color:#9bb4bd;font-size:11px">→ ${mat.icon} ${mat.name}</span></div>
+              <div class="biz-cost">$${effCost.toLocaleString()} build</div>
             </div>
-            <div class="biz-income">+$${effIncome.toLocaleString()}/s</div>
+            <div class="biz-income">+${rate.toFixed(1)}/s</div>
           </button>
         `;
       }).join('');
       businessPanel = `
         <div class="business-panel">
           <div class="biz-title">Build a Business</div>
-          <div class="biz-hint">Cost &amp; income scale with plot area (${plot.userData.areaMultiplier.toFixed(2)}×)</div>
+          <div class="biz-hint">Each business produces a different material. Cost &amp; rate scale with plot area (${plot.userData.areaMultiplier.toFixed(2)}×). Sell materials at the Market.</div>
           <div class="biz-list">${options}</div>
         </div>
       `;
@@ -1022,10 +1111,10 @@ function openPlotModal(plot) {
       <span class="meta-chip">Tier <b>${plot.userData.sizeName}</b></span>
       <span class="meta-chip">Area <b>${plot.userData.areaMultiplier.toFixed(1)}×</b></span>
     </div>
-    <div class="desc">An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Build a business to generate passive income.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}</div>
+    <div class="desc">An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Build a business to produce materials for sale at the Market.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}</div>
     <div class="price-row">
-      <span class="price-label">${owned ? (plot.userData.business ? 'Operating' : 'Owned — Build Ready') : 'Asking Price'}</span>
-      <span class="price-value">${owned ? (plot.userData.business ? 'Income Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString()}<small>${owned ? '' : ' USD'}</small></span>
+      <span class="price-label">${owned ? (plot.userData.business ? 'Producing' : 'Owned — Build Ready') : 'Asking Price'}</span>
+      <span class="price-value">${owned ? (plot.userData.business ? 'Active Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString()}<small>${owned ? '' : ' USD'}</small></span>
     </div>
     ${businessPanel}
     <div class="actions">
@@ -1091,22 +1180,10 @@ window.buildBusiness = function(businessId) {
   p.userData.business = { type: businessId, builtAt: Date.now() };
 
   // Add 3D business mesh on the plot
-  // Position = plot's centroid (which is at p.userData.localDir * vertexRadius)
-  // The business mesh is added as child of Earth so it rotates with the planet.
   const bizScale = Math.max(0.015, Math.min(0.04, p.userData.areaMultiplier * 0.02));
   const bizMesh = buildBusinessMesh(bt, bizScale);
-  // Position at plot centroid on the sphere, oriented outward
   const centroidPos = p.userData.localDir.clone().multiplyScalar(EARTH_RADIUS * 1.006);
-  bizMesh.position.copy(centroidPos);
-  bizMesh.lookAt(0, 0, 0);
-  bizMesh.rotateX(Math.PI / 2); // make "up" axis point outward from sphere
-  // Actually we want the business to sit ON the surface with its base down.
-  // The mesh was built with base at y=0 and top at y=height. After lookAt(origin)
-  // + rotateX(PI/2), the y-axis points outward. Let's just position it correctly.
-  // Simpler approach: use lookAt to orient toward origin, then the mesh's +y
-  // points outward from the sphere.
   bizMesh.lookAt(centroidPos.clone().multiplyScalar(2));
-  // After this, +y of mesh points away from origin (outward). Good.
   bizMesh.position.copy(centroidPos);
 
   p.userData.businessMesh = bizMesh;
@@ -1120,17 +1197,17 @@ window.buildBusiness = function(businessId) {
     p.userData.outline.material.opacity = 0.7;
   }
 
-  // Recompute total income
-  recomputeIncome();
   updateHUD();
   openPlotModal(p);  // refresh modal to show business info
-  showToast(`Built ${bt.name} — earning $${Math.round(bt.income * p.userData.areaMultiplier).toLocaleString()}/s`, true);
+  const rate = bt.rate * p.userData.areaMultiplier;
+  const mat = getMaterial(bt.produces);
+  showToast(`Built ${bt.name} — producing ${rate.toFixed(1)} ${mat.icon}/s`, true);
 };
 
 window.demolishBusiness = function() {
   const p = STATE.selectedPlot;
   if (!p || !p.userData.business) return;
-  const bt = BUSINESS_TYPES.find(b => b.id === p.userData.business.type);
+  const bt = getBusinessType(p.userData.business.type);
   // Remove business mesh
   if (p.userData.businessMesh) {
     earth.remove(p.userData.businessMesh);
@@ -1146,22 +1223,174 @@ window.demolishBusiness = function() {
     p.userData.outline.material.color.setHex(0xf5cc74);
     p.userData.outline.material.opacity = 0.9;
   }
-  recomputeIncome();
   updateHUD();
   openPlotModal(p);
   showToast(`Demolished ${bt ? bt.name : 'business'}`, true);
 };
 
-function recomputeIncome() {
-  let total = 0;
-  for (const p of STATE.plots) {
-    if (p.userData.business) {
-      const bt = BUSINESS_TYPES.find(b => b.id === p.userData.business.type);
-      if (bt) total += bt.income * p.userData.areaMultiplier;
+// ====================================================================
+// MARKET SYSTEM
+// ====================================================================
+// Initialize market prices to base prices, set inventory to 0.
+function initMarket() {
+  for (const m of MATERIALS) {
+    STATE.marketPrices[m.id] = m.basePrice;
+    STATE.marketTrend[m.id] = 'stable';
+    STATE.inventory[m.id] = 0;
+  }
+  STATE.lastMarketUpdate = Date.now();
+}
+
+// Update market prices — random walk ±20% per call.
+// Bounded between 0.5× and 2× base price.
+// Called from animate loop; only fires every 5 minutes.
+let _marketCheckCounter = 0;
+function updateMarket() {
+  // Only check timestamp every 60 frames (~1s) to avoid Date.now() overhead
+  _marketCheckCounter++;
+  if (_marketCheckCounter < 60) return;
+  _marketCheckCounter = 0;
+
+  const now = Date.now();
+  if (now - STATE.lastMarketUpdate < STATE.marketUpdateInterval) return;
+
+  for (const m of MATERIALS) {
+    const oldPrice = STATE.marketPrices[m.id];
+    // Random walk: ±20% change
+    const change = (Math.random() - 0.5) * 0.4;  // -0.2 to +0.2
+    let newPrice = oldPrice * (1 + change);
+    // Bound between 0.5× and 2× base price
+    newPrice = Math.max(m.basePrice * 0.5, Math.min(m.basePrice * 2, newPrice));
+    STATE.marketPrices[m.id] = newPrice;
+    if (newPrice > oldPrice * 1.02) {
+      STATE.marketTrend[m.id] = 'up';
+    } else if (newPrice < oldPrice * 0.98) {
+      STATE.marketTrend[m.id] = 'down';
+    } else {
+      STATE.marketTrend[m.id] = 'stable';
     }
   }
-  STATE.totalIncome = total;
+  STATE.lastMarketUpdate = now;
+  // If market modal is open, refresh it to show new prices
+  if (document.getElementById('market-modal').classList.contains('show')) {
+    openMarketModal();
+  }
+  showToast('📈 Market prices updated', true);
 }
+
+// Compute total value of all materials in inventory at current market prices
+function getInventoryValue() {
+  let total = 0;
+  for (const m of MATERIALS) {
+    total += (STATE.inventory[m.id] || 0) * STATE.marketPrices[m.id];
+  }
+  return total;
+}
+
+// Format time until next market update as M:SS
+function getMarketCountdown() {
+  const elapsed = Date.now() - STATE.lastMarketUpdate;
+  const remaining = Math.max(0, STATE.marketUpdateInterval - elapsed);
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+window.openMarketModal = function() {
+  const card = document.getElementById('market-card');
+  const countdown = getMarketCountdown();
+  const invValue = getInventoryValue();
+
+  const rows = MATERIALS.map(m => {
+    const price = STATE.marketPrices[m.id];
+    const trend = STATE.marketTrend[m.id];
+    const trendIcon = trend === 'up' ? '▲' : (trend === 'down' ? '▼' : '◆');
+    const trendClass = trend === 'up' ? 'up' : (trend === 'down' ? 'down' : 'stable');
+    const stock = STATE.inventory[m.id] || 0;
+    const stockValue = stock * price;
+    const hasStock = stock > 0.01;
+    const pctVsBase = ((price / m.basePrice - 1) * 100).toFixed(0);
+    const pctSign = pctVsBase >= 0 ? '+' : '';
+    return `
+      <div class="mat-row">
+        <div class="mat-icon">${m.icon}</div>
+        <div class="mat-info">
+          <div class="mat-name">${m.name}</div>
+          <div class="mat-meta">Base $${m.basePrice} · ${pctSign}${pctVsBase}%</div>
+        </div>
+        <div>
+          <div class="mat-price">$${Math.round(price).toLocaleString()}</div>
+          <div class="mat-trend ${trendClass}">${trendIcon} ${trend}</div>
+        </div>
+        <div>
+          <div class="mat-stock">${hasStock ? stock.toFixed(1) : '—'}</div>
+          ${hasStock ? `<div class="mat-stock" style="color:#f5cc74">$${Math.round(stockValue).toLocaleString()}</div>` : ''}
+        </div>
+        <button class="mat-sell" ${hasStock ? '' : 'disabled'} onclick="sellMaterial('${m.id}')">
+          ${hasStock ? 'Sell' : 'Empty'}
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  card.innerHTML = `
+    <span class="badge available">market</span>
+    <h2>📈 Global Market</h2>
+    <div class="market-sub">
+      Inventory value: <b>$${Math.round(invValue).toLocaleString()}</b> ·
+      Next price update in: <b class="market-countdown">${countdown}</b>
+    </div>
+    <div class="biz-hint" style="margin-bottom:14px">Prices fluctuate every 5 minutes. Sell when prices are high for maximum profit.</div>
+    ${rows}
+    <div class="market-actions">
+      <button class="btn" onclick="closeMarketModal()">Close</button>
+      <button class="btn primary" onclick="sellAllMaterials()">Sell All Materials</button>
+    </div>
+  `;
+  document.getElementById('market-modal').classList.add('show');
+};
+
+window.closeMarketModal = function() {
+  document.getElementById('market-modal').classList.remove('show');
+};
+
+window.sellMaterial = function(materialId) {
+  const m = getMaterial(materialId);
+  if (!m) return;
+  const qty = STATE.inventory[materialId] || 0;
+  if (qty <= 0) return;
+  const price = STATE.marketPrices[materialId];
+  const revenue = Math.floor(qty * price);
+  STATE.money += revenue;
+  STATE.inventory[materialId] = 0;
+  updateHUD();
+  openMarketModal();  // refresh to show updated stock
+  showToast(`Sold ${qty.toFixed(1)} ${m.icon} ${m.name} for $${revenue.toLocaleString()}`, true);
+};
+
+window.sellAllMaterials = function() {
+  let total = 0;
+  let totalQty = 0;
+  const sold = [];
+  for (const m of MATERIALS) {
+    const qty = STATE.inventory[m.id] || 0;
+    if (qty > 0.01) {
+      const rev = Math.floor(qty * STATE.marketPrices[m.id]);
+      total += rev;
+      totalQty += qty;
+      STATE.inventory[m.id] = 0;
+      sold.push(`${qty.toFixed(1)} ${m.icon}`);
+    }
+  }
+  if (total > 0) {
+    STATE.money += total;
+    updateHUD();
+    openMarketModal();
+    showToast(`Sold ${sold.join(', ')} for $${total.toLocaleString()}`, true);
+  } else {
+    showToast('No materials to sell', false);
+  }
+};
 
 // ====================================================================
 // HUD UPDATES
@@ -1169,30 +1398,39 @@ function recomputeIncome() {
 function updateHUD() {
   document.getElementById('money').textContent = '$' + Math.floor(STATE.money).toLocaleString();
   document.getElementById('owned-count').textContent = STATE.owned.size;
-  const incEl = document.getElementById('income');
-  if (incEl) {
-    const inc = STATE.totalIncome;
-    if (inc >= 1000) {
-      incEl.textContent = '$' + (inc / 1000).toFixed(1) + 'k/s';
+  const stockEl = document.getElementById('stock-value');
+  if (stockEl) {
+    const val = getInventoryValue();
+    if (val >= 1000) {
+      stockEl.textContent = '$' + (val / 1000).toFixed(1) + 'k';
     } else {
-      incEl.textContent = '$' + Math.round(inc) + '/s';
+      stockEl.textContent = '$' + Math.round(val);
     }
   }
 }
 
-// Apply accumulated income since last tick (called from animate loop)
-function tickIncome() {
-  if (STATE.totalIncome <= 0) return;
+// Apply accumulated production since last tick (called from animate loop)
+function tickProduction() {
   const now = performance.now();
-  if (STATE.lastIncomeTime === 0) {
-    STATE.lastIncomeTime = now;
+  if (STATE.lastProductionTime === 0) {
+    STATE.lastProductionTime = now;
     return;
   }
-  const dt = (now - STATE.lastIncomeTime) / 1000;  // seconds
-  if (dt < 0.1) return;  // update at most 10× per second
-  STATE.money += STATE.totalIncome * dt;
-  STATE.lastIncomeTime = now;
-  updateHUD();
+  const dt = (now - STATE.lastProductionTime) / 1000;  // seconds
+  if (dt < 0.5) return;  // update at most 2× per second
+  let anyProduced = false;
+  for (const p of STATE.plots) {
+    if (p.userData.business) {
+      const bt = getBusinessType(p.userData.business.type);
+      if (bt) {
+        const produced = bt.rate * p.userData.areaMultiplier * dt;
+        STATE.inventory[bt.produces] = (STATE.inventory[bt.produces] || 0) + produced;
+        anyProduced = true;
+      }
+    }
+  }
+  STATE.lastProductionTime = now;
+  if (anyProduced) updateHUD();
 }
 
 function updateZoomMeter() {
@@ -1243,7 +1481,21 @@ function animate() {
   controls.update();
   updatePlotVisibility();
   updateZoomMeter();
-  tickIncome();  // accumulate passive income from businesses
+  tickProduction();  // accumulate materials from businesses
+  updateMarket();    // update market prices every 5 minutes
+  // Update market countdown if modal is open
+  if (document.getElementById('market-modal').classList.contains('show')) {
+    const cdEl = document.querySelector('.market-countdown');
+    if (cdEl) {
+      // Only update every ~30 frames to avoid flicker
+      if (!animate._cdCounter) animate._cdCounter = 0;
+      animate._cdCounter++;
+      if (animate._cdCounter >= 30) {
+        animate._cdCounter = 0;
+        cdEl.textContent = getMarketCountdown();
+      }
+    }
+  }
   renderer.render(scene, camera);
 }
 
@@ -1262,6 +1514,7 @@ window.enterGame = function() {
   document.getElementById('game').classList.remove('hidden');
   if (!gameInitialized) {
     gameInitialized = true;
+    initMarket();  // initialize market prices and inventory
     initScene();
     updateHUD();
   } else {
@@ -1283,6 +1536,7 @@ window.startGame = window.enterGame; // legacy
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     window.closePlotModal();
+    window.closeMarketModal();
     window.closeSettings();
   }
 });
