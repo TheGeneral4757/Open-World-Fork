@@ -755,10 +755,10 @@ function saveGame() {
     passwordHash: existing ? existing.passwordHash : hashPassword('default'),
     money: STATE.money,
     ownedPlotIds: Array.from(STATE.owned),
-    // Map of plotId → business type
+    // Map of plotId → array of business types (plots can hold multiple)
     businesses: STATE.plots
-      .filter(p => p.userData.business)
-      .map(p => ({ plotId: p.userData.id, type: p.userData.business.type })),
+      .filter(p => p.userData.businesses && p.userData.businesses.length > 0)
+      .flatMap(p => p.userData.businesses.map(b => ({ plotId: p.userData.id, type: b.type }))),
     inventory: { ...STATE.inventory },
     marketPrices: { ...STATE.marketPrices },
     marketTrend: { ...STATE.marketTrend },
@@ -808,25 +808,76 @@ function loadGame(username) {
     }
   }
 
-  // Restore businesses
+  // Restore businesses (group by plotId — plots can hold multiple)
   const businesses = save.businesses || [];
+  const byPlot = {};
   for (const b of businesses) {
-    const plot = STATE.plots.find(p => p.userData.id === b.plotId);
+    if (!byPlot[b.plotId]) byPlot[b.plotId] = [];
+    byPlot[b.plotId].push(b.type);
+  }
+  for (const [plotIdStr, types] of Object.entries(byPlot)) {
+    const plotId = parseInt(plotIdStr);
+    const plot = STATE.plots.find(p => p.userData.id === plotId);
     if (!plot) continue;
-    const bt = getBusinessType(b.type);
-    if (!bt) continue;
-    plot.userData.business = { type: b.type, builtAt: Date.now() };
+    plot.userData.businesses = [];
+    types.forEach((type, idx) => {
+      const bt = getBusinessType(type);
+      if (!bt) return;
+      addBusinessToPlot(plot, bt, idx);
+    });
+  }
 
-    // Rebuild 3D mesh
-    const bizScale = Math.max(0.015, Math.min(0.04, plot.userData.areaMultiplier * 0.02));
-    const bizMesh = buildBusinessMesh(bt, bizScale);
-    const centroidPos = plot.userData.localDir.clone().multiplyScalar(EARTH_RADIUS * 1.006);
-    bizMesh.lookAt(centroidPos.clone().multiplyScalar(2));
-    bizMesh.position.copy(centroidPos);
-    plot.userData.businessMesh = bizMesh;
-    earth.add(bizMesh);
+  return true;
+}
 
-    // Recolor plot to business color
+// Position offset for business index within a plot (small grid layout)
+function getBusinessOffset(index, total, plotSizeA) {
+  const off = plotSizeA * 0.28;
+  if (total <= 1) return { u: 0, w: 0 };
+  if (total === 2) {
+    return index === 0 ? { u: -off, w: 0 } : { u: off, w: 0 };
+  }
+  if (total === 3) {
+    // Triangle: top, bottom-left, bottom-right
+    if (index === 0) return { u: 0, w: off };
+    if (index === 1) return { u: -off, w: -off * 0.6 };
+    return { u: off, w: -off * 0.6 };
+  }
+  // 4: 2x2 grid
+  const s = off * 0.9;
+  if (index === 0) return { u: -s, w: s };
+  if (index === 1) return { u: s, w: s };
+  if (index === 2) return { u: -s, w: -s };
+  return { u: s, w: -s };
+}
+
+// Add a business to a plot at the given index, build its 3D mesh, recolor plot
+function addBusinessToPlot(plot, bt, index) {
+  const total = (plot.userData.businesses || []).length + 1;
+  const bizScale = Math.max(0.012, Math.min(0.03, plot.userData.areaMultiplier * 0.016));
+  const bizMesh = buildBusinessMesh(bt, bizScale);
+
+  // Compute position: centroid + offset in tangent plane
+  const offset = getBusinessOffset(index, Math.max(total, plot.userData.maxBusinesses), plot.userData.sizeA);
+  const centroidPos = plot.userData.localDir.clone().multiplyScalar(EARTH_RADIUS * 1.006);
+  // Build tangent basis at plot location
+  const p_i = plot.userData.localDir;
+  const ref = Math.abs(p_i.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+  const uAxis = new THREE.Vector3().crossVectors(p_i, ref).normalize();
+  const wAxis = new THREE.Vector3().crossVectors(p_i, uAxis).normalize();
+  const pos = centroidPos.clone()
+    .addScaledVector(uAxis, offset.u)
+    .addScaledVector(wAxis, offset.w);
+  bizMesh.lookAt(pos.clone().multiplyScalar(2));
+  bizMesh.position.copy(pos);
+
+  const entry = { type: bt.id, builtAt: Date.now(), mesh: bizMesh };
+  if (!plot.userData.businesses) plot.userData.businesses = [];
+  plot.userData.businesses.push(entry);
+  earth.add(bizMesh);
+
+  // Recolor plot to the FIRST business color (primary business)
+  if (plot.userData.businesses.length === 1) {
     plot.material.color.setHex(bt.color);
     plot.material.opacity = 0.5;
     if (plot.userData.outline) {
@@ -834,8 +885,6 @@ function loadGame(username) {
       plot.userData.outline.material.opacity = 0.7;
     }
   }
-
-  return true;
 }
 
 // ====================================================================
@@ -1822,6 +1871,13 @@ function generatePlots() {
       sidesPremium,
       sizeName,
       owned: false,
+      businesses: [],           // array of { type, builtAt, mesh }
+      maxBusinesses: (() => {   // bigger plots can hold more businesses
+        if (sizeName === 'territory') return 4;
+        if (sizeName === 'province')  return 3;
+        if (sizeName === 'estate')    return 2;
+        return 1;                  // cottage, standard
+      })(),
       name: plotName(seed.lat, seed.lon),
       localDir: p_i.clone(),
       baseColor: baseColor.getHex(),
@@ -1948,9 +2004,12 @@ function updatePlotVisibility() {
           if (outline) outline.material.opacity = ownedOutline;
         }
       }
-      // Business mesh visibility follows the plot (only for your own plots)
-      if (p.userData.businessMesh) {
-        p.userData.businessMesh.visible = onNearSide && baseOpacity > 0.05;
+      // Business meshes visibility follows the plot (only for your own plots)
+      const bizVisible = onNearSide && baseOpacity > 0.05;
+      if (p.userData.businesses) {
+        for (const entry of p.userData.businesses) {
+          if (entry.mesh) entry.mesh.visible = bizVisible;
+        }
       }
       if (onNearSide) {
         STATE.visiblePlots.push(p);
@@ -1990,28 +2049,31 @@ function onPointerMove(e) {
     tip.style.top = e.clientY + 'px';
     const owned = hitPlot.userData.owned;
     const ownedByOther = hitPlot.userData.ownedByOther;
-    const biz = hitPlot.userData.business;
+    const businesses = hitPlot.userData.businesses || [];
     const terrainIcon = hitPlot.userData.isWater ? '🌊' : '🌿';
     let tipText;
     if (ownedByOther) {
       // Owned by another user — show lock + owner name
       tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">🔒 ${hitPlot.userData.ownerName}</span>`;
       tip.classList.add('owned');
-    } else if (owned && biz) {
-      const bt = getBusinessType(biz.type);
+    } else if (owned && businesses.length > 0) {
+      // Show primary business + count if multiple
+      const primaryEntry = businesses[0];
+      const bt = getBusinessType(primaryEntry.type);
       const mat = getMaterial(bt.produces);
       const regionBonus = getRegionBonus(bt.id, hitPlot);
       const effectiveRate = bt.rate * hitPlot.userData.areaMultiplier * regionBonus;
       const bonusPct = Math.round((regionBonus - 1) * 100);
       const bonusTag = bonusPct !== 0 ? ` (${bonusPct > 0 ? '+' : ''}${bonusPct}%)` : '';
+      const countTag = businesses.length > 1 ? ` ×${businesses.length}` : '';
       if (bt.id === 'casino') {
         // Casino shows last roll result instead of steady rate
         const gambling = hitPlot.userData.gambling || {};
         const lastOutcome = CASINO_OUTCOMES.find(o => o.id === gambling.lastRoll);
         const rollTag = lastOutcome ? ` · ${lastOutcome.label}` : ' · 🎲 rolling...';
-        tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name} 🎲 volatile${bonusTag}${rollTag}</span>`;
+        tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name}${countTag} 🎲 volatile${bonusTag}${rollTag}</span>`;
       } else {
-        tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name} +${effectiveRate.toFixed(1)} ${mat.icon}/s${bonusTag}</span>`;
+        tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name}${countTag} +${effectiveRate.toFixed(1)} ${mat.icon}/s${bonusTag}</span>`;
       }
       tip.classList.add('owned');
     } else if (owned) {
@@ -2073,13 +2135,17 @@ function openPlotModal(plot) {
   // Business panel — only shown for owned plots
   let businessPanel = '';
   if (owned) {
-    const existing = plot.userData.business;
-    if (existing) {
-      // Show existing business info + option to demolish
-      const bt = getBusinessType(existing.type);
+    const businesses = plot.userData.businesses || [];
+    const maxBiz = plot.userData.maxBusinesses || 1;
+    const regionInfo = REGION_INFO[plot.userData.region] || REGION_INFO['temperate'];
+    const isWater = plot.userData.isWater;
+
+    // Render each existing business as a card
+    const bizCards = businesses.map((entry, idx) => {
+      const bt = getBusinessType(entry.type);
+      if (!bt) return '';
       const mat = getMaterial(bt.produces);
       const regionBonus = getRegionBonus(bt.id, plot);
-      const regionInfo = REGION_INFO[plot.userData.region] || REGION_INFO['temperate'];
       const baseRate = bt.rate * plot.userData.areaMultiplier;
       const effectiveRate = baseRate * regionBonus;
       const price = STATE.marketPrices[bt.produces] || mat.basePrice;
@@ -2090,70 +2156,57 @@ function openPlotModal(plot) {
       const bonusLabel = bonusPct > 0 ? `+${bonusPct}%` : `${bonusPct}%`;
       const bonusColor = bonusPct > 0 ? '#7fffd4' : (bonusPct < 0 ? '#ff8080' : '#9bb4bd');
 
-      // Casino gambling panel
+      // Casino gambling panel (only for casino businesses)
       let gamblingPanel = '';
       if (bt.id === 'casino') {
         const gambling = plot.userData.gambling || {};
-        const lastRoll = gambling.lastRoll;
-        const lastOutcome = CASINO_OUTCOMES.find(o => o.id === lastRoll);
+        const lastOutcome = CASINO_OUTCOMES.find(o => o.id === gambling.lastRoll);
         const history = gambling.rollHistory || [];
-        // Compute stats from history
         const rollCount = history.length;
         const jackpots = history.filter(r => r.outcome === 'jackpot').length;
         const bigwins = history.filter(r => r.outcome === 'bigwin').length;
         const busts = history.filter(r => r.outcome === 'bust').length;
         const totalWon = history.reduce((s, r) => s + r.amount, 0);
-
-        const historyRows = history.slice(0, 6).map(r => {
+        const historyRows = history.slice(0, 4).map(r => {
           const oc = CASINO_OUTCOMES.find(o => o.id === r.outcome);
           return `<div class="gamble-row"><span style="color:${oc.color}">${oc.label}</span><span>×${r.multiplier}</span><span style="color:#7fffd4">+${r.amount.toFixed(2)} 🎰</span></div>`;
         }).join('');
-
         gamblingPanel = `
-          <div class="gambling-panel">
-            <div class="gamble-title">🎰 Gambling Stats</div>
-            <div class="gamble-stats">
+          <div class="gambling-panel" style="margin:8px 0">
+            <div class="gamble-stats" style="font-size:10px">
               <span>Last: <b style="color:${lastOutcome ? lastOutcome.color : '#9bb4bd'}">${lastOutcome ? lastOutcome.label : '—'}</b></span>
               <span>Rolls: <b>${rollCount}</b></span>
-              <span>Jackpots: <b style="color:#f5cc74">${jackpots}</b></span>
-              <span>Big Wins: <b style="color:#7fffd4">${bigwins}</b></span>
-              <span>Busts: <b style="color:#ff8080">${busts}</b></span>
+              <span>🎰: <b style="color:#f5cc74">${jackpots}</b></span>
+              <span>✨: <b style="color:#7fffd4">${bigwins}</b></span>
+              <span>💀: <b style="color:#ff8080">${busts}</b></span>
             </div>
-            ${historyRows ? `<div class="gamble-history">${historyRows}</div>` : '<div class="gamble-empty">No rolls yet — production ticks every 0.5s</div>'}
-            ${rollCount > 0 ? `<div class="gamble-total">Recent winnings: <b style="color:#7fffd4">+${totalWon.toFixed(2)} 🎰</b></div>` : ''}
+            ${historyRows ? `<div class="gamble-history" style="max-height:100px">${historyRows}</div>` : ''}
           </div>
         `;
       }
 
-      businessPanel = `
-        <div class="business-panel">
+      return `
+        <div class="biz-card-multi" style="border:1px solid #1a3340;border-radius:8px;padding:10px;margin-bottom:8px;background:rgba(20,50,60,.3)">
           <div class="business-current">
             <div class="biz-icon">${bt.icon}</div>
             <div class="biz-info">
-              <div class="biz-name">${bt.name} <span style="color:#9bb4bd;font-size:13px;font-weight:normal">→ ${mat.icon} ${mat.name}</span></div>
-              <div class="biz-income">${bt.id === 'casino'
-                ? `🎲 Volatile — base ${baseRate.toFixed(2)}/s × roll (0×–10×) × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b>`
-                : `+${baseRate.toFixed(2)}/s × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b> → <b>+${effectiveRate.toFixed(2)} ${mat.icon}/s</b>`
+              <div class="biz-name">${bt.name} <span style="color:#9bb4bd;font-size:11px">→ ${mat.icon} ${mat.name}</span></div>
+              <div class="biz-income" style="font-size:11px">${bt.id === 'casino'
+                ? `🎲 Volatile base ${baseRate.toFixed(1)}/s × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b>`
+                : `+${effectiveRate.toFixed(1)} ${mat.icon}/s · $${Math.round(effectiveRate * price).toLocaleString()}/s`
               }</div>
             </div>
           </div>
-          <div class="biz-desc">${bt.desc}</div>
-          <div class="biz-market-info" style="font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;margin-bottom:12px;padding:8px;border:1px solid #1a3340;border-radius:6px;background:rgba(20,50,60,.4)">
-            <span>Region: <b style="color:${regionInfo.color}">${regionInfo.icon} ${regionInfo.name}</b></span>
-            <span style="margin-left:12px">Bonus: <b style="color:${bonusColor}">${bonusLabel}</b></span>
-            <span style="margin-left:12px">Market: <b style="color:#f5cc74">$${Math.round(price).toLocaleString()}</b>/unit</span>
-            <span class="mat-trend ${trendClass}" style="margin-left:8px">${trendIcon} ${trend}</span>
-            ${bt.id !== 'casino' ? `<div style="margin-top:4px">Value: <b style="color:#7fffd4">$${Math.round(effectiveRate * price).toLocaleString()}/s</b></div>` : '<div style="margin-top:4px;color:#9bb4bd">Value varies — gamble to find out!</div>'}
-          </div>
           ${gamblingPanel}
-          <button class="btn demolish" onclick="demolishBusiness()">Demolish Business</button>
+          <button class="btn demolish" style="margin-top:6px;padding:7px;font-size:11px" onclick="demolishBusiness(${idx})">Demolish ${bt.name}</button>
         </div>
       `;
-    } else {
-      // Show business options to build
-      const isWater = plot.userData.isWater;
-      const terrainLabel = isWater ? 'Ocean' : 'Land';
-      const regionInfo = REGION_INFO[plot.userData.region] || REGION_INFO['temperate'];
+    }).join('');
+
+    // Build options (shown if slots available)
+    let buildSection = '';
+    if (businesses.length < maxBiz) {
+      const slotsLeft = maxBiz - businesses.length;
       const options = BUSINESS_TYPES.map(b => {
         const effCost = Math.round(b.buildCost * plot.userData.areaMultiplier);
         const baseRate = b.rate * plot.userData.areaMultiplier;
@@ -2161,14 +2214,10 @@ function openPlotModal(plot) {
         const effRate = baseRate * regionBonus;
         const mat = getMaterial(b.produces);
         const canAfford = STATE.money >= effCost;
-        // Terrain restriction: Oil Rig only on water, everything else only on land
         const needsWater = (b.id === 'oilrig');
         const terrainOk = needsWater ? isWater : !isWater;
-        const terrainReason = !terrainOk
-          ? (needsWater ? 'Ocean only' : 'Land only')
-          : null;
+        const terrainReason = !terrainOk ? (needsWater ? 'Ocean only' : 'Land only') : null;
         const canBuild = canAfford && terrainOk;
-        // Bonus label
         const bonusPct = Math.round((regionBonus - 1) * 100);
         const bonusLabel = bonusPct > 0 ? `+${bonusPct}%` : (bonusPct < 0 ? `${bonusPct}%` : '');
         const bonusColor = bonusPct > 0 ? '#7fffd4' : (bonusPct < 0 ? '#ff8080' : '#9bb4bd');
@@ -2184,14 +2233,21 @@ function openPlotModal(plot) {
           </button>
         `;
       }).join('');
-      businessPanel = `
-        <div class="business-panel">
-          <div class="biz-title">Build a Business</div>
-          <div class="biz-hint">Region: <b style="color:${regionInfo.color}">${regionInfo.icon} ${regionInfo.name}</b>. Bonuses shown next to each business. Oil Rigs require ocean; all other businesses require land.</div>
+      buildSection = `
+        <div style="margin-top:10px">
+          <div class="biz-title" style="font-size:14px;margin-bottom:6px">${businesses.length === 0 ? 'Build a Business' : `Build Another Business (${slotsLeft} slot${slotsLeft > 1 ? 's' : ''} left)`}</div>
           <div class="biz-list">${options}</div>
         </div>
       `;
     }
+
+    businessPanel = `
+      <div class="business-panel">
+        <div class="biz-hint">Region: <b style="color:${regionInfo.color}">${regionInfo.icon} ${regionInfo.name}</b> · Capacity: <b>${businesses.length}/${maxBiz}</b> businesses</div>
+        ${bizCards}
+        ${buildSection}
+      </div>
+    `;
   }
 
   card.innerHTML = `
@@ -2203,14 +2259,15 @@ function openPlotModal(plot) {
       <span class="meta-chip">Tier <b>${plot.userData.sizeName}</b></span>
       <span class="meta-chip">Area <b>${plot.userData.areaMultiplier.toFixed(1)}×</b></span>
       <span class="meta-chip">Terrain <b style="color:${plot.userData.isWater ? '#4dd0e1' : '#7cb342'}">${plot.userData.isWater ? 'Ocean' : 'Land'}</b></span>
+      <span class="meta-chip">Capacity <b>${plot.userData.maxBusinesses || 1}</b></span>
     </div>
     <div class="desc">${ownedByOther
       ? `This parcel is <b>claimed by ${ownerName}</b> and cannot be purchased. Find another plot to build your empire.`
       : `An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Build a business to produce materials for sale at the Market.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}`
     }</div>
     <div class="price-row">
-      <span class="price-label">${ownedByOther ? 'Owner' : (owned ? (plot.userData.business ? 'Producing' : 'Owned — Build Ready') : 'Asking Price')}</span>
-      <span class="price-value" style="${ownedByOther ? 'font-size:20px;color:#9a6aaa' : ''}">${ownedByOther ? ownerName : (owned ? (plot.userData.business ? 'Active Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString())}<small>${ownedByOther || owned ? '' : ' USD'}</small></span>
+      <span class="price-label">${ownedByOther ? 'Owner' : (owned ? ((plot.userData.businesses && plot.userData.businesses.length > 0) ? `Producing (${plot.userData.businesses.length})` : 'Owned — Build Ready') : 'Asking Price')}</span>
+      <span class="price-value" style="${ownedByOther ? 'font-size:20px;color:#9a6aaa' : ''}">${ownedByOther ? ownerName : (owned ? ((plot.userData.businesses && plot.userData.businesses.length > 0) ? 'Active Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString())}<small>${ownedByOther || owned ? '' : ' USD'}</small></span>
     </div>
     ${businessPanel}
     <div class="actions">
@@ -2270,8 +2327,9 @@ window.buySelectedPlot = function() {
 window.buildBusiness = function(businessId) {
   const p = STATE.selectedPlot;
   if (!p || !p.userData.owned) return;
-  if (p.userData.business) {
-    showToast('Plot already has a business. Demolish first.', false);
+  const existing = p.userData.businesses || [];
+  if (existing.length >= p.userData.maxBusinesses) {
+    showToast(`Plot is at max capacity (${p.userData.maxBusinesses} businesses)`, false);
     return;
   }
   const bt = BUSINESS_TYPES.find(b => b.id === businessId);
@@ -2292,52 +2350,46 @@ window.buildBusiness = function(businessId) {
     return;
   }
   STATE.money -= effCost;
-  p.userData.business = { type: businessId, builtAt: Date.now() };
-
-  // Add 3D business mesh on the plot
-  const bizScale = Math.max(0.015, Math.min(0.04, p.userData.areaMultiplier * 0.02));
-  const bizMesh = buildBusinessMesh(bt, bizScale);
-  const centroidPos = p.userData.localDir.clone().multiplyScalar(EARTH_RADIUS * 1.006);
-  bizMesh.lookAt(centroidPos.clone().multiplyScalar(2));
-  bizMesh.position.copy(centroidPos);
-
-  p.userData.businessMesh = bizMesh;
-  earth.add(bizMesh);
-
-  // Recolor plot to business color (subtle tint)
-  p.material.color.setHex(bt.color);
-  p.material.opacity = 0.5;
-  if (p.userData.outline) {
-    p.userData.outline.material.color.setHex(bt.color);
-    p.userData.outline.material.opacity = 0.7;
-  }
+  addBusinessToPlot(p, bt, existing.length);
 
   updateHUD();
-  openPlotModal(p);  // refresh modal to show business info
+  openPlotModal(p);
   const rate = bt.rate * p.userData.areaMultiplier;
   const mat = getMaterial(bt.produces);
   showToast(`Built ${bt.name} — producing ${rate.toFixed(1)} ${mat.icon}/s`, true);
   saveGame();
 };
 
-window.demolishBusiness = function() {
+window.demolishBusiness = function(businessIndex) {
   const p = STATE.selectedPlot;
-  if (!p || !p.userData.business) return;
-  const bt = getBusinessType(p.userData.business.type);
+  if (!p || !p.userData.businesses) return;
+  if (businessIndex === undefined) businessIndex = 0;
+  const entry = p.userData.businesses[businessIndex];
+  if (!entry) return;
+  const bt = getBusinessType(entry.type);
   // Remove business mesh
-  if (p.userData.businessMesh) {
-    earth.remove(p.userData.businessMesh);
-    p.userData.businessMesh.geometry.dispose();
-    p.userData.businessMesh.material.dispose();
-    p.userData.businessMesh = null;
+  if (entry.mesh) {
+    earth.remove(entry.mesh);
+    entry.mesh.geometry.dispose();
+    entry.mesh.material.dispose();
   }
-  p.userData.business = null;
-  // Restore owned-plot gold color
-  p.material.color.setHex(0xf5cc74);
-  p.material.opacity = 0.85;
-  if (p.userData.outline) {
-    p.userData.outline.material.color.setHex(0xf5cc74);
-    p.userData.outline.material.opacity = 0.9;
+  p.userData.businesses.splice(businessIndex, 1);
+  // If no businesses left, restore gold; otherwise recolor to first remaining
+  if (p.userData.businesses.length === 0) {
+    p.material.color.setHex(0xf5cc74);
+    p.material.opacity = 0.85;
+    if (p.userData.outline) {
+      p.userData.outline.material.color.setHex(0xf5cc74);
+      p.userData.outline.material.opacity = 0.9;
+    }
+  } else {
+    const firstBt = getBusinessType(p.userData.businesses[0].type);
+    if (firstBt) {
+      p.material.color.setHex(firstBt.color);
+      if (p.userData.outline) {
+        p.userData.outline.material.color.setHex(firstBt.color);
+      }
+    }
   }
   updateHUD();
   openPlotModal(p);
@@ -2539,22 +2591,22 @@ function tickProduction() {
   if (dt < 0.5) return;  // update at most 2× per second
   let anyProduced = false;
   for (const p of STATE.plots) {
-    if (p.userData.business) {
-      const bt = getBusinessType(p.userData.business.type);
-      if (bt) {
-        let produced;
-        if (bt.id === 'casino') {
-          // Casino uses gambling roll — volatile production
-          produced = rollCasinoProduction(p, bt, dt);
-        } else {
-          // Steady production with region bonus
-          const regionBonus = getRegionBonus(bt.id, p);
-          produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
-        }
-        if (produced > 0) {
-          STATE.inventory[bt.produces] = (STATE.inventory[bt.produces] || 0) + produced;
-          anyProduced = true;
-        }
+    const businesses = p.userData.businesses || [];
+    for (const entry of businesses) {
+      const bt = getBusinessType(entry.type);
+      if (!bt) continue;
+      let produced;
+      if (bt.id === 'casino') {
+        // Casino uses gambling roll — volatile production
+        produced = rollCasinoProduction(p, bt, dt);
+      } else {
+        // Steady production with region bonus
+        const regionBonus = getRegionBonus(bt.id, p);
+        produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
+      }
+      if (produced > 0) {
+        STATE.inventory[bt.produces] = (STATE.inventory[bt.produces] || 0) + produced;
+        anyProduced = true;
       }
     }
   }
