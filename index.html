@@ -796,6 +796,9 @@ function buildStarField() {
 // ====================================================================
 // EARTH
 // ====================================================================
+let _waterMaskCanvas = null;   // offscreen canvas with earth-water.png data
+let _waterMaskData = null;     // ImageData for pixel sampling
+
 function buildEarth() {
   const geo = new THREE.SphereGeometry(EARTH_RADIUS, 96, 96);
 
@@ -819,6 +822,55 @@ function buildEarth() {
   earth.name = 'earth';
   earth.frustumCulled = false;   // never cull — camera gets very close
   scene.add(earth);
+
+  // Load water mask separately for pixel sampling (to determine land vs ocean per plot)
+  loadWaterMask();
+}
+
+// Load the earth-water.png into an offscreen canvas for pixel sampling.
+// Water = white (high brightness), Land = black (low brightness).
+function loadWaterMask() {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    _waterMaskCanvas = document.createElement('canvas');
+    _waterMaskCanvas.width = img.width;
+    _waterMaskCanvas.height = img.height;
+    const ctx = _waterMaskCanvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    _waterMaskData = ctx.getImageData(0, 0, img.width, img.height);
+    // Now that we have the mask, classify all existing plots
+    classifyPlotsByTerrain();
+  };
+  img.onerror = () => {
+    console.warn('Water mask failed to load — all plots default to land');
+    // Default all plots to land (Oil Rigs won't be buildable)
+    for (const p of STATE.plots) {
+      p.userData.isWater = false;
+    }
+  };
+  img.src = 'https://unpkg.com/three-globe@2.31.0/example/img/earth-water.png';
+}
+
+// Sample the water mask at a given lat/lon. Returns true if water.
+function isWaterAt(lat, lon) {
+  if (!_waterMaskData) return false;
+  // Equirectangular mapping:
+  // x = (lon + 180) / 360 * width
+  // y = (90 - lat) / 180 * height
+  const x = Math.floor(((lon + 180) / 360) * _waterMaskData.width) % _waterMaskData.width;
+  const y = Math.floor(((90 - lat) / 180) * _waterMaskData.height);
+  const idx = (Math.max(0, Math.min(_waterMaskData.height - 1, y)) * _waterMaskData.width + Math.max(0, Math.min(_waterMaskData.width - 1, x))) * 4;
+  // Use red channel (grayscale image — R=G=B)
+  const brightness = _waterMaskData.data[idx];
+  return brightness > 128;
+}
+
+// Classify all plots as water or land based on the water mask
+function classifyPlotsByTerrain() {
+  for (const p of STATE.plots) {
+    p.userData.isWater = isWaterAt(p.userData.lat, p.userData.lon);
+  }
 }
 
 function buildAtmosphere() {
@@ -1264,18 +1316,19 @@ function onPointerMove(e) {
     tip.style.top = e.clientY + 'px';
     const owned = hitPlot.userData.owned;
     const biz = hitPlot.userData.business;
+    const terrainIcon = hitPlot.userData.isWater ? '🌊' : '🌿';
     let tipText;
     if (owned && biz) {
       const bt = getBusinessType(biz.type);
       const mat = getMaterial(bt.produces);
       const rate = (bt.rate * hitPlot.userData.areaMultiplier).toFixed(1);
-      tipText = `${hitPlot.userData.name}<span class="price">${bt.icon} ${bt.name} +${rate} ${mat.icon}/s</span>`;
+      tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name} +${rate} ${mat.icon}/s</span>`;
       tip.classList.add('owned');
     } else if (owned) {
-      tipText = `${hitPlot.userData.name}<span class="price">OWNED — build ready</span>`;
+      tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">OWNED — build ready</span>`;
       tip.classList.add('owned');
     } else {
-      tipText = `${hitPlot.userData.name}<span class="price">$${hitPlot.userData.price.toLocaleString()}</span>`;
+      tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">$${hitPlot.userData.price.toLocaleString()}</span>`;
       tip.classList.remove('owned');
     }
     tip.innerHTML = tipText;
@@ -1356,18 +1409,26 @@ function openPlotModal(plot) {
       `;
     } else {
       // Show business options to build
+      const isWater = plot.userData.isWater;
+      const terrainLabel = isWater ? 'Ocean' : 'Land';
       const options = BUSINESS_TYPES.map(b => {
         const effCost = Math.round(b.buildCost * plot.userData.areaMultiplier);
         const rate = b.rate * plot.userData.areaMultiplier;
         const mat = getMaterial(b.produces);
-        const price = STATE.marketPrices[b.produces] || mat.basePrice;
         const canAfford = STATE.money >= effCost;
+        // Terrain restriction: Oil Rig only on water, everything else only on land
+        const needsWater = (b.id === 'oilrig');
+        const terrainOk = needsWater ? isWater : !isWater;
+        const terrainReason = !terrainOk
+          ? (needsWater ? 'Ocean only' : 'Land only')
+          : null;
+        const canBuild = canAfford && terrainOk;
         return `
-          <button class="biz-option ${canAfford ? '' : 'disabled'}" ${canAfford ? '' : 'disabled'} onclick="buildBusiness('${b.id}')">
+          <button class="biz-option ${canBuild ? '' : 'disabled'}" ${canBuild ? '' : 'disabled'} onclick="buildBusiness('${b.id}')">
             <div class="biz-icon">${b.icon}</div>
             <div class="biz-info">
               <div class="biz-name">${b.name} <span style="color:#9bb4bd;font-size:11px">→ ${mat.icon} ${mat.name}</span></div>
-              <div class="biz-cost">$${effCost.toLocaleString()} build</div>
+              <div class="biz-cost">$${effCost.toLocaleString()} build${terrainReason ? ` · <span style="color:#ff8080">${terrainReason}</span>` : ''}</div>
             </div>
             <div class="biz-income">+${rate.toFixed(1)}/s</div>
           </button>
@@ -1376,7 +1437,7 @@ function openPlotModal(plot) {
       businessPanel = `
         <div class="business-panel">
           <div class="biz-title">Build a Business</div>
-          <div class="biz-hint">Each business produces a different material. Cost &amp; rate scale with plot area (${plot.userData.areaMultiplier.toFixed(2)}×). Sell materials at the Market.</div>
+          <div class="biz-hint">Terrain: <b style="color:#7fffd4">${terrainLabel}</b>. Oil Rigs require ocean; all other businesses require land. Cost &amp; rate scale with plot area (${plot.userData.areaMultiplier.toFixed(2)}×).</div>
           <div class="biz-list">${options}</div>
         </div>
       `;
@@ -1391,6 +1452,7 @@ function openPlotModal(plot) {
       <span class="meta-chip meta-shape">${shapeIconSVG(plot.userData.sides)} Cell <b>${plot.userData.sides}-sided</b></span>
       <span class="meta-chip">Tier <b>${plot.userData.sizeName}</b></span>
       <span class="meta-chip">Area <b>${plot.userData.areaMultiplier.toFixed(1)}×</b></span>
+      <span class="meta-chip">Terrain <b style="color:${plot.userData.isWater ? '#4dd0e1' : '#7cb342'}">${plot.userData.isWater ? 'Ocean' : 'Land'}</b></span>
     </div>
     <div class="desc">An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Build a business to produce materials for sale at the Market.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}</div>
     <div class="price-row">
@@ -1453,6 +1515,16 @@ window.buildBusiness = function(businessId) {
   }
   const bt = BUSINESS_TYPES.find(b => b.id === businessId);
   if (!bt) return;
+  // Terrain restriction: Oil Rig only on water, everything else only on land
+  const needsWater = (businessId === 'oilrig');
+  if (needsWater && !p.userData.isWater) {
+    showToast('Oil Rigs can only be built in the ocean', false);
+    return;
+  }
+  if (!needsWater && p.userData.isWater) {
+    showToast(`${bt.name} can only be built on land`, false);
+    return;
+  }
   const effCost = Math.round(bt.buildCost * p.userData.areaMultiplier);
   if (STATE.money < effCost) {
     showToast(`Need $${effCost.toLocaleString()} to build ${bt.name}`, false);
