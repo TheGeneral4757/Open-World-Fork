@@ -293,6 +293,19 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .btn.demolish{background:rgba(90,36,36,.4);border-color:#5a2424;color:#ff8080;width:100%;margin-top:4px}
 .btn.demolish:hover{background:rgba(120,48,48,.6)}
 
+/* Casino gambling panel */
+.gambling-panel{margin:14px 0;padding:14px;border:1px solid #5a2424;border-radius:10px;background:rgba(90,36,36,.2)}
+.gamble-title{font-family:Georgia,serif;color:#f5cc74;font-size:15px;margin-bottom:10px}
+.gamble-stats{display:flex;flex-wrap:wrap;gap:10px;font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;margin-bottom:10px}
+.gamble-stats span{white-space:nowrap}
+.gamble-stats b{font-weight:600}
+.gamble-history{display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto}
+.gamble-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border:1px solid #1a3340;border-radius:5px;background:rgba(20,50,60,.4);font-family:Arial,sans-serif;font-size:11px;gap:8px}
+.gamble-row span:first-child{flex:1}
+.gamble-row span:nth-child(2){color:#9bb4bd;font-weight:600}
+.gamble-empty{font-family:Arial,sans-serif;font-size:11px;color:#5e7d87;padding:8px;text-align:center;font-style:italic}
+.gamble-total{font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;margin-top:8px;padding-top:8px;border-top:1px solid #1a3340;text-align:right}
+
 /* Loading overlay */
 .loader{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:#08141d;transition:opacity .8s}
@@ -537,6 +550,78 @@ const STATE = {
 };
 
 const EARTH_RADIUS = STATE.radius;
+
+// ====================================================================
+// CASINO GAMBLING SYSTEM
+// ====================================================================
+// Casinos don't produce at a steady rate. Instead, each production tick
+// rolls a slot-machine outcome that multiplies the base rate:
+//   🎰 JACKPOT (3 cherries): 10× — rare, big win
+//   ✨ BIG WIN  (2 cherries): 3× — occasional
+//   🎲 NORMAL   (mixed):      1× — most common
+//   💀 BUST     (no cherries): 0× — frequent dry spell
+// Average over time ≈ 1.0× (slightly higher due to jackpot skew),
+// but variance is huge — you can go minutes with nothing, then hit
+// a 10× jackpot that fills your stock.
+const CASINO_OUTCOMES = [
+  { id: 'jackpot', label: '🎰 JACKPOT!',  multiplier: 10,  weight: 2,  color: '#f5cc74' },
+  { id: 'bigwin',  label: '✨ Big Win',   multiplier: 3,   weight: 10, color: '#7fffd4' },
+  { id: 'normal',  label: '🎲 Normal',    multiplier: 1,   weight: 45, color: '#cbd7dc' },
+  { id: 'bust',    label: '💀 Bust',      multiplier: 0,   weight: 43, color: '#ff8080' },
+];
+
+// Per-casino gambling state stored in plot.userData.gambling
+//   { lastRoll: outcomeId, lastRollAt: timestamp, rollHistory: [{outcome, amount, time}] }
+// Global recent jackpots for toast notifications (max 1 toast per 5s to avoid spam)
+let _lastJackpotToast = 0;
+
+function rollCasino() {
+  const totalWeight = CASINO_OUTCOMES.reduce((s, o) => s + o.weight, 0);
+  let r = Math.random() * totalWeight;
+  for (const o of CASINO_OUTCOMES) {
+    r -= o.weight;
+    if (r <= 0) return o;
+  }
+  return CASINO_OUTCOMES[CASINO_OUTCOMES.length - 1];
+}
+
+// Roll for a casino plot and return the production amount for this tick
+function rollCasinoProduction(plot, bt, dt) {
+  const outcome = rollCasino();
+  const baseRate = bt.rate * plot.userData.areaMultiplier;
+  const regionBonus = getRegionBonus(bt.id, plot);
+  const amount = baseRate * regionBonus * outcome.multiplier * dt;
+
+  // Store roll state on the plot
+  if (!plot.userData.gambling) plot.userData.gambling = {};
+  plot.userData.gambling.lastRoll = outcome.id;
+  plot.userData.gambling.lastRollAt = Date.now();
+  plot.userData.gambling.lastMultiplier = outcome.multiplier;
+
+  // Track history (last 10 rolls)
+  if (!plot.userData.gambling.rollHistory) plot.userData.gambling.rollHistory = [];
+  plot.userData.gambling.rollHistory.unshift({
+    outcome: outcome.id,
+    label: outcome.label,
+    multiplier: outcome.multiplier,
+    amount: amount,
+    time: Date.now()
+  });
+  if (plot.userData.gambling.rollHistory.length > 10) {
+    plot.userData.gambling.rollHistory.length = 10;
+  }
+
+  // Jackpot toast (throttled to 1 per 5 seconds globally)
+  if (outcome.id === 'jackpot') {
+    const now = Date.now();
+    if (now - _lastJackpotToast > 5000) {
+      _lastJackpotToast = now;
+      showToast(`🎰 JACKPOT! Casino hit 10× — +${amount.toFixed(1)} 🎰 Entertainment`, true);
+    }
+  }
+
+  return amount;
+}
 
 // ====================================================================
 // PERSISTENCE — save/load to localStorage
@@ -1104,7 +1189,7 @@ const BUSINESS_TYPES = [
     id: 'casino', name: 'Casino', icon: '🎰',
     buildCost: 180000, produces: 'fun', rate: 1.7,
     color: 0xd32f2f, shape: 'sphere',
-    desc: 'Sells entertainment to high rollers.'
+    desc: 'Volatile gambling den. Each roll can hit jackpots (10×) or bust (0×). High risk, high reward.'
   },
   {
     id: 'bank', name: 'Bank', icon: '🏦',
@@ -1919,7 +2004,15 @@ function onPointerMove(e) {
       const effectiveRate = bt.rate * hitPlot.userData.areaMultiplier * regionBonus;
       const bonusPct = Math.round((regionBonus - 1) * 100);
       const bonusTag = bonusPct !== 0 ? ` (${bonusPct > 0 ? '+' : ''}${bonusPct}%)` : '';
-      tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name} +${effectiveRate.toFixed(1)} ${mat.icon}/s${bonusTag}</span>`;
+      if (bt.id === 'casino') {
+        // Casino shows last roll result instead of steady rate
+        const gambling = hitPlot.userData.gambling || {};
+        const lastOutcome = CASINO_OUTCOMES.find(o => o.id === gambling.lastRoll);
+        const rollTag = lastOutcome ? ` · ${lastOutcome.label}` : ' · 🎲 rolling...';
+        tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name} 🎲 volatile${bonusTag}${rollTag}</span>`;
+      } else {
+        tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name} +${effectiveRate.toFixed(1)} ${mat.icon}/s${bonusTag}</span>`;
+      }
       tip.classList.add('owned');
     } else if (owned) {
       tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">OWNED — build ready</span>`;
@@ -1996,13 +2089,52 @@ function openPlotModal(plot) {
       const bonusPct = Math.round((regionBonus - 1) * 100);
       const bonusLabel = bonusPct > 0 ? `+${bonusPct}%` : `${bonusPct}%`;
       const bonusColor = bonusPct > 0 ? '#7fffd4' : (bonusPct < 0 ? '#ff8080' : '#9bb4bd');
+
+      // Casino gambling panel
+      let gamblingPanel = '';
+      if (bt.id === 'casino') {
+        const gambling = plot.userData.gambling || {};
+        const lastRoll = gambling.lastRoll;
+        const lastOutcome = CASINO_OUTCOMES.find(o => o.id === lastRoll);
+        const history = gambling.rollHistory || [];
+        // Compute stats from history
+        const rollCount = history.length;
+        const jackpots = history.filter(r => r.outcome === 'jackpot').length;
+        const bigwins = history.filter(r => r.outcome === 'bigwin').length;
+        const busts = history.filter(r => r.outcome === 'bust').length;
+        const totalWon = history.reduce((s, r) => s + r.amount, 0);
+
+        const historyRows = history.slice(0, 6).map(r => {
+          const oc = CASINO_OUTCOMES.find(o => o.id === r.outcome);
+          return `<div class="gamble-row"><span style="color:${oc.color}">${oc.label}</span><span>×${r.multiplier}</span><span style="color:#7fffd4">+${r.amount.toFixed(2)} 🎰</span></div>`;
+        }).join('');
+
+        gamblingPanel = `
+          <div class="gambling-panel">
+            <div class="gamble-title">🎰 Gambling Stats</div>
+            <div class="gamble-stats">
+              <span>Last: <b style="color:${lastOutcome ? lastOutcome.color : '#9bb4bd'}">${lastOutcome ? lastOutcome.label : '—'}</b></span>
+              <span>Rolls: <b>${rollCount}</b></span>
+              <span>Jackpots: <b style="color:#f5cc74">${jackpots}</b></span>
+              <span>Big Wins: <b style="color:#7fffd4">${bigwins}</b></span>
+              <span>Busts: <b style="color:#ff8080">${busts}</b></span>
+            </div>
+            ${historyRows ? `<div class="gamble-history">${historyRows}</div>` : '<div class="gamble-empty">No rolls yet — production ticks every 0.5s</div>'}
+            ${rollCount > 0 ? `<div class="gamble-total">Recent winnings: <b style="color:#7fffd4">+${totalWon.toFixed(2)} 🎰</b></div>` : ''}
+          </div>
+        `;
+      }
+
       businessPanel = `
         <div class="business-panel">
           <div class="business-current">
             <div class="biz-icon">${bt.icon}</div>
             <div class="biz-info">
               <div class="biz-name">${bt.name} <span style="color:#9bb4bd;font-size:13px;font-weight:normal">→ ${mat.icon} ${mat.name}</span></div>
-              <div class="biz-income">+${baseRate.toFixed(2)}/s × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b> → <b>+${effectiveRate.toFixed(2)} ${mat.icon}/s</b></div>
+              <div class="biz-income">${bt.id === 'casino'
+                ? `🎲 Volatile — base ${baseRate.toFixed(2)}/s × roll (0×–10×) × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b>`
+                : `+${baseRate.toFixed(2)}/s × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b> → <b>+${effectiveRate.toFixed(2)} ${mat.icon}/s</b>`
+              }</div>
             </div>
           </div>
           <div class="biz-desc">${bt.desc}</div>
@@ -2011,8 +2143,9 @@ function openPlotModal(plot) {
             <span style="margin-left:12px">Bonus: <b style="color:${bonusColor}">${bonusLabel}</b></span>
             <span style="margin-left:12px">Market: <b style="color:#f5cc74">$${Math.round(price).toLocaleString()}</b>/unit</span>
             <span class="mat-trend ${trendClass}" style="margin-left:8px">${trendIcon} ${trend}</span>
-            <div style="margin-top:4px">Value: <b style="color:#7fffd4">$${Math.round(effectiveRate * price).toLocaleString()}/s</b></div>
+            ${bt.id !== 'casino' ? `<div style="margin-top:4px">Value: <b style="color:#7fffd4">$${Math.round(effectiveRate * price).toLocaleString()}/s</b></div>` : '<div style="margin-top:4px;color:#9bb4bd">Value varies — gamble to find out!</div>'}
           </div>
+          ${gamblingPanel}
           <button class="btn demolish" onclick="demolishBusiness()">Demolish Business</button>
         </div>
       `;
@@ -2409,10 +2542,19 @@ function tickProduction() {
     if (p.userData.business) {
       const bt = getBusinessType(p.userData.business.type);
       if (bt) {
-        const regionBonus = getRegionBonus(bt.id, p);
-        const produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
-        STATE.inventory[bt.produces] = (STATE.inventory[bt.produces] || 0) + produced;
-        anyProduced = true;
+        let produced;
+        if (bt.id === 'casino') {
+          // Casino uses gambling roll — volatile production
+          produced = rollCasinoProduction(p, bt, dt);
+        } else {
+          // Steady production with region bonus
+          const regionBonus = getRegionBonus(bt.id, p);
+          produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
+        }
+        if (produced > 0) {
+          STATE.inventory[bt.produces] = (STATE.inventory[bt.produces] || 0) + produced;
+          anyProduced = true;
+        }
       }
     }
   }
