@@ -184,6 +184,59 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.success{border-color:#3a8b6a;color:#7fffd4}
 
+/* ============ LOGIN SCREEN ============ */
+.login-screen{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at center,#0b1d29 0%,#08141d 70%);overflow:hidden}
+.login-screen.hide{opacity:0;pointer-events:none;transition:opacity .6s}
+.login-screen::before{content:'';position:absolute;inset:0;
+  background-image:radial-gradient(2px 2px at 20% 30%,#fff,transparent),
+    radial-gradient(1px 1px at 60% 70%,#fff,transparent),
+    radial-gradient(1.5px 1.5px at 80% 20%,#aaccff,transparent),
+    radial-gradient(1px 1px at 40% 80%,#fff,transparent),
+    radial-gradient(1.5px 1.5px at 90% 50%,#fff,transparent),
+    radial-gradient(1px 1px at 10% 60%,#aaccff,transparent);
+  background-size:600px 600px;opacity:.4;animation:starDrift 60s linear infinite}
+@keyframes starDrift{to{background-position:600px 600px}}
+.login-card{position:relative;z-index:2;width:min(420px,92vw);padding:42px 36px;border:1px solid #2c4a55;
+  border-radius:16px;background:linear-gradient(145deg,rgba(11,29,41,.92),rgba(8,19,29,.92));backdrop-filter:blur(12px);
+  box-shadow:0 25px 80px rgba(0,0,0,.7);text-align:center}
+.login-card .login-logo{font-family:Georgia,serif;font-size:32px;color:#f5cc74;letter-spacing:3px;text-transform:uppercase;margin-bottom:4px}
+.login-card .login-sub{font-family:Arial,sans-serif;font-size:11px;color:#7fa0ab;letter-spacing:3px;text-transform:uppercase;margin-bottom:32px}
+.login-card .login-label{display:block;text-align:left;font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;
+  text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
+.login-card .login-input{width:100%;padding:13px 16px;border:1px solid #2c4a55;border-radius:8px;
+  background:rgba(8,19,29,.8);color:#e8eef0;font-family:Arial,sans-serif;font-size:15px;outline:none;transition:all .2s;
+  box-sizing:border-box}
+.login-card .login-input:focus{border-color:#f5cc74;box-shadow:0 0 0 3px rgba(245,204,116,.15)}
+.login-card .login-input::placeholder{color:#5e7d87}
+.login-card .login-btn{width:100%;padding:14px;border:none;border-radius:8px;cursor:pointer;
+  background:linear-gradient(135deg,#f5cc74,#d4a44a);color:#08141d;font-family:Arial,sans-serif;font-size:14px;
+  font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-top:20px;transition:all .2s}
+.login-card .login-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.login-card .login-btn:disabled{opacity:.4;cursor:not-allowed;filter:none;transform:none}
+.login-card .login-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:#5e7d87;font-family:Arial,sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase}
+.login-card .login-divider::before,.login-card .login-divider::after{content:'';flex:1;height:1px;background:#1a3340}
+.login-card .login-profiles{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
+.login-card .login-profile{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid #1a3340;
+  border-radius:8px;background:rgba(20,50,60,.4);cursor:pointer;transition:all .15s;text-align:left;color:inherit;font-family:inherit;width:100%;box-sizing:border-box}
+.login-card .login-profile:hover{background:rgba(29,74,87,.7);border-color:#2c4a55}
+.login-card .login-profile .profile-avatar{font-size:24px;flex-shrink:0;width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,#f5cc74,#d4a44a);display:flex;align-items:center;justify-content:center;color:#08141d;font-weight:bold;font-family:Georgia,serif}
+.login-card .login-profile .profile-info{flex:1;min-width:0}
+.login-card .login-profile .profile-name{font-family:Arial,sans-serif;font-size:14px;color:#e8eef0;font-weight:600}
+.login-card .login-profile .profile-meta{font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;margin-top:2px}
+.login-card .login-profile .profile-delete{flex-shrink:0;padding:6px 10px;border:1px solid #5a2424;border-radius:6px;
+  background:rgba(90,36,36,.3);color:#ff8080;cursor:pointer;font-size:11px;transition:all .15s}
+.login-card .login-profile .profile-delete:hover{background:rgba(120,48,48,.6)}
+.login-card .login-empty{font-family:Arial,sans-serif;font-size:12px;color:#5e7d87;padding:16px;text-align:center}
+.login-card .login-error{color:#ff8080;font-family:Arial,sans-serif;font-size:12px;margin-top:12px;min-height:16px}
+
+/* Logout button in game HUD */
+.logout-btn{flex-shrink:0;padding:9px 14px;border:1px solid #5a2424;border-radius:8px;background:rgba(90,36,36,.4);
+  backdrop-filter:blur(6px);color:#ff8080;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1px;
+  text-transform:uppercase;cursor:pointer;transition:all .15s;white-space:nowrap}
+.logout-btn:hover{background:rgba(120,48,48,.6);color:#ffaaaa}
+
 @media(max-width:700px){
   .top-bar{padding:10px 12px;gap:8px;flex-wrap:wrap}
   .brand{font-size:14px;order:3;flex-basis:100%;text-align:center;margin-top:4px}
@@ -201,8 +254,15 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 </head>
 <body>
 
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card" id="login-card">
+    <!-- filled dynamically by renderLogin() -->
+  </div>
+</div>
+
 <!-- ============ MENU SCREEN ============ -->
-<div id="menu" class="screen">
+<div id="menu" class="screen hidden">
   <img class="hero-image" src="assets/home-screen.webp?v=2" alt="Open World cinematic home screen">
   <button class="hit play" aria-label="Play" onclick="enterGame()"></button>
   <button class="hit settings" aria-label="Settings" onclick="openSettings()"></button>
@@ -222,6 +282,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
   <div class="hud">
     <div class="top-bar">
       <button class="back-btn" onclick="exitGame()">← Menu</button>
+      <button class="logout-btn" onclick="logout()">Logout</button>
       <div class="brand">Open World<small>Live · Earth Edition</small></div>
       <div class="stats">
         <div class="stat-chip"><span class="icon">💰</span><span>Budget</span><b id="money">$1,000,000</b></div>
@@ -307,6 +368,226 @@ const STATE = {
 };
 
 const EARTH_RADIUS = STATE.radius;
+
+// ====================================================================
+// PERSISTENCE — save/load to localStorage
+// ====================================================================
+// Save key: 'openworld_save_<username>'. Profile list: 'openworld_profiles'.
+const SAVE_PREFIX = 'openworld_save_';
+const PROFILES_KEY = 'openworld_profiles';
+let CURRENT_USER = null;  // set on login
+
+// Get list of saved profiles (array of usernames)
+function getProfiles() {
+  try {
+    const raw = localStorage.getItem(PROFILES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+// Add a username to the profiles list (no-op if already present)
+function addProfile(username) {
+  const profiles = getProfiles();
+  if (!profiles.includes(username)) {
+    profiles.push(username);
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+  }
+}
+
+// Remove a profile and its save
+function deleteProfile(username) {
+  const profiles = getProfiles().filter(p => p !== username);
+  localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+  localStorage.removeItem(SAVE_PREFIX + username);
+}
+
+// Get a save object for a username (or null if no save)
+function getSave(username) {
+  try {
+    const raw = localStorage.getItem(SAVE_PREFIX + username);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+// Save the current game state to localStorage
+function saveGame() {
+  if (!CURRENT_USER) return;
+  const save = {
+    version: 1,
+    username: CURRENT_USER,
+    savedAt: Date.now(),
+    money: STATE.money,
+    ownedPlotIds: Array.from(STATE.owned),
+    // Map of plotId → business type
+    businesses: STATE.plots
+      .filter(p => p.userData.business)
+      .map(p => ({ plotId: p.userData.id, type: p.userData.business.type })),
+    inventory: { ...STATE.inventory },
+    marketPrices: { ...STATE.marketPrices },
+    marketTrend: { ...STATE.marketTrend },
+    lastMarketUpdate: STATE.lastMarketUpdate,
+    lastProductionTime: 0  // don't save; reset on load
+  };
+  try {
+    localStorage.setItem(SAVE_PREFIX + CURRENT_USER, JSON.stringify(save));
+  } catch (e) {
+    console.warn('Save failed:', e);
+  }
+}
+
+// Load a save into STATE (called after plots are generated)
+function loadGame(username) {
+  const save = getSave(username);
+  if (!save) return false;
+
+  STATE.money = save.money || 1_000_000;
+  STATE.inventory = save.inventory || {};
+  STATE.marketPrices = save.marketPrices || {};
+  STATE.marketTrend = save.marketTrend || {};
+  STATE.lastMarketUpdate = save.lastMarketUpdate || Date.now();
+  STATE.lastProductionTime = 0;
+
+  // Ensure all materials have entries
+  for (const m of MATERIALS) {
+    if (STATE.inventory[m.id] === undefined) STATE.inventory[m.id] = 0;
+    if (STATE.marketPrices[m.id] === undefined) STATE.marketPrices[m.id] = m.basePrice;
+    if (STATE.marketTrend[m.id] === undefined) STATE.marketTrend[m.id] = 'stable';
+  }
+
+  // Restore owned plots
+  const ownedIds = new Set(save.ownedPlotIds || []);
+  for (const p of STATE.plots) {
+    if (ownedIds.has(p.userData.id)) {
+      p.userData.owned = true;
+      STATE.owned.add(p.userData.id);
+      p.material.color.setHex(0xf5cc74);
+      p.material.opacity = 0.85;
+      p.scale.setScalar(1.05);
+      if (p.userData.outline) {
+        p.userData.outline.material.color.setHex(0xf5cc74);
+        p.userData.outline.material.opacity = 0.9;
+        p.userData.outline.scale.setScalar(1.05);
+      }
+    }
+  }
+
+  // Restore businesses
+  const businesses = save.businesses || [];
+  for (const b of businesses) {
+    const plot = STATE.plots.find(p => p.userData.id === b.plotId);
+    if (!plot) continue;
+    const bt = getBusinessType(b.type);
+    if (!bt) continue;
+    plot.userData.business = { type: b.type, builtAt: Date.now() };
+
+    // Rebuild 3D mesh
+    const bizScale = Math.max(0.015, Math.min(0.04, plot.userData.areaMultiplier * 0.02));
+    const bizMesh = buildBusinessMesh(bt, bizScale);
+    const centroidPos = plot.userData.localDir.clone().multiplyScalar(EARTH_RADIUS * 1.006);
+    bizMesh.lookAt(centroidPos.clone().multiplyScalar(2));
+    bizMesh.position.copy(centroidPos);
+    plot.userData.businessMesh = bizMesh;
+    earth.add(bizMesh);
+
+    // Recolor plot to business color
+    plot.material.color.setHex(bt.color);
+    plot.material.opacity = 0.5;
+    if (plot.userData.outline) {
+      plot.userData.outline.material.color.setHex(bt.color);
+      plot.userData.outline.material.opacity = 0.7;
+    }
+  }
+
+  return true;
+}
+
+// ====================================================================
+// LOGIN SYSTEM
+// ====================================================================
+function renderLogin() {
+  const card = document.getElementById('login-card');
+  const profiles = getProfiles();
+
+  const profileRows = profiles.map(name => {
+    const save = getSave(name);
+    const meta = save
+      ? `$${Math.floor(save.money || 0).toLocaleString()} · ${save.ownedPlotIds?.length || 0} plots · ${new Date(save.savedAt).toLocaleDateString()}`
+      : 'No save data';
+    return `
+      <button class="login-profile" onclick="loginAs('${name.replace(/'/g, "\\'")}')">
+        <div class="profile-avatar">${name.charAt(0).toUpperCase()}</div>
+        <div class="profile-info">
+          <div class="profile-name">${name}</div>
+          <div class="profile-meta">${meta}</div>
+        </div>
+        <button class="profile-delete" onclick="event.stopPropagation(); deleteProfileClick('${name.replace(/'/g, "\\'")}')">Delete</button>
+      </button>
+    `;
+  }).join('');
+
+  card.innerHTML = `
+    <div class="login-logo">Open World</div>
+    <div class="login-sub">Earth Edition</div>
+    <label class="login-label" for="login-name">Commander Name</label>
+    <input type="text" id="login-name" class="login-input" placeholder="Enter your name..." maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')loginNew()">
+    <button class="login-btn" onclick="loginNew()">Start New Game</button>
+    ${profiles.length > 0 ? `
+      <div class="login-divider">Or continue as</div>
+      <div class="login-profiles">${profileRows}</div>
+    ` : ''}
+    <div class="login-error" id="login-error"></div>
+  `;
+}
+
+window.loginNew = function() {
+  const input = document.getElementById('login-name');
+  const errEl = document.getElementById('login-error');
+  const name = (input.value || '').trim();
+  if (!name) {
+    errEl.textContent = 'Please enter a name';
+    return;
+  }
+  if (name.length < 2) {
+    errEl.textContent = 'Name must be at least 2 characters';
+    return;
+  }
+  loginAs(name);
+};
+
+window.loginAs = function(name) {
+  CURRENT_USER = name;
+  addProfile(name);
+  // Hide login, show menu
+  document.getElementById('login-screen').classList.add('hide');
+  setTimeout(() => {
+    document.getElementById('login-screen').style.display = 'none';
+  }, 600);
+  document.getElementById('menu').classList.remove('hidden');
+};
+
+window.deleteProfileClick = function(name) {
+  if (!confirm(`Delete profile "${name}" and all progress? This cannot be undone.`)) return;
+  deleteProfile(name);
+  renderLogin();
+};
+
+window.logout = function() {
+  saveGame();  // save before logging out
+  // Reset state for next user
+  CURRENT_USER = null;
+  // Reload the page to reset everything cleanly
+  location.reload();
+};
+
+// Auto-save every 10 seconds
+setInterval(() => {
+  if (CURRENT_USER && gameInitialized) saveGame();
+}, 10000);
+
+// Save on page hide (tab close / navigate away)
+window.addEventListener('beforeunload', () => {
+  if (CURRENT_USER && gameInitialized) saveGame();
+});
 
 // ====================================================================
 // MATERIALS CATALOG
@@ -1157,6 +1438,7 @@ window.buySelectedPlot = function() {
   // Re-open modal to show business panel now that plot is owned
   openPlotModal(p);
   showToast(`Acquired ${p.userData.name} for $${p.userData.price.toLocaleString()}`, true);
+  saveGame();
 };
 
 // ====================================================================
@@ -1202,6 +1484,7 @@ window.buildBusiness = function(businessId) {
   const rate = bt.rate * p.userData.areaMultiplier;
   const mat = getMaterial(bt.produces);
   showToast(`Built ${bt.name} — producing ${rate.toFixed(1)} ${mat.icon}/s`, true);
+  saveGame();
 };
 
 window.demolishBusiness = function() {
@@ -1226,6 +1509,7 @@ window.demolishBusiness = function() {
   updateHUD();
   openPlotModal(p);
   showToast(`Demolished ${bt ? bt.name : 'business'}`, true);
+  saveGame();
 };
 
 // ====================================================================
@@ -1366,6 +1650,7 @@ window.sellMaterial = function(materialId) {
   updateHUD();
   openMarketModal();  // refresh to show updated stock
   showToast(`Sold ${qty.toFixed(1)} ${m.icon} ${m.name} for $${revenue.toLocaleString()}`, true);
+  saveGame();
 };
 
 window.sellAllMaterials = function() {
@@ -1387,6 +1672,7 @@ window.sellAllMaterials = function() {
     updateHUD();
     openMarketModal();
     showToast(`Sold ${sold.join(', ')} for $${total.toLocaleString()}`, true);
+    saveGame();
   } else {
     showToast('No materials to sell', false);
   }
@@ -1514,8 +1800,15 @@ window.enterGame = function() {
   document.getElementById('game').classList.remove('hidden');
   if (!gameInitialized) {
     gameInitialized = true;
-    initMarket();  // initialize market prices and inventory
-    initScene();
+    initMarket();  // initialize market prices and inventory to defaults
+    initScene();   // generates plots
+    // Load save AFTER plots exist (overwrites defaults with saved values)
+    if (CURRENT_USER && getSave(CURRENT_USER)) {
+      const loaded = loadGame(CURRENT_USER);
+      if (loaded) {
+        showToast(`Welcome back, ${CURRENT_USER}!`, true);
+      }
+    }
     updateHUD();
   } else {
     // re-fit on resume
@@ -1531,6 +1824,9 @@ window.exitGame = function() {
 window.openSettings = function() { document.getElementById('settings').classList.add('show'); };
 window.closeSettings = function() { document.getElementById('settings').classList.remove('show'); };
 window.startGame = window.enterGame; // legacy
+
+// Initial render: show login screen
+renderLogin();
 
 // ESC closes modals
 window.addEventListener('keydown', (e) => {
