@@ -18,6 +18,8 @@ An interactive 3D Earth strategy game — claim land, build businesses, produce 
 - **Full save/load**: money, owned plots, businesses, inventory, market prices — all persisted to localStorage
 - Auto-save every 10 seconds + on buy/build/sell/demolish/logout
 - Multiple users can have separate saves on the same browser
+- **Backup buttons**: Export all accounts to a JSON file / Import them back on any device
+- **Optional cloud saving (Supabase)**: paste your project URL + anon key at the top of the game script (see `supabase-setup.sql`) and every account + save is mirrored to the cloud automatically — accounts survive cleared browsers and are shared across all devices. Old local accounts migrate to the cloud on first visit. The login screen shows whether cloud saving is ON or OFF.
 
 ### 🏞️ Plots
 - **Non-overlapping Voronoi cells** — every plot is a unique irregular polygon (4-12 sides)

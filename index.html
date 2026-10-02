@@ -357,6 +357,13 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .login-card .login-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
 .login-card .login-btn:disabled{opacity:.4;cursor:not-allowed;filter:none;transform:none}
 .login-card .login-error{color:#ff8080;font-family:Arial,sans-serif;font-size:12px;margin-top:12px;min-height:16px}
+.login-cloud{font-family:Arial,sans-serif;font-size:11px;letter-spacing:.5px;margin-top:14px;color:#c9a24a}
+.login-cloud.on{color:#7fffd4}
+.login-tools{display:flex;gap:10px;justify-content:center;margin-top:10px}
+.login-tool-btn{padding:8px 18px;border:1px solid #2c4a55;border-radius:8px;background:rgba(8,19,29,.6);
+  color:#9bb4bd;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;
+  cursor:pointer;transition:all .15s}
+.login-tool-btn:hover{color:#f5cc74;border-color:#4a7a85}
 
 /* Logout button in game HUD */
 .logout-btn{flex-shrink:0;padding:9px 14px;border:1px solid #5a2424;border-radius:8px;background:rgba(90,36,36,.4);
@@ -511,6 +518,9 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
   </div>
 </div>
 
+<!-- Supabase SDK (optional — used only when cloud saving keys are set in the game code) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script type="importmap">
 {
   "imports": {
@@ -523,6 +533,15 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ====================================================================
+// CLOUD SAVING (optional) — paste your Supabase project URL + anon key
+// below to enable it. While empty, accounts save to this browser only
+// (exactly like before). When set, every account + save is mirrored to
+// the cloud automatically and shared across all devices.
+// ====================================================================
+const SUPABASE_URL = '';
+const SUPABASE_ANON_KEY = '';
 
 // ====================================================================
 // STATE
@@ -632,6 +651,154 @@ const SAVE_PREFIX = 'openworld_save_';
 const PROFILES_KEY = 'openworld_profiles';
 const CLAIMS_KEY = 'openworld_claims';
 let CURRENT_USER = null;  // set on login
+
+// ====================================================================
+// CLOUD SYNC — optional Supabase backend for accounts & saves.
+// Mirrors the same data that lives in localStorage up to the cloud:
+//   save_<username>  → full player save
+//   profiles         → list of usernames
+//   claims           → plot ownership map
+// If SUPABASE_URL / SUPABASE_ANON_KEY are empty, everything behaves
+// exactly like the original localStorage-only version.
+// ====================================================================
+const CloudSync = (() => {
+  const TABLE = 'openworld_data';
+  let client = null;
+  if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
+    try {
+      client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {
+      console.warn('[OpenWorld] Could not create cloud client:', e);
+    }
+  }
+
+  function status() {
+    return client ? 'cloud' : 'local';
+  }
+
+  async function uploadRow(key, data) {
+    const { error } = await client
+      .from(TABLE)
+      .upsert({ key, data, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (error) throw error;
+  }
+
+  // Fire-and-forget: push one player's save to the cloud
+  function pushSave(username) {
+    if (!client || !username) return;
+    const save = getSave(username);
+    if (!save) return;
+    uploadRow(SAVE_PREFIX + username, save)
+      .catch(e => console.warn('[OpenWorld] Cloud push failed:', e));
+  }
+
+  function pushProfiles() {
+    if (!client) return;
+    uploadRow('profiles', getProfiles())
+      .catch(e => console.warn('[OpenWorld] Cloud push failed:', e));
+  }
+
+  function pushClaims() {
+    if (!client) return;
+    uploadRow(CLAIMS_KEY, getClaims())
+      .catch(e => console.warn('[OpenWorld] Cloud push failed:', e));
+  }
+
+  function deleteSave(username) {
+    if (!client || !username) return;
+    client.from(TABLE).delete().eq('key', SAVE_PREFIX + username)
+      .then(({ error }) => { if (error) console.warn('[OpenWorld] Cloud delete failed:', error); })
+      .catch(e => console.warn('[OpenWorld] Cloud delete failed:', e));
+  }
+
+  // One-time merge on boot: pull everything from the cloud into this
+  // browser, and push any local-only / newer accounts back up (so old
+  // accounts migrate to the cloud automatically on first visit).
+  async function pullAndMerge() {
+    if (!client) return false;
+    try {
+      const { data: rows, error } = await client.from(TABLE).select('key,data');
+      if (error) throw error;
+      const cloud = {};
+      (rows || []).forEach(r => { cloud[r.key] = r.data; });
+      let changed = false;
+
+      // 1) Profiles: union of local + cloud
+      const cloudProfiles = Array.isArray(cloud['profiles']) ? cloud['profiles'] : [];
+      const localProfiles = getProfiles();
+      const mergedProfiles = Array.from(new Set([...localProfiles, ...cloudProfiles]));
+      if (mergedProfiles.some(p => !localProfiles.includes(p))) {
+        localStorage.setItem(PROFILES_KEY, JSON.stringify(mergedProfiles));
+        changed = true;
+      }
+
+      // 2) Saves: newest savedAt wins; local-only or newer-local → push up
+      const toPush = [];
+      for (const p of mergedProfiles) {
+        const local = getSave(p);
+        const cloudSave = cloud[SAVE_PREFIX + p] || null;
+        if (cloudSave && (!local || (cloudSave.savedAt || 0) > (local.savedAt || 0))) {
+          try {
+            localStorage.setItem(SAVE_PREFIX + p, JSON.stringify(cloudSave));
+            changed = true;
+          } catch (e) { console.warn('[OpenWorld] Failed to store cloud save:', e); }
+        } else if (local && (!cloudSave || (local.savedAt || 0) > (cloudSave.savedAt || 0))) {
+          toPush.push(local);
+        }
+      }
+
+      // 3) Claims: union, cloud wins conflicts
+      const cloudClaims = cloud[CLAIMS_KEY] || {};
+      const localClaims = getClaims();
+      const mergedClaims = Object.assign({}, localClaims, cloudClaims);
+      if (JSON.stringify(mergedClaims) !== JSON.stringify(localClaims)) {
+        localStorage.setItem(CLAIMS_KEY, JSON.stringify(mergedClaims));
+        changed = true;
+      }
+
+      // Push merged state back up so every device converges
+      if (JSON.stringify(mergedProfiles) !== JSON.stringify(cloudProfiles)) {
+        await uploadRow('profiles', mergedProfiles);
+      }
+      if (JSON.stringify(mergedClaims) !== JSON.stringify(cloudClaims)) {
+        await uploadRow(CLAIMS_KEY, mergedClaims);
+      }
+      for (const s of toPush) {
+        await uploadRow(SAVE_PREFIX + s.username, s);
+      }
+
+      return changed;
+    } catch (e) {
+      console.warn('[OpenWorld] Cloud sync unavailable — saving on this device only.', e);
+      return false;
+    }
+  }
+
+  return { status, pushSave, pushProfiles, pushClaims, deleteSave, pullAndMerge };
+})();
+
+// --- Cloud mirror hooks: after every local change, sync to the cloud ---
+const _saveGame = saveGame;
+saveGame = function() {
+  _saveGame();
+  if (CURRENT_USER) CloudSync.pushSave(CURRENT_USER);
+};
+const _addProfile = addProfile;
+addProfile = function(u) {
+  _addProfile(u);
+  CloudSync.pushProfiles();
+};
+const _deleteProfile = deleteProfile;
+deleteProfile = function(u) {
+  _deleteProfile(u);
+  CloudSync.deleteSave(u);
+  CloudSync.pushProfiles();
+};
+const _saveClaims = saveClaims;
+saveClaims = function(c) {
+  _saveClaims(c);
+  CloudSync.pushClaims();
+};
 
 // ====================================================================
 // GLOBAL CLAIMS — shared plot ownership across accounts
@@ -925,6 +1092,14 @@ function renderLogin() {
     ` : ''}
     <button class="login-btn" onclick="loginSubmit()">${isSignup ? 'Create Account' : 'Login'}</button>
     <div class="login-error" id="login-error"></div>
+    <div class="login-cloud ${CloudSync.status() === 'cloud' ? 'on' : ''}">${CloudSync.status() === 'cloud'
+      ? '☁ Cloud saving: ON — accounts shared across all devices'
+      : '⚠ Cloud saving: OFF — accounts stay in this browser only'}</div>
+    <div class="login-tools">
+      <button class="login-tool-btn" onclick="exportAccounts()" title="Download a backup file of every account on this device">⬇ Export accounts</button>
+      <button class="login-tool-btn" onclick="document.getElementById('import-file').click()" title="Restore accounts from a backup file">⬆ Import</button>
+      <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importAccounts(this)">
+    </div>
   `;
   setTimeout(() => {
     const nameInput = document.getElementById('login-name');
@@ -1016,6 +1191,8 @@ window.loginSubmit = function() {
       return;
     }
     addProfile(name);
+    // Mirror the brand-new account to the cloud immediately (if enabled)
+    CloudSync.pushSave(name);
   } else {
     // === LOGIN ===
     const existingSave = getSave(name);
@@ -1040,6 +1217,79 @@ window.loginSubmit = function() {
     document.getElementById('login-screen').style.display = 'none';
   }, 600);
   document.getElementById('menu').classList.remove('hidden');
+};
+
+// ============ ACCOUNT BACKUP — export/import every account ============
+window.exportAccounts = function() {
+  try {
+    const profiles = getProfiles();
+    const saves = {};
+    for (const p of profiles) {
+      const s = getSave(p);
+      if (s) saves[p] = s;
+    }
+    const backup = {
+      app: 'open-world',
+      type: 'accounts-backup',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      profiles,
+      saves,
+      claims: getClaims()
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'open-world-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) {
+    alert('Export failed: ' + e.message);
+  }
+};
+
+window.importAccounts = function(input) {
+  const file = input.files && input.files[0];
+  input.value = ''; // allow re-selecting the same file later
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function() {
+    try {
+      const backup = JSON.parse(reader.result);
+      if (!backup || backup.type !== 'accounts-backup' || typeof backup.saves !== 'object') {
+        throw new Error('not a backup file');
+      }
+      let added = 0, updated = 0;
+      for (const [name, save] of Object.entries(backup.saves)) {
+        const local = getSave(name);
+        if (!local) {
+          localStorage.setItem(SAVE_PREFIX + name, JSON.stringify(save));
+          added++;
+        } else if ((save.savedAt || 0) > (local.savedAt || 0)) {
+          localStorage.setItem(SAVE_PREFIX + name, JSON.stringify(save));
+          updated++;
+        }
+        CloudSync.pushSave(name); // move imported accounts to cloud too
+      }
+      const profiles = getProfiles();
+      for (const name of Object.keys(backup.saves)) {
+        if (!profiles.includes(name)) profiles.push(name);
+      }
+      localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+      CloudSync.pushProfiles();
+      if (backup.claims && typeof backup.claims === 'object') {
+        saveClaims(Object.assign({}, getClaims(), backup.claims));
+      }
+      alert('Import complete: ' + added + ' new account(s), ' + updated + ' updated.');
+      renderLogin();
+    } catch (e) {
+      alert('Import failed: not a valid Open World backup file.');
+    }
+  };
+  reader.readAsText(file);
 };
 
 // Populate the menu welcome panel with user's name and save stats
@@ -2726,6 +2976,10 @@ window.startGame = window.enterGame; // legacy
 
 // Initial render: show login screen
 renderLogin();
+// If cloud saving is configured, pull every account from the cloud into
+// this browser before the player logs in, then refresh the login screen
+// so accounts from all devices are visible.
+CloudSync.pullAndMerge().then((changed) => { if (changed) renderLogin(); });
 
 // ESC closes modals
 window.addEventListener('keydown', (e) => {
