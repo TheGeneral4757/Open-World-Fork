@@ -542,9 +542,87 @@ const EARTH_RADIUS = STATE.radius;
 // PERSISTENCE — save/load to localStorage
 // ====================================================================
 // Save key: 'openworld_save_<username>'. Profile list: 'openworld_profiles'.
+// Global claims: 'openworld_claims' = { plotId: username }
 const SAVE_PREFIX = 'openworld_save_';
 const PROFILES_KEY = 'openworld_profiles';
+const CLAIMS_KEY = 'openworld_claims';
 let CURRENT_USER = null;  // set on login
+
+// ====================================================================
+// GLOBAL CLAIMS — shared plot ownership across accounts
+// ====================================================================
+// Maps plotId → username. A plot in this map is owned by that user
+// and cannot be bought by anyone else. Rebuilt from all saves on login.
+
+function getClaims() {
+  try {
+    const raw = localStorage.getItem(CLAIMS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) { return {}; }
+}
+
+function saveClaims(claims) {
+  try {
+    localStorage.setItem(CLAIMS_KEY, JSON.stringify(claims));
+  } catch (e) {
+    console.warn('Failed to save claims:', e);
+  }
+}
+
+// Rebuild the claims map from all users' saves.
+// First-writer-wins: if two saves claim the same plot, the first profile
+// in alphabetical order keeps it.
+function rebuildClaims() {
+  const profiles = getProfiles().sort();
+  const claims = {};
+  for (const name of profiles) {
+    const save = getSave(name);
+    if (!save) continue;
+    const plotIds = save.ownedPlotIds || [];
+    for (const pid of plotIds) {
+      if (claims[pid] === undefined) {
+        claims[pid] = name;
+      }
+    }
+  }
+  saveClaims(claims);
+  return claims;
+}
+
+// Claim a plot for the current user (called on buy)
+function claimPlot(plotId) {
+  const claims = getClaims();
+  claims[plotId] = CURRENT_USER;
+  saveClaims(claims);
+}
+
+// Get the owner of a plot (or null if unclaimed)
+function getPlotOwner(plotId) {
+  const claims = getClaims();
+  return claims[plotId] || null;
+}
+
+// Apply claim-based colors to all plots:
+//   - Claimed by current user → gold (already set by loadGame)
+//   - Claimed by other user → muted purple
+//   - Unclaimed → default green/teal (already the default)
+function applyClaimColors() {
+  const claims = getClaims();
+  const OTHER_COLOR = 0x7a4a8a;       // muted purple for others' plots
+  const OTHER_OUTLINE = 0x9a6aaa;     // brighter purple outline
+  for (const p of STATE.plots) {
+    const owner = claims[p.userData.id];
+    if (owner && owner !== CURRENT_USER) {
+      // Owned by another user — show in muted purple
+      p.userData.ownedByOther = true;
+      p.userData.ownerName = owner;
+      p.material.color.setHex(OTHER_COLOR);
+      if (p.userData.outline) {
+        p.userData.outline.material.color.setHex(OTHER_OUTLINE);
+      }
+    }
+  }
+}
 
 // Get list of saved profiles (array of usernames)
 function getProfiles() {
@@ -568,6 +646,8 @@ function deleteProfile(username) {
   const profiles = getProfiles().filter(p => p !== username);
   localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
   localStorage.removeItem(SAVE_PREFIX + username);
+  // Rebuild global claims so deleted user's plots become available again
+  rebuildClaims();
 }
 
 // Get a save object for a username (or null if no save)
@@ -1318,10 +1398,25 @@ function hideLoader() {
 const UP_VEC = new THREE.Vector3(0, 1, 0);
 const RIGHT_VEC = new THREE.Vector3(1, 0, 0);
 
+// Seeded PRNG (mulberry32) — ensures plot generation is deterministic
+// so plot IDs are identical across sessions and users. This is required
+// for shared plot ownership (global claims registry).
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
 function generatePlots() {
   const PLOT_COUNT = 2200;  // sweet spot: dense coverage, fast perf, irregular cells
   const plotGroup = new THREE.Group();
   plotGroup.name = 'plots';
+
+  // Seeded RNG for deterministic plot generation
+  const rng = mulberry32(1337);
 
   // Reference area: average cell area on unit sphere = 4π / N
   const REF_AREA = (4 * Math.PI / PLOT_COUNT) * 0.5;
@@ -1344,8 +1439,8 @@ function generatePlots() {
     // Apply random tangent offset for organic size variation
     const ref = Math.abs(dir.y) < 0.9 ? UP_VEC : RIGHT_VEC;
     const tangent = new THREE.Vector3().crossVectors(dir, ref).normalize();
-    const angle = Math.random() * Math.PI * 2;
-    const offsetMag = jitterStrength * (0.3 + Math.random() * 0.7);
+    const angle = rng() * Math.PI * 2;
+    const offsetMag = jitterStrength * (0.3 + rng() * 0.7);
     const offset = tangent.clone().applyAxisAngle(dir, angle).multiplyScalar(offsetMag);
     dir.add(offset).normalize();
 
@@ -1489,7 +1584,7 @@ function generatePlots() {
     const areaMultiplier = area / REF_AREA;
     // Cells with more sides are slightly rarer/more interesting
     const sidesPremium = 1 + Math.max(0, cell.length - 4) * 0.04;
-    const jitter = 0.85 + Math.random() * 0.30;
+    const jitter = 0.85 + rng() * 0.30;
     const rawPrice = basePrice * areaMultiplier * sidesPremium * jitter;
     const price = Math.max(500, Math.round(rawPrice / 100) * 100);
 
@@ -1502,7 +1597,7 @@ function generatePlots() {
     else                            sizeName = 'territory';
 
     // Slight per-plot color tint for visual variety (shades of teal-green)
-    const hueShift = (Math.random() - 0.5) * 0.05;
+    const hueShift = (rng() - 0.5) * 0.05;
     const baseColor = new THREE.Color().setHSL(0.42 + hueShift, 0.65, 0.55);
 
     const mat = new THREE.MeshBasicMaterial({
@@ -1635,7 +1730,7 @@ function updatePlotVisibility() {
     const dot = dir.x * _camLocal.x + dir.y * _camLocal.y + dir.z * _camLocal.z;
     const outline = p.userData.outline;
 
-    if (!p.userData.owned) {
+    if (!p.userData.owned && !p.userData.ownedByOther) {
       if (showAny && dot > dotThreshold) {
         if (opacityChanged) {
           p.material.opacity = unownedOpacity;
@@ -1649,11 +1744,21 @@ function updatePlotVisibility() {
         if (outline) outline.visible = false;
       }
     } else {
-      // Owned plots glow gold and stay visible on the near side
+      // Owned (by you OR another user) — always visible on near side
       const onNearSide = dot > dotThresholdOwned;
       p.visible = onNearSide;
       if (outline) outline.visible = onNearSide;
-      // Business mesh visibility follows the plot
+      // Set opacity for owned/other plots (higher than unowned)
+      if (onNearSide && opacityChanged) {
+        if (p.userData.ownedByOther) {
+          p.material.opacity = Math.max(baseOpacity * 0.7, 0.3);
+          if (outline) outline.material.opacity = Math.max(baseOpacity * 0.8, 0.4);
+        } else {
+          p.material.opacity = ownedOpacity;
+          if (outline) outline.material.opacity = ownedOutline;
+        }
+      }
+      // Business mesh visibility follows the plot (only for your own plots)
       if (p.userData.businessMesh) {
         p.userData.businessMesh.visible = onNearSide && baseOpacity > 0.05;
       }
@@ -1694,10 +1799,15 @@ function onPointerMove(e) {
     tip.style.left = e.clientX + 'px';
     tip.style.top = e.clientY + 'px';
     const owned = hitPlot.userData.owned;
+    const ownedByOther = hitPlot.userData.ownedByOther;
     const biz = hitPlot.userData.business;
     const terrainIcon = hitPlot.userData.isWater ? '🌊' : '🌿';
     let tipText;
-    if (owned && biz) {
+    if (ownedByOther) {
+      // Owned by another user — show lock + owner name
+      tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">🔒 ${hitPlot.userData.ownerName}</span>`;
+      tip.classList.add('owned');
+    } else if (owned && biz) {
       const bt = getBusinessType(biz.type);
       const mat = getMaterial(bt.produces);
       const rate = (bt.rate * hitPlot.userData.areaMultiplier).toFixed(1);
@@ -1743,11 +1853,15 @@ function openPlotModal(plot) {
   STATE.selectedPlot = plot;
   const card = document.getElementById('plot-card');
   const owned = plot.userData.owned;
+  const ownedByOther = plot.userData.ownedByOther;
+  const ownerName = plot.userData.ownerName;
   const affordable = STATE.money >= plot.userData.price;
-  const status = owned ? 'owned' : (affordable ? 'available' : 'locked');
+  const status = ownedByOther ? 'locked' : (owned ? 'owned' : (affordable ? 'available' : 'locked'));
 
   let actionBtn;
-  if (owned) {
+  if (ownedByOther) {
+    actionBtn = `<button class="btn primary" onclick="closePlotModal()">Close</button>`;
+  } else if (owned) {
     actionBtn = `<button class="btn primary" onclick="closePlotModal()">Close</button>`;
   } else if (affordable) {
     actionBtn = `<button class="btn primary" onclick="buySelectedPlot()">Buy Plot</button>`;
@@ -1824,7 +1938,7 @@ function openPlotModal(plot) {
   }
 
   card.innerHTML = `
-    <span class="badge ${status}">${status}</span>
+    <span class="badge ${status}">${ownedByOther ? '🔒 claimed' : status}</span>
     <h2>${plot.userData.name}</h2>
     <div class="coords">LAT ${plot.userData.lat.toFixed(4)}° · LON ${plot.userData.lon.toFixed(4)}° · PLOT #${plot.userData.id.toString().padStart(4,'0')}</div>
     <div class="meta-row">
@@ -1833,10 +1947,13 @@ function openPlotModal(plot) {
       <span class="meta-chip">Area <b>${plot.userData.areaMultiplier.toFixed(1)}×</b></span>
       <span class="meta-chip">Terrain <b style="color:${plot.userData.isWater ? '#4dd0e1' : '#7cb342'}">${plot.userData.isWater ? 'Ocean' : 'Land'}</b></span>
     </div>
-    <div class="desc">An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Build a business to produce materials for sale at the Market.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}</div>
+    <div class="desc">${ownedByOther
+      ? `This parcel is <b>claimed by ${ownerName}</b> and cannot be purchased. Find another plot to build your empire.`
+      : `An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Build a business to produce materials for sale at the Market.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}`
+    }</div>
     <div class="price-row">
-      <span class="price-label">${owned ? (plot.userData.business ? 'Producing' : 'Owned — Build Ready') : 'Asking Price'}</span>
-      <span class="price-value">${owned ? (plot.userData.business ? 'Active Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString()}<small>${owned ? '' : ' USD'}</small></span>
+      <span class="price-label">${ownedByOther ? 'Owner' : (owned ? (plot.userData.business ? 'Producing' : 'Owned — Build Ready') : 'Asking Price')}</span>
+      <span class="price-value" style="${ownedByOther ? 'font-size:20px;color:#9a6aaa' : ''}">${ownedByOther ? ownerName : (owned ? (plot.userData.business ? 'Active Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString())}<small>${ownedByOther || owned ? '' : ' USD'}</small></span>
     </div>
     ${businessPanel}
     <div class="actions">
@@ -1855,13 +1972,21 @@ window.closePlotModal = function() {
 window.buySelectedPlot = function() {
   const p = STATE.selectedPlot;
   if (!p || p.userData.owned) return;
+  // Check global claims — can't buy a plot owned by someone else
+  const owner = getPlotOwner(p.userData.id);
+  if (owner && owner !== CURRENT_USER) {
+    showToast(`This plot is owned by ${owner}`, false);
+    return;
+  }
   if (STATE.money < p.userData.price) {
     showToast('Insufficient funds!', false);
     return;
   }
   STATE.money -= p.userData.price;
   p.userData.owned = true;
+  p.userData.ownedByOther = false;  // clear flag just in case
   STATE.owned.add(p.userData.id);
+  claimPlot(p.userData.id);  // register in global claims
   // Color & visibility — turn gold
   p.material.color.setHex(0xf5cc74);
   p.material.opacity = 0.85;
@@ -2252,7 +2377,9 @@ window.enterGame = function() {
   if (!gameInitialized) {
     gameInitialized = true;
     initMarket();  // initialize market prices and inventory to defaults
-    initScene();   // generates plots
+    initScene();   // generates plots (deterministic — same IDs every load)
+    // Rebuild global claims from all users' saves, then apply colors
+    rebuildClaims();
     // Load save AFTER plots exist (overwrites defaults with saved values)
     if (CURRENT_USER && getSave(CURRENT_USER)) {
       const loaded = loadGame(CURRENT_USER);
@@ -2260,6 +2387,8 @@ window.enterGame = function() {
         showToast(`Welcome back, ${CURRENT_USER}!`, true);
       }
     }
+    // Apply claim colors AFTER loadGame (so own plots are gold, others' are purple)
+    applyClaimColors();
     updateHUD();
   } else {
     // re-fit on resume
