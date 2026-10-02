@@ -214,21 +214,6 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
   font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-top:20px;transition:all .2s}
 .login-card .login-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
 .login-card .login-btn:disabled{opacity:.4;cursor:not-allowed;filter:none;transform:none}
-.login-card .login-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:#5e7d87;font-family:Arial,sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase}
-.login-card .login-divider::before,.login-card .login-divider::after{content:'';flex:1;height:1px;background:#1a3340}
-.login-card .login-profiles{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
-.login-card .login-profile{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid #1a3340;
-  border-radius:8px;background:rgba(20,50,60,.4);cursor:pointer;transition:all .15s;text-align:left;color:inherit;font-family:inherit;width:100%;box-sizing:border-box}
-.login-card .login-profile:hover{background:rgba(29,74,87,.7);border-color:#2c4a55}
-.login-card .login-profile .profile-avatar{font-size:24px;flex-shrink:0;width:36px;height:36px;border-radius:50%;
-  background:linear-gradient(135deg,#f5cc74,#d4a44a);display:flex;align-items:center;justify-content:center;color:#08141d;font-weight:bold;font-family:Georgia,serif}
-.login-card .login-profile .profile-info{flex:1;min-width:0}
-.login-card .login-profile .profile-name{font-family:Arial,sans-serif;font-size:14px;color:#e8eef0;font-weight:600}
-.login-card .login-profile .profile-meta{font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;margin-top:2px}
-.login-card .login-profile .profile-delete{flex-shrink:0;padding:6px 10px;border:1px solid #5a2424;border-radius:6px;
-  background:rgba(90,36,36,.3);color:#ff8080;cursor:pointer;font-size:11px;transition:all .15s}
-.login-card .login-profile .profile-delete:hover{background:rgba(120,48,48,.6)}
-.login-card .login-empty{font-family:Arial,sans-serif;font-size:12px;color:#5e7d87;padding:16px;text-align:center}
 .login-card .login-error{color:#ff8080;font-family:Arial,sans-serif;font-size:12px;margin-top:12px;min-height:16px}
 
 /* Logout button in game HUD */
@@ -412,10 +397,13 @@ function getSave(username) {
 // Save the current game state to localStorage
 function saveGame() {
   if (!CURRENT_USER) return;
+  // Preserve existing password hash from the stored save
+  const existing = getSave(CURRENT_USER);
   const save = {
     version: 1,
     username: CURRENT_USER,
     savedAt: Date.now(),
+    passwordHash: existing ? existing.passwordHash : hashPassword('default'),
     money: STATE.money,
     ownedPlotIds: Array.from(STATE.owned),
     // Map of plotId → business type
@@ -502,62 +490,100 @@ function loadGame(username) {
 }
 
 // ====================================================================
-// LOGIN SYSTEM
+// LOGIN SYSTEM (username + password)
 // ====================================================================
+// NOTE: Passwords are hashed with a simple hash for obfuscation only.
+// This is a game, not a real auth system — do not reuse passwords.
+function hashPassword(pwd) {
+  // Simple DJB2-style hash — NOT cryptographically secure, just obfuscation
+  let hash = 5381;
+  for (let i = 0; i < pwd.length; i++) {
+    hash = ((hash << 5) + hash + pwd.charCodeAt(i)) | 0; // keep as 32-bit int
+  }
+  // Convert to unsigned hex string
+  return (hash >>> 0).toString(16);
+}
+
 function renderLogin() {
   const card = document.getElementById('login-card');
-  const profiles = getProfiles();
-
-  const profileRows = profiles.map(name => {
-    const save = getSave(name);
-    const meta = save
-      ? `$${Math.floor(save.money || 0).toLocaleString()} · ${save.ownedPlotIds?.length || 0} plots · ${new Date(save.savedAt).toLocaleDateString()}`
-      : 'No save data';
-    return `
-      <button class="login-profile" onclick="loginAs('${name.replace(/'/g, "\\'")}')">
-        <div class="profile-avatar">${name.charAt(0).toUpperCase()}</div>
-        <div class="profile-info">
-          <div class="profile-name">${name}</div>
-          <div class="profile-meta">${meta}</div>
-        </div>
-        <button class="profile-delete" onclick="event.stopPropagation(); deleteProfileClick('${name.replace(/'/g, "\\'")}')">Delete</button>
-      </button>
-    `;
-  }).join('');
-
   card.innerHTML = `
     <div class="login-logo">Open World</div>
     <div class="login-sub">Earth Edition</div>
     <label class="login-label" for="login-name">Commander Name</label>
-    <input type="text" id="login-name" class="login-input" placeholder="Enter your name..." maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')loginNew()">
-    <button class="login-btn" onclick="loginNew()">Start New Game</button>
-    ${profiles.length > 0 ? `
-      <div class="login-divider">Or continue as</div>
-      <div class="login-profiles">${profileRows}</div>
-    ` : ''}
+    <input type="text" id="login-name" class="login-input" placeholder="Enter your name..." maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('login-pwd').focus()">
+    <label class="login-label" for="login-pwd" style="margin-top:14px">Password</label>
+    <input type="password" id="login-pwd" class="login-input" placeholder="Enter password..." maxlength="40" autocomplete="off" onkeydown="if(event.key==='Enter')loginSubmit()">
+    <button class="login-btn" onclick="loginSubmit()">Login / Sign Up</button>
     <div class="login-error" id="login-error"></div>
   `;
+  // Focus the name input
+  setTimeout(() => document.getElementById('login-name').focus(), 100);
 }
 
-window.loginNew = function() {
-  const input = document.getElementById('login-name');
+window.loginSubmit = function() {
+  const nameInput = document.getElementById('login-name');
+  const pwdInput = document.getElementById('login-pwd');
   const errEl = document.getElementById('login-error');
-  const name = (input.value || '').trim();
+  const name = (nameInput.value || '').trim();
+  const pwd = pwdInput.value;
+
   if (!name) {
     errEl.textContent = 'Please enter a name';
+    nameInput.focus();
     return;
   }
   if (name.length < 2) {
     errEl.textContent = 'Name must be at least 2 characters';
+    nameInput.focus();
     return;
   }
-  loginAs(name);
-};
+  if (!pwd) {
+    errEl.textContent = 'Please enter a password';
+    pwdInput.focus();
+    return;
+  }
+  if (pwd.length < 3) {
+    errEl.textContent = 'Password must be at least 3 characters';
+    pwdInput.focus();
+    return;
+  }
 
-window.loginAs = function(name) {
+  const existingSave = getSave(name);
+  if (existingSave) {
+    // Existing account — verify password
+    if (existingSave.passwordHash !== hashPassword(pwd)) {
+      errEl.textContent = 'Incorrect password';
+      pwdInput.select();
+      return;
+    }
+  } else {
+    // New account — create a minimal save with password hash
+    const initSave = {
+      version: 1,
+      username: name,
+      savedAt: Date.now(),
+      passwordHash: hashPassword(pwd),
+      money: 1_000_000,
+      ownedPlotIds: [],
+      businesses: [],
+      inventory: {},
+      marketPrices: {},
+      marketTrend: {},
+      lastMarketUpdate: Date.now(),
+      lastProductionTime: 0
+    };
+    try {
+      localStorage.setItem(SAVE_PREFIX + name, JSON.stringify(initSave));
+    } catch (e) {
+      errEl.textContent = 'Failed to create account';
+      return;
+    }
+    addProfile(name);
+  }
+
+  // Success — proceed to menu
   CURRENT_USER = name;
-  addProfile(name);
-  // Hide login, show menu
+  errEl.textContent = '';  // clear any previous error
   document.getElementById('login-screen').classList.add('hide');
   setTimeout(() => {
     document.getElementById('login-screen').style.display = 'none';
@@ -565,17 +591,9 @@ window.loginAs = function(name) {
   document.getElementById('menu').classList.remove('hidden');
 };
 
-window.deleteProfileClick = function(name) {
-  if (!confirm(`Delete profile "${name}" and all progress? This cannot be undone.`)) return;
-  deleteProfile(name);
-  renderLogin();
-};
-
 window.logout = function() {
   saveGame();  // save before logging out
-  // Reset state for next user
   CURRENT_USER = null;
-  // Reload the page to reset everything cleanly
   location.reload();
 };
 
