@@ -44,6 +44,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
   font-size:13px;color:#cbd7dc;display:flex;align-items:center;gap:8px;white-space:nowrap}
 .stat-chip b{color:#f5cc74;font-size:15px;font-family:Georgia,serif}
 .stat-chip .icon{font-size:16px}
+.income-chip b{color:#7fffd4 !important}  /* income shows in teal-green to distinguish from gold budget */
 
 /* Bottom hint bar */
 .bottom-bar{bottom:0;left:0;right:0;padding:14px 26px;display:flex;justify-content:space-between;align-items:flex-end;
@@ -99,6 +100,33 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .plot-card .meta-chip{padding:6px 12px;border:1px solid #1a3340;border-radius:6px;background:rgba(20,50,60,.5);font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;text-transform:uppercase;letter-spacing:1px}
 .plot-card .meta-chip b{color:#f5cc74;font-weight:600;margin-left:4px;text-transform:none;letter-spacing:0}
 .plot-card .meta-shape{display:inline-flex;align-items:center}
+
+/* Business panel inside plot modal */
+.business-panel{margin:16px 0;padding:14px;border:1px solid #1a3340;border-radius:10px;background:rgba(11,29,41,.5)}
+.biz-title{font-family:Georgia,serif;color:#f5cc74;font-size:16px;margin-bottom:4px}
+.biz-hint{font-family:Arial,sans-serif;font-size:11px;color:#7fa0ab;margin-bottom:12px;letter-spacing:.5px}
+.biz-list{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto}
+.biz-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #1a3340;border-radius:8px;
+  background:rgba(20,50,60,.4);cursor:pointer;transition:all .15s;text-align:left;color:inherit;font-family:inherit}
+.biz-option:hover:not(.disabled){background:rgba(29,74,87,.7);border-color:#2c4a55}
+.biz-option.disabled{opacity:.4;cursor:not-allowed}
+.biz-option .biz-icon{font-size:22px;flex-shrink:0;width:28px;text-align:center}
+.biz-option .biz-info{flex:1;min-width:0}
+.biz-option .biz-name{font-family:Arial,sans-serif;font-size:14px;color:#e8eef0;font-weight:600}
+.biz-option .biz-cost{font-family:Arial,sans-serif;font-size:11px;color:#f5cc74;margin-top:2px}
+.biz-option .biz-income{font-family:Georgia,serif;font-size:13px;color:#7fffd4;flex-shrink:0;white-space:nowrap}
+.biz-option.disabled .biz-income{color:#9bb4bd}
+
+/* Existing business display */
+.business-current{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.business-current .biz-icon{font-size:32px}
+.business-current .biz-info{flex:1}
+.business-current .biz-name{font-family:Georgia,serif;font-size:18px;color:#f5cc74}
+.business-current .biz-income{font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;margin-top:2px}
+.business-current .biz-income b{color:#7fffd4}
+.biz-desc{font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;line-height:1.5;margin-bottom:12px;font-style:italic}
+.btn.demolish{background:rgba(90,36,36,.4);border-color:#5a2424;color:#ff8080;width:100%;margin-top:4px}
+.btn.demolish:hover{background:rgba(120,48,48,.6)}
 
 /* Loading overlay */
 .loader{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -157,6 +185,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
       <div class="brand">Open World<small>Live · Earth Edition</small></div>
       <div class="stats">
         <div class="stat-chip"><span class="icon">💰</span><span>Budget</span><b id="money">$1,000,000</b></div>
+        <div class="stat-chip income-chip"><span class="icon">📈</span><span>Income</span><b id="income">$0/s</b></div>
         <div class="stat-chip"><span class="icon">🌍</span><span>Owned</span><b id="owned-count">0</b></div>
       </div>
     </div>
@@ -215,6 +244,8 @@ const STATE = {
   visiblePlots: [],             // updated each frame; subset of plots currently on near side
   hoveredPlot: null,
   selectedPlot: null,
+  totalIncome: 0,               // $ per second from all businesses
+  lastIncomeTime: 0,            // timestamp of last income tick
   radius: 1.0,                // Earth radius in scene units
   zoomMin: 1.22,              // closest (just above surface — safe for rendering)
   zoomMax: 6.0,               // farthest (space view)
@@ -225,6 +256,91 @@ const STATE = {
 };
 
 const EARTH_RADIUS = STATE.radius;
+
+// ====================================================================
+// BUSINESS CATALOG
+// ====================================================================
+// Each business has: id, name, icon (emoji), buildCost, income ($/sec),
+// color (hex), shape (3D primitive type), description.
+// Income scales with plot area — bigger plots earn proportionally more.
+const BUSINESS_TYPES = [
+  {
+    id: 'farm', name: 'Farm', icon: '🌾',
+    buildCost: 8000, income: 60,
+    color: 0x7cb342, shape: 'cone',
+    desc: 'Modest crops. Slow but reliable income.'
+  },
+  {
+    id: 'mine', name: 'Mine', icon: '⛏️',
+    buildCost: 20000, income: 180,
+    color: 0x8d6e63, shape: 'cylinder',
+    desc: 'Extracts minerals from the earth.'
+  },
+  {
+    id: 'factory', name: 'Factory', icon: '🏭',
+    buildCost: 60000, income: 650,
+    color: 0x546e7a, shape: 'box',
+    desc: 'Mass production. Solid mid-tier income.'
+  },
+  {
+    id: 'resort', name: 'Resort', icon: '🏖️',
+    buildCost: 90000, income: 950,
+    color: 0x4dd0e1, shape: 'dome',
+    desc: 'Tourist destination. Tropical plots preferred.'
+  },
+  {
+    id: 'oilrig', name: 'Oil Rig', icon: '🛢️',
+    buildCost: 140000, income: 1600,
+    color: 0x37474f, shape: 'pyramid',
+    desc: 'Black gold. High income, environmental cost.'
+  },
+  {
+    id: 'casino', name: 'Casino', icon: '🎰',
+    buildCost: 180000, income: 2400,
+    color: 0xd32f2f, shape: 'sphere',
+    desc: 'High-stakes entertainment. Risky but lucrative.'
+  },
+  {
+    id: 'bank', name: 'Bank', icon: '🏦',
+    buildCost: 300000, income: 4500,
+    color: 0xf5cc74, shape: 'cylinder',
+    desc: 'Financial hub. Money makes money.'
+  },
+  {
+    id: 'techhub', name: 'Tech Hub', icon: '💻',
+    buildCost: 600000, income: 11000,
+    color: 0x7c4dff, shape: 'octahedron',
+    desc: 'Cutting-edge innovation. Top-tier income.'
+  },
+];
+
+// Build the 3D mesh for a business type at a given scale.
+// Returns a THREE.Mesh positioned at origin (caller positions it).
+function buildBusinessMesh(businessType, scale) {
+  const s = scale;
+  let geo;
+  switch (businessType.shape) {
+    case 'cone':       geo = new THREE.ConeGeometry(s * 0.6, s * 1.4, 8); break;
+    case 'cylinder':   geo = new THREE.CylinderGeometry(s * 0.5, s * 0.6, s * 1.2, 12); break;
+    case 'box':        geo = new THREE.BoxGeometry(s, s, s); break;
+    case 'dome':       geo = new THREE.SphereGeometry(s * 0.7, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2); break;
+    case 'pyramid':    geo = new THREE.ConeGeometry(s * 0.8, s * 1.4, 4); break;
+    case 'sphere':     geo = new THREE.SphereGeometry(s * 0.7, 16, 12); break;
+    case 'octahedron': geo = new THREE.OctahedronGeometry(s * 0.8, 0); break;
+    default:           geo = new THREE.BoxGeometry(s, s, s);
+  }
+  const mat = new THREE.MeshBasicMaterial({
+    color: businessType.color,
+    transparent: true,
+    opacity: 0.95,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  // Lift so base sits on the surface (roughly)
+  mesh.position.y = s * 0.6;
+  return mesh;
+}
 
 // ====================================================================
 // SCENE SETUP
@@ -746,16 +862,15 @@ function updatePlotVisibility() {
       }
     } else {
       // Owned plots glow gold and stay visible on the near side
-      if (dot > dotThresholdOwned) {
-        if (opacityChanged && !p.userData._ownedOverride) {
-          // owned plots have their opacity set by buySelectedPlot; don't override
-        }
-        p.visible = true;
-        if (outline) outline.visible = true;
+      const onNearSide = dot > dotThresholdOwned;
+      p.visible = onNearSide;
+      if (outline) outline.visible = onNearSide;
+      // Business mesh visibility follows the plot
+      if (p.userData.businessMesh) {
+        p.userData.businessMesh.visible = onNearSide && baseOpacity > 0.05;
+      }
+      if (onNearSide) {
         STATE.visiblePlots.push(p);
-      } else {
-        p.visible = false;
-        if (outline) outline.visible = false;
       }
     }
   }
@@ -791,8 +906,21 @@ function onPointerMove(e) {
     tip.style.left = e.clientX + 'px';
     tip.style.top = e.clientY + 'px';
     const owned = hitPlot.userData.owned;
-    tip.classList.toggle('owned', owned);
-    tip.innerHTML = `${hitPlot.userData.name}<span class="price">${owned ? 'OWNED' : '$' + hitPlot.userData.price.toLocaleString()}</span>`;
+    const biz = hitPlot.userData.business;
+    let tipText;
+    if (owned && biz) {
+      const bt = BUSINESS_TYPES.find(b => b.id === biz.type);
+      const inc = Math.round(bt.income * hitPlot.userData.areaMultiplier);
+      tipText = `${hitPlot.userData.name}<span class="price">${bt.icon} ${bt.name} +$${inc.toLocaleString()}/s</span>`;
+      tip.classList.add('owned');
+    } else if (owned) {
+      tipText = `${hitPlot.userData.name}<span class="price">OWNED — build ready</span>`;
+      tip.classList.add('owned');
+    } else {
+      tipText = `${hitPlot.userData.name}<span class="price">$${hitPlot.userData.price.toLocaleString()}</span>`;
+      tip.classList.remove('owned');
+    }
+    tip.innerHTML = tipText;
   } else {
     STATE.hoveredPlot = null;
     renderer.domElement.style.cursor = 'grab';
@@ -819,7 +947,7 @@ function onPointerClick(e) {
 }
 
 // ====================================================================
-// PLOT MODAL (BUY)
+// PLOT MODAL (BUY / BUILD)
 // ====================================================================
 function openPlotModal(plot) {
   STATE.selectedPlot = plot;
@@ -830,11 +958,59 @@ function openPlotModal(plot) {
 
   let actionBtn;
   if (owned) {
-    actionBtn = `<button class="btn primary" onclick="closePlotModal()">Owned — Close</button>`;
+    actionBtn = `<button class="btn primary" onclick="closePlotModal()">Close</button>`;
   } else if (affordable) {
     actionBtn = `<button class="btn primary" onclick="buySelectedPlot()">Buy Plot</button>`;
   } else {
     actionBtn = `<button class="btn primary" disabled>Insufficient Funds</button>`;
+  }
+
+  // Business panel — only shown for owned plots
+  let businessPanel = '';
+  if (owned) {
+    const existing = plot.userData.business;
+    if (existing) {
+      // Show existing business info + option to demolish
+      const bt = BUSINESS_TYPES.find(b => b.id === existing.type);
+      businessPanel = `
+        <div class="business-panel">
+          <div class="business-current">
+            <div class="biz-icon">${bt.icon}</div>
+            <div class="biz-info">
+              <div class="biz-name">${bt.name}</div>
+              <div class="biz-income">+${bt.income.toLocaleString()}/s × ${plot.userData.areaMultiplier.toFixed(2)} = <b>+$${Math.round(bt.income * plot.userData.areaMultiplier).toLocaleString()}/s</b></div>
+            </div>
+          </div>
+          <div class="biz-desc">${bt.desc}</div>
+          <button class="btn demolish" onclick="demolishBusiness()">Demolish Business</button>
+        </div>
+      `;
+    } else {
+      // Show business options to build
+      const options = BUSINESS_TYPES.map(b => {
+        // Effective cost & income scale with plot area
+        const effCost = Math.round(b.buildCost * plot.userData.areaMultiplier);
+        const effIncome = Math.round(b.income * plot.userData.areaMultiplier);
+        const canAfford = STATE.money >= effCost;
+        return `
+          <button class="biz-option ${canAfford ? '' : 'disabled'}" ${canAfford ? '' : 'disabled'} onclick="buildBusiness('${b.id}')">
+            <div class="biz-icon">${b.icon}</div>
+            <div class="biz-info">
+              <div class="biz-name">${b.name}</div>
+              <div class="biz-cost">$${effCost.toLocaleString()}</div>
+            </div>
+            <div class="biz-income">+$${effIncome.toLocaleString()}/s</div>
+          </button>
+        `;
+      }).join('');
+      businessPanel = `
+        <div class="business-panel">
+          <div class="biz-title">Build a Business</div>
+          <div class="biz-hint">Cost &amp; income scale with plot area (${plot.userData.areaMultiplier.toFixed(2)}×)</div>
+          <div class="biz-list">${options}</div>
+        </div>
+      `;
+    }
   }
 
   card.innerHTML = `
@@ -846,11 +1022,12 @@ function openPlotModal(plot) {
       <span class="meta-chip">Tier <b>${plot.userData.sizeName}</b></span>
       <span class="meta-chip">Area <b>${plot.userData.areaMultiplier.toFixed(1)}×</b></span>
     </div>
-    <div class="desc">An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Watch it glow from orbit.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}</div>
+    <div class="desc">An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Build a business to generate passive income.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}</div>
     <div class="price-row">
-      <span class="price-label">${owned ? 'Acquired For' : 'Asking Price'}</span>
-      <span class="price-value">$${plot.userData.price.toLocaleString()}<small> USD</small></span>
+      <span class="price-label">${owned ? (plot.userData.business ? 'Operating' : 'Owned — Build Ready') : 'Asking Price'}</span>
+      <span class="price-value">${owned ? (plot.userData.business ? 'Income Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString()}<small>${owned ? '' : ' USD'}</small></span>
     </div>
+    ${businessPanel}
     <div class="actions">
       <button class="btn" onclick="closePlotModal()">Cancel</button>
       ${actionBtn}
@@ -888,16 +1065,134 @@ window.buySelectedPlot = function() {
   }
 
   updateHUD();
-  closePlotModal();
+  // Re-open modal to show business panel now that plot is owned
+  openPlotModal(p);
   showToast(`Acquired ${p.userData.name} for $${p.userData.price.toLocaleString()}`, true);
 };
+
+// ====================================================================
+// BUSINESS: BUILD & DEMOLISH
+// ====================================================================
+window.buildBusiness = function(businessId) {
+  const p = STATE.selectedPlot;
+  if (!p || !p.userData.owned) return;
+  if (p.userData.business) {
+    showToast('Plot already has a business. Demolish first.', false);
+    return;
+  }
+  const bt = BUSINESS_TYPES.find(b => b.id === businessId);
+  if (!bt) return;
+  const effCost = Math.round(bt.buildCost * p.userData.areaMultiplier);
+  if (STATE.money < effCost) {
+    showToast(`Need $${effCost.toLocaleString()} to build ${bt.name}`, false);
+    return;
+  }
+  STATE.money -= effCost;
+  p.userData.business = { type: businessId, builtAt: Date.now() };
+
+  // Add 3D business mesh on the plot
+  // Position = plot's centroid (which is at p.userData.localDir * vertexRadius)
+  // The business mesh is added as child of Earth so it rotates with the planet.
+  const bizScale = Math.max(0.015, Math.min(0.04, p.userData.areaMultiplier * 0.02));
+  const bizMesh = buildBusinessMesh(bt, bizScale);
+  // Position at plot centroid on the sphere, oriented outward
+  const centroidPos = p.userData.localDir.clone().multiplyScalar(EARTH_RADIUS * 1.006);
+  bizMesh.position.copy(centroidPos);
+  bizMesh.lookAt(0, 0, 0);
+  bizMesh.rotateX(Math.PI / 2); // make "up" axis point outward from sphere
+  // Actually we want the business to sit ON the surface with its base down.
+  // The mesh was built with base at y=0 and top at y=height. After lookAt(origin)
+  // + rotateX(PI/2), the y-axis points outward. Let's just position it correctly.
+  // Simpler approach: use lookAt to orient toward origin, then the mesh's +y
+  // points outward from the sphere.
+  bizMesh.lookAt(centroidPos.clone().multiplyScalar(2));
+  // After this, +y of mesh points away from origin (outward). Good.
+  bizMesh.position.copy(centroidPos);
+
+  p.userData.businessMesh = bizMesh;
+  earth.add(bizMesh);
+
+  // Recolor plot to business color (subtle tint)
+  p.material.color.setHex(bt.color);
+  p.material.opacity = 0.5;
+  if (p.userData.outline) {
+    p.userData.outline.material.color.setHex(bt.color);
+    p.userData.outline.material.opacity = 0.7;
+  }
+
+  // Recompute total income
+  recomputeIncome();
+  updateHUD();
+  openPlotModal(p);  // refresh modal to show business info
+  showToast(`Built ${bt.name} — earning $${Math.round(bt.income * p.userData.areaMultiplier).toLocaleString()}/s`, true);
+};
+
+window.demolishBusiness = function() {
+  const p = STATE.selectedPlot;
+  if (!p || !p.userData.business) return;
+  const bt = BUSINESS_TYPES.find(b => b.id === p.userData.business.type);
+  // Remove business mesh
+  if (p.userData.businessMesh) {
+    earth.remove(p.userData.businessMesh);
+    p.userData.businessMesh.geometry.dispose();
+    p.userData.businessMesh.material.dispose();
+    p.userData.businessMesh = null;
+  }
+  p.userData.business = null;
+  // Restore owned-plot gold color
+  p.material.color.setHex(0xf5cc74);
+  p.material.opacity = 0.85;
+  if (p.userData.outline) {
+    p.userData.outline.material.color.setHex(0xf5cc74);
+    p.userData.outline.material.opacity = 0.9;
+  }
+  recomputeIncome();
+  updateHUD();
+  openPlotModal(p);
+  showToast(`Demolished ${bt ? bt.name : 'business'}`, true);
+};
+
+function recomputeIncome() {
+  let total = 0;
+  for (const p of STATE.plots) {
+    if (p.userData.business) {
+      const bt = BUSINESS_TYPES.find(b => b.id === p.userData.business.type);
+      if (bt) total += bt.income * p.userData.areaMultiplier;
+    }
+  }
+  STATE.totalIncome = total;
+}
 
 // ====================================================================
 // HUD UPDATES
 // ====================================================================
 function updateHUD() {
-  document.getElementById('money').textContent = '$' + STATE.money.toLocaleString();
+  document.getElementById('money').textContent = '$' + Math.floor(STATE.money).toLocaleString();
   document.getElementById('owned-count').textContent = STATE.owned.size;
+  const incEl = document.getElementById('income');
+  if (incEl) {
+    const inc = STATE.totalIncome;
+    if (inc >= 1000) {
+      incEl.textContent = '$' + (inc / 1000).toFixed(1) + 'k/s';
+    } else {
+      incEl.textContent = '$' + Math.round(inc) + '/s';
+    }
+  }
+}
+
+// Apply accumulated income since last tick (called from animate loop)
+function tickIncome() {
+  if (STATE.totalIncome <= 0) return;
+  const now = performance.now();
+  if (STATE.lastIncomeTime === 0) {
+    STATE.lastIncomeTime = now;
+    return;
+  }
+  const dt = (now - STATE.lastIncomeTime) / 1000;  // seconds
+  if (dt < 0.1) return;  // update at most 10× per second
+  STATE.money += STATE.totalIncome * dt;
+  STATE.lastIncomeTime = now;
+  updateHUD();
 }
 
 function updateZoomMeter() {
@@ -948,6 +1243,7 @@ function animate() {
   controls.update();
   updatePlotVisibility();
   updateZoomMeter();
+  tickIncome();  // accumulate passive income from businesses
   renderer.render(scene, camera);
 }
 
