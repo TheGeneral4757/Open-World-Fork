@@ -40,6 +40,16 @@ An interactive 3D Earth strategy game — claim land, build businesses, produce 
 - Each business has a unique 3D shape (cone, cylinder, box, dome, pyramid, sphere, octahedron)
 - **Demolish** any business individually
 
+### ⚔️ Military & Conquest
+- **Barracks** train ⚔️ troops — a military resource that can't be sold on the market
+- Your army defends all your plots automatically; enemies see your strength before attacking
+- **Conquer other commanders' plots**: click a claimed plot, commit troops, and attack
+  - Defenders get terrain bonuses: mountains ×1.5, highlands ×1.35, ocean ×1.3, other land ×1.2
+  - Battles roll strength with ±15% luck — the modal shows your estimated win chance before you commit
+  - **Win**: the plot becomes yours — captured businesses keep producing for you — and both sides take casualties
+  - **Lose**: the entire committed force is lost; the defender's army takes light losses
+- The 📊 **Army** chip in the HUD shows your current troop strength
+
 ### 🎰 Casino Gambling
 - Casinos don't produce steadily — each tick rolls a slot machine:
   - 🎰 **JACKPOT** (10×) — 2% chance, triggers gold toast notification
@@ -132,6 +142,14 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.3 (2026-10-03) — Military & conquest
+- **Barracks** business (land, $250k): trains ⚔️ troops, a military resource excluded from the market
+- **Army HUD chip** shows your troop strength at a glance
+- **Conquest**: attack any plot claimed by another commander — commit troops, see the estimated win chance, and fight
+- Terrain defense bonuses (mountains ×1.5, highlands ×1.35, ocean ×1.3, land ×1.2) and ±15% battle luck
+- Victory transfers the plot and its businesses to the conqueror; the defender's save is updated live
+- Losses on both sides scale with how close the battle was; a lost attack kills the entire committed force
 
 ### v1.2 (2026-10-03) — Interactive casino
 - **Lucky Diamond Slots**: interactive slot-machine minigame for casino owners — bet your own money and spin
