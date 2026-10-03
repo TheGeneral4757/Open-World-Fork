@@ -185,6 +185,32 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .market-card .market-sub{font-family:Arial,sans-serif;font-size:12px;color:#7fa0ab;margin-bottom:16px;letter-spacing:.5px}
 .market-card .market-sub b{color:#f5cc74}
 .market-card .market-countdown{color:#7fffd4}
+/* Casino slots minigame */
+.gamble-card{width:min(520px,92vw);max-height:88vh;overflow-y:auto}
+.gamble-card h2{margin:0 0 4px;color:#f5cc74;font-size:24px}
+.gamble-sub{font-family:Arial,sans-serif;font-size:12px;color:#7fa0ab;margin:0 0 12px;letter-spacing:1px}
+.gamble-select{width:100%;background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:8px;padding:8px;font-size:13px;margin-bottom:12px;font-family:Arial,sans-serif}
+.slot-reels{display:flex;gap:12px;justify-content:center;margin:14px 0}
+.slot-reel{width:82px;height:82px;display:flex;align-items:center;justify-content:center;font-size:42px;background:#0a1420;border:2px solid #2c4a55;border-radius:12px;box-shadow:inset 0 0 18px rgba(0,0,0,.6)}
+.slot-reel.spinning{border-color:#f5cc74;animation:slotroll .14s linear infinite}
+@keyframes slotroll{0%{transform:translateY(-7%)}50%{transform:translateY(7%)}100%{transform:translateY(-7%)}}
+.slot-reel.stopped{animation:slotpop .28s ease}
+@keyframes slotpop{0%{transform:scale(1.18)}100%{transform:scale(1)}}
+.slot-result{min-height:24px;text-align:center;font-family:Arial,sans-serif;font-size:15px;margin:6px 0 12px;font-weight:bold}
+.slot-spin-btn{width:100%;padding:13px;font-size:17px;font-weight:bold;letter-spacing:2px;background:linear-gradient(180deg,#f7d98d,#e0b455);color:#221a05;border:none;border-radius:10px;cursor:pointer;font-family:Arial,sans-serif}
+.slot-spin-btn:hover{filter:brightness(1.08)}
+.slot-spin-btn:disabled{opacity:.45;cursor:default}
+.bet-row{display:flex;align-items:center;gap:8px;justify-content:center;margin:12px 0 4px;font-family:Arial,sans-serif;font-size:13px;color:#9bb4bd;flex-wrap:wrap}
+.bet-chip{background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:14px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:Arial,sans-serif}
+.bet-chip:hover{border-color:#f5cc74;color:#f5cc74}
+.slot-paytable{text-align:center;font-size:11px;color:#7fa0ab;margin:10px 0 4px;font-family:Arial,sans-serif}
+.slot-house{text-align:center;font-size:11px;color:#7fffd4;margin-bottom:8px;font-family:Arial,sans-serif}
+.slot-stats{text-align:center;font-size:12px;color:#cbd7dc;margin:8px 0;font-family:Arial,sans-serif}
+.slot-stats b{color:#f5cc74}
+.slot-history{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;min-height:22px}
+.slot-history span{padding:2px 9px;border-radius:10px;font-size:11px;border:1px solid;background:rgba(10,20,32,.6);font-family:Arial,sans-serif}
+.gamble-play-btn{width:100%;padding:9px;font-size:13px;font-weight:bold;background:rgba(245,204,116,.12);border:1px solid #f5cc74;color:#f5cc74;border-radius:8px;cursor:pointer;letter-spacing:1px;font-family:Arial,sans-serif;margin-top:6px}
+.gamble-play-btn:hover{background:rgba(245,204,116,.25)}
 .mat-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #1a3340;border-radius:8px;
   background:rgba(20,50,60,.4);margin-bottom:8px}
 .mat-row .mat-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center}
@@ -489,6 +515,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <div class="stat-chip stock-chip" onclick="openMarketModal()" title="Open Market"><span class="icon">📦</span><span>Stock</span><b id="stock-value">$0</b></div>
         <div class="stat-chip"><span class="icon">🌍</span><span>Owned</span><b id="owned-count">0</b></div>
         <button class="market-btn" onclick="openMarketModal()">📈 Market</button>
+        <button class="market-btn" id="gamble-btn" onclick="openGambling()" style="display:none" title="Play at your casinos">🎰 Casino</button>
       </div>
     </div>
 
@@ -517,6 +544,12 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 
   <div class="plot-modal" id="market-modal">
     <div class="plot-card market-card" id="market-card">
+      <!-- filled dynamically -->
+    </div>
+  </div>
+
+  <div class="plot-modal" id="gamble-modal">
+    <div class="plot-card gamble-card" id="gamble-card">
       <!-- filled dynamically -->
     </div>
   </div>
@@ -2684,6 +2717,7 @@ function openPlotModal(plot) {
               <span>💀: <b style="color:#ff8080">${busts}</b></span>
             </div>
             ${historyRows ? `<div class="gamble-history" style="max-height:100px">${historyRows}</div>` : ''}
+            <button class="gamble-play-btn" onclick="playAtSelectedCasino()">🎰 Play Slots Here</button>
           </div>
         `;
       }
@@ -3052,6 +3086,238 @@ window.sellAllMaterials = function() {
 // ====================================================================
 // HUD UPDATES
 // ====================================================================
+// ====================================================================
+// INTERACTIVE CASINO — slot machine minigame for owned casinos
+// ====================================================================
+// Visit any casino you own, place a bet, and spin the reels. Uses the
+// same paytable as the passive casino rolls (jackpot 10×, big win 3×,
+// push 1×, bust 0×). Every casino you own beyond the first trims the
+// bust chance (up to −18%), rewarding casino empires without breaking
+// the economy — expected return stays near break-even.
+const SLOT_SYMBOLS = ['🍒','🍋','⭐','🔔','7️⃣','💎'];
+const SLOT_BIG_TRIPLE = ['7️⃣','🔔','⭐'];
+let gamblePlot = null;          // currently selected casino plot
+let gambleBet = 5000;
+let gambleSpinning = false;
+const gambleStats = { spins: 0, wagered: 0, won: 0, best: 0, history: [] };
+
+function fmtMoney(v) {
+  const n = Math.round(v);
+  return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString();
+}
+
+function getOwnedCasinoCount() {
+  let n = 0;
+  for (const p of STATE.plots) {
+    if (!p.userData.owned) continue;
+    for (const b of p.userData.businesses || []) {
+      if (b.type === 'casino') n++;
+    }
+  }
+  return n;
+}
+function getOwnedCasinoPlots() {
+  return STATE.plots.filter(p => p.userData.owned && (p.userData.businesses || []).some(b => b.type === 'casino'));
+}
+
+// Show/hide the HUD Casino shortcut (called from updateHUD)
+function updateGambleButton() {
+  const btn = document.getElementById('gamble-btn');
+  if (btn) btn.style.display = getOwnedCasinoCount() > 0 ? '' : 'none';
+}
+
+window.openGambling = function(plot) {
+  const owned = getOwnedCasinoPlots();
+  if (!owned.length) { showToast('Build a casino first!', false); return; }
+  gamblePlot = owned.includes(plot) ? plot : owned[0];
+  renderGambleModal(owned);
+  document.getElementById('gamble-modal').classList.add('show');
+};
+
+// Play button inside the plot modal — opens the game at this plot's casino
+window.playAtSelectedCasino = function() {
+  openGambling(STATE.selectedPlot);
+};
+
+window.setGamblePlot = function(idx) {
+  const owned = getOwnedCasinoPlots();
+  const p = owned[parseInt(idx)];
+  if (p) { gamblePlot = p; renderGambleModal(owned); }
+};
+
+window.closeGambling = function() {
+  document.getElementById('gamble-modal').classList.remove('show');
+};
+
+function renderGambleModal(owned) {
+  const card = document.getElementById('gamble-card');
+  const sel = owned.map((p, i) =>
+    `<option value="${i}" ${p === gamblePlot ? 'selected' : ''}>${p.userData.name} · ${(p.userData.businesses || []).filter(b => b.type === 'casino').length} 🎰</option>`
+  ).join('');
+  card.innerHTML = `
+    <h2>🎰 Lucky Diamond Slots</h2>
+    <p class="gamble-sub">Bet your own money — jackpot pays 10×</p>
+    ${owned.length > 1 ? `<select class="gamble-select" onchange="setGamblePlot(this.value)">${sel}</select>` : ''}
+    <div class="slot-reels">
+      <div class="slot-reel" id="slot-reel-0">💎</div>
+      <div class="slot-reel" id="slot-reel-1">💎</div>
+      <div class="slot-reel" id="slot-reel-2">💎</div>
+    </div>
+    <div class="slot-result" id="slot-result">Place your bet and spin!</div>
+    <button class="slot-spin-btn" id="slot-spin-btn" onclick="spinSlots()">SPIN — ${fmtMoney(gambleBet)}</button>
+    <div class="bet-row">
+      <span>Bet:</span><b id="slot-bet-value" style="color:#f5cc74">${fmtMoney(gambleBet)}</b>
+      <button class="bet-chip" onclick="adjustBet(1000)">+1K</button>
+      <button class="bet-chip" onclick="adjustBet(5000)">+5K</button>
+      <button class="bet-chip" onclick="adjustBet(25000)">+25K</button>
+      <button class="bet-chip" onclick="adjustBet(100000)">+100K</button>
+      <button class="bet-chip" onclick="maxBet()">MAX</button>
+    </div>
+    <div class="slot-paytable">💎💎💎 ×10 · 7️⃣/🔔/⭐ triple ×3 · 🍒 pair ×1 (push) · mixed ×0</div>
+    <div class="slot-house" id="slot-house"></div>
+    <div class="slot-stats" id="slot-stats"></div>
+    <div class="slot-history" id="slot-history"></div>
+    <button class="close" onclick="closeGambling()">CLOSE</button>
+  `;
+  updateSlotMeta();
+}
+
+function updateSlotMeta() {
+  const n = getOwnedCasinoCount();
+  const house = document.getElementById('slot-house');
+  if (house) {
+    house.textContent = n > 1
+      ? `🏠 ${n} casinos — bust chance reduced by ${Math.min(18, n - 1)}%`
+      : '🏠 Build more casinos to reduce the bust chance';
+  }
+  updateSlotBet();
+  renderSlotStats();
+}
+
+window.adjustBet = function(d) {
+  gambleBet = Math.max(100, Math.min(Math.max(100, Math.floor(STATE.money)), gambleBet + d));
+  updateSlotBet();
+};
+window.maxBet = function() {
+  gambleBet = Math.max(100, Math.floor(STATE.money));
+  updateSlotBet();
+};
+
+function updateSlotBet() {
+  const bv = document.getElementById('slot-bet-value');
+  const sb = document.getElementById('slot-spin-btn');
+  if (bv) bv.textContent = fmtMoney(gambleBet);
+  if (sb) sb.textContent = `SPIN — ${fmtMoney(gambleBet)}`;
+}
+
+function renderSlotStats() {
+  const el = document.getElementById('slot-stats');
+  if (!el) return;
+  const net = gambleStats.won - gambleStats.wagered;
+  const netColor = net > 0 ? '#7fffd4' : (net < 0 ? '#ff8080' : '#cbd7dc');
+  el.innerHTML = `Spins <b>${gambleStats.spins}</b> · Wagered ${fmtMoney(gambleStats.wagered)} · Won <b>${fmtMoney(gambleStats.won)}</b> · Net <b style="color:${netColor}">${net >= 0 ? '+' : ''}${fmtMoney(net)}</b> · Best <b>+${fmtMoney(gambleStats.best)}</b>`;
+  const hist = document.getElementById('slot-history');
+  if (hist) {
+    hist.innerHTML = gambleStats.history.map(h =>
+      `<span style="color:${h.color};border-color:${h.color}">${h.label} ${h.delta >= 0 ? '+' : ''}${fmtMoney(h.delta)}</span>`
+    ).join('');
+  }
+}
+
+function pickSlotOutcome() {
+  const n = getOwnedCasinoCount();
+  const bonus = Math.max(0, Math.min(18, n - 1));
+  const weights = [ ['jackpot', 2], ['bigwin', 10], ['normal', 45 + bonus], ['bust', 43 - bonus] ];
+  let r = Math.random() * weights.reduce((s, w) => s + w[1], 0);
+  for (const [id, wt] of weights) { if ((r -= wt) <= 0) return id; }
+  return 'bust';
+}
+
+// Pick reel symbols that visually match the outcome chosen by weight —
+// the odds stay exactly the weighted probabilities, the reels just
+// show a combination consistent with the result.
+function symbolsForOutcome(id) {
+  if (id === 'jackpot') return ['💎', '💎', '💎'];
+  if (id === 'bigwin') {
+    const s = SLOT_BIG_TRIPLE[Math.floor(Math.random() * SLOT_BIG_TRIPLE.length)];
+    return [s, s, s];
+  }
+  if (id === 'normal') {
+    const others = SLOT_SYMBOLS.filter(s => s !== '🍒');
+    const arr = ['🍒', '🍒', others[Math.floor(Math.random() * others.length)]];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+  const pool = [...SLOT_SYMBOLS];
+  return [0, 1, 2].map(() => pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+}
+
+window.spinSlots = function() {
+  if (gambleSpinning) return;
+  if (!gamblePlot || !(gamblePlot.userData.businesses || []).some(b => b.type === 'casino')) {
+    showToast('This plot has no casino', false);
+    return;
+  }
+  if (gambleBet > STATE.money) { showToast('Not enough money for that bet', false); return; }
+  gambleSpinning = true;
+  const bet = gambleBet;
+  STATE.money -= bet;
+
+  const outcomeId = pickSlotOutcome();
+  const finalSyms = symbolsForOutcome(outcomeId);
+  const outcome = CASINO_OUTCOMES.find(o => o.id === outcomeId);
+  const reels = [0, 1, 2].map(i => document.getElementById('slot-reel-' + i));
+  const spinBtn = document.getElementById('slot-spin-btn');
+  const resultEl = document.getElementById('slot-result');
+  if (resultEl) { resultEl.textContent = '🎰 Spinning...'; resultEl.style.color = '#9bb4bd'; }
+  if (spinBtn) spinBtn.disabled = true;
+  reels.forEach(r => { r.classList.remove('stopped'); r.classList.add('spinning'); });
+
+  const cycle = setInterval(() => {
+    reels.forEach(r => { r.textContent = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]; });
+  }, 80);
+  [650, 1100, 1550].forEach((delay, i) => {
+    setTimeout(() => {
+      reels[i].classList.remove('spinning');
+      reels[i].classList.add('stopped');
+      reels[i].textContent = finalSyms[i];
+    }, delay);
+  });
+  setTimeout(() => {
+    clearInterval(cycle);
+    settleSpin(bet, outcome, resultEl, spinBtn);
+    gambleSpinning = false;
+  }, 1850);
+};
+
+function settleSpin(bet, outcome, resultEl, spinBtn) {
+  const win = Math.round(bet * outcome.multiplier);
+  STATE.money += win;
+  const delta = win - bet;
+  gambleStats.spins++;
+  gambleStats.wagered += bet;
+  gambleStats.won += win;
+  if (delta > gambleStats.best) gambleStats.best = delta;
+  gambleStats.history.unshift({ label: outcome.label.split(' ')[0], color: outcome.color, delta });
+  if (gambleStats.history.length > 8) gambleStats.history.length = 8;
+
+  if (resultEl) {
+    resultEl.style.color = outcome.color;
+    resultEl.textContent = delta > 0
+      ? `${outcome.label} +${fmtMoney(delta)}`
+      : (delta === 0 ? '🎲 Push — bet returned' : `💀 Bust — ${fmtMoney(delta)}`);
+  }
+  updateHUD();
+  updateSlotMeta();
+  saveGame();
+  if (spinBtn) spinBtn.disabled = false;
+  if (outcome.id === 'jackpot') showToast(`🎰 JACKPOT! +${fmtMoney(win)}`, true);
+  else if (outcome.id === 'bigwin') showToast(`✨ Big Win! +${fmtMoney(delta)}`, true);
+}
+
 function updateHUD() {
   document.getElementById('money').textContent = '$' + Math.floor(STATE.money).toLocaleString();
   document.getElementById('owned-count').textContent = STATE.owned.size;
@@ -3064,6 +3330,8 @@ function updateHUD() {
       stockEl.textContent = '$' + Math.round(val);
     }
   }
+  // Casino shortcut — visible when you own at least one casino
+  updateGambleButton();
 }
 
 // Apply accumulated production since last tick (called from animate loop)
@@ -3232,6 +3500,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     window.closePlotModal();
     window.closeMarketModal();
+    window.closeGambling();
     window.closeLeaderboard();
     window.closeSettings();
   }
