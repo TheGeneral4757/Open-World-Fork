@@ -47,6 +47,12 @@ An interactive 3D Earth strategy game — claim land, build businesses, produce 
   - 🎲 **Normal** (1×) — 45% chance
   - 💀 **Bust** (0×) — 43% chance, no production
 - Gambling stats panel shows roll history, jackpots, big wins, busts
+- **Interactive slots minigame** — with a casino you can gamble your own money:
+  - Open it from the HUD **🎰 Casino** button or the **Play Slots Here** button on any casino plot
+  - Place a bet (from $100 up to your whole budget), spin the reels, watch them stop one by one
+  - Same paytable as passive rolls: 💎💎💎 pays 10× your bet, a triple 7️⃣/🔔/⭐ pays 3×, a 🍒 pair pushes, mixed reels lose
+  - **Every casino beyond your first reduces the bust chance** (up to −18%) — casino empires gamble with better odds
+  - Session stats (spins, wagered, won, net, best) and a recent-spins history strip
 
 ### 📈 Market System
 - **8 materials** trade on a global market with fluctuating prices
@@ -126,6 +132,15 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.2 (2026-10-03) — Interactive casino
+- **Lucky Diamond Slots**: interactive slot-machine minigame for casino owners — bet your own money and spin
+- Real bets with instant payouts: jackpot 10×, big win 3×, cherry-pair push, mixed reels lose (same odds table as passive casinos)
+- Every casino beyond the first reduces the bust chance (up to −18%), rewarding casino empires
+- Bet chips (+1K / +5K / +25K / +100K / MAX) with a $100 minimum
+- Animated reels with staggered stops, pop animations, result line and jackpot/big-win toasts
+- Session stats (spins, wagered, won, net, best) and recent-spin history
+- HUD **🎰 Casino** shortcut appears whenever you own a casino; **Play Slots Here** button on every casino plot
 
 ### v1.1 (2026-10-03) — Performance & device optimization
 - Graphics quality system: Auto / High / Balanced / Low with hardware auto-detection, persisted choice, Settings UI and in-game quality button
