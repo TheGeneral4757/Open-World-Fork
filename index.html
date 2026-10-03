@@ -215,6 +215,9 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .bottom-bar{bottom:0;left:0;right:0;padding:14px 26px;display:flex;justify-content:space-between;align-items:flex-end;
   background:linear-gradient(0deg,rgba(8,20,29,.85),rgba(8,20,29,0));}
 .controls-hint{display:flex;gap:18px;font-size:12px;color:#9bb4bd;font-family:Arial,sans-serif;letter-spacing:.5px}
+.quality-btn{background:rgba(10,20,32,.7);border:1px solid #2c4a55;color:#9bb4bd;border-radius:8px;padding:7px 14px;font-size:12px;letter-spacing:.5px;cursor:pointer;font-family:Arial,sans-serif;margin-right:18px}
+.quality-btn:hover{border-color:#f5cc74;color:#f5cc74}
+.quality-note{font-size:12px;color:#9bb4bd;margin:10px 0 0;text-align:left}
 .controls-hint span b{color:#f5cc74;display:inline-block;padding:2px 8px;border:1px solid #2c4a55;border-radius:4px;margin-right:6px;font-weight:400;background:rgba(11,29,41,.6)}
 .zoom-meter{font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;text-align:right;letter-spacing:.5px}
 .zoom-meter .label{text-transform:uppercase;color:#5e7d87;font-size:10px;letter-spacing:2px;margin-bottom:4px}
@@ -444,7 +447,15 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
   <div class="modal" id="settings">
     <div class="panel">
       <h2>Settings</h2>
-      <p>Your adventure settings will live here as the game is built. For now, click <b>Enter World</b> to dive into the Open World — a living Earth you can explore from space down to the ground, where every plot of land is yours to claim, develop, and profit from.</p>
+      <p class="leaderboard-sub">Graphics quality — pick <b>Low</b> or <b>Balanced</b> if the globe stutters on your device (great for Chromebooks and older laptops). Antialiasing and smaller textures apply after a reload; everything else applies instantly.</p>
+      <div class="leaderboard-tabs" id="quality-tabs">
+        <button class="leaderboard-tab" data-q="auto" onclick="setQuality('auto')">⚡ Auto</button>
+        <button class="leaderboard-tab" data-q="high" onclick="setQuality('high')">High</button>
+        <button class="leaderboard-tab" data-q="balanced" onclick="setQuality('balanced')">Balanced</button>
+        <button class="leaderboard-tab" data-q="low" onclick="setQuality('low')">Low</button>
+      </div>
+      <p class="quality-note" id="quality-note"></p>
+      <p class="quality-note">Detected for this device: <b id="quality-detected">—</b></p>
       <button class="close" onclick="closeSettings()">CLOSE</button>
     </div>
   </div>
@@ -487,6 +498,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <span><b>Scroll</b>Zoom</span>
         <span><b>Click</b>Buy plot</span>
       </div>
+      <button class="quality-btn" id="quality-btn" onclick="cycleQuality()" title="Cycle graphics quality (also in Settings)">⚡ Auto</button>
       <div class="zoom-meter">
         <div class="label">Altitude</div>
         <div class="value" id="altitude">— km</div>
@@ -544,13 +556,156 @@ const SUPABASE_URL = '';
 const SUPABASE_ANON_KEY = '';
 
 // ====================================================================
+// GRAPHICS QUALITY — device-aware rendering for low-end hardware
+// (Chromebooks, tablets, old laptops). Auto-detects the device on
+// first run; the player can override it in Settings. The choice is
+// persisted in localStorage.
+// ====================================================================
+const QUALITY_LEVELS = {
+  high:     { label: 'High',     pixelRatioCap: 2,   antialias: true,  stars: 6000, earthSegments: 96, atmoSegments: 64, textureWidth: 4096, maskWidth: 2048, bump: true  },
+  balanced: { label: 'Balanced', pixelRatioCap: 1.5, antialias: true,  stars: 3500, earthSegments: 64, atmoSegments: 48, textureWidth: 2048, maskWidth: 1024, bump: true  },
+  low:      { label: 'Low',      pixelRatioCap: 1,   antialias: false, stars: 1500, earthSegments: 48, atmoSegments: 32, textureWidth: 1024, maskWidth: 1024, bump: false }
+};
+const QUALITY_KEY = 'ow-quality';
+const QUALITY_ORDER = ['auto', 'high', 'balanced', 'low'];
+
+// Heuristic device detection. Each "low signal" suggests weaker
+// hardware; 2+ signals → Low, 1 → Balanced, 0 → High.
+function detectQuality() {
+  let lowSignals = 0;
+  const cores = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory || 0;   // GB, Chrome/ChromeOS only
+  if (cores <= 4) lowSignals++;
+  if (mem > 0 && mem <= 4) lowSignals++;
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    if (gl) {
+      const r = (gl.getParameter(gl.RENDERER) || '').toLowerCase();
+      if (/swiftshader|software|basic render|llvmpipe/.test(r)) lowSignals += 2;
+      else if (/intel.*(hd|uhd|iris)|mali|adreno|powervr|videocore|apple gpu/.test(r)) lowSignals++;
+    }
+  } catch (e) { /* WebGL probe failed — ignore */ }
+  if (/cros|android/i.test(navigator.userAgent)) lowSignals++;
+  if (lowSignals >= 2) return 'low';
+  if (lowSignals === 1) return 'balanced';
+  return 'high';
+}
+
+function getStoredQuality() {
+  try {
+    const q = localStorage.getItem(QUALITY_KEY);
+    return QUALITY_ORDER.includes(q) ? q : 'auto';
+  } catch (e) { return 'auto'; }
+}
+function getEffectiveQuality() {
+  const q = getStoredQuality();
+  return q === 'auto' ? detectQuality() : q;
+}
+
+// Adaptive resolution (Auto mode only): watches FPS and steps the
+// render pixel ratio down/up within the quality cap. This keeps the
+// globe smooth on devices the heuristic misjudged.
+const adaptiveDPR = { scale: 1, frames: 0, time: 0, startedAt: 0, lastAdjust: 0 };
+function tickAdaptiveQuality(now) {
+  if (!renderer || getStoredQuality() !== 'auto') return;
+  adaptiveDPR.frames++;
+  if (!adaptiveDPR.startedAt) { adaptiveDPR.startedAt = now; adaptiveDPR.time = now; }
+  const elapsed = now - adaptiveDPR.time;
+  if (elapsed < 2000) return;
+  const fps = adaptiveDPR.frames * 1000 / elapsed;
+  adaptiveDPR.frames = 0;
+  adaptiveDPR.time = now;
+  // Ignore the first seconds (texture uploads, warmup) and rate-limit changes
+  if (now - adaptiveDPR.startedAt < 4000 || now - adaptiveDPR.lastAdjust < 3000) return;
+  const q = QUALITY_LEVELS[getEffectiveQuality()];
+  const cap = Math.min(window.devicePixelRatio || 1, q.pixelRatioCap);
+  if (fps < 28 && adaptiveDPR.scale > 0.55) {
+    adaptiveDPR.scale = Math.max(0.5, adaptiveDPR.scale - 0.25);
+    renderer.setPixelRatio(cap * adaptiveDPR.scale);
+    adaptiveDPR.lastAdjust = now;
+  } else if (fps > 55 && adaptiveDPR.scale < 1) {
+    adaptiveDPR.scale = Math.min(1, adaptiveDPR.scale + 0.25);
+    renderer.setPixelRatio(cap * adaptiveDPR.scale);
+    adaptiveDPR.lastAdjust = now;
+  }
+}
+
+// Apply what can change live (pixel ratio, stars, geometry detail).
+// Texture resolution and antialiasing take effect on next load — the
+// WebGL context and GPU textures can't be swapped mid-session.
+function applyQualityChange() {
+  const q = QUALITY_LEVELS[getEffectiveQuality()];
+  adaptiveDPR.scale = 1;
+  adaptiveDPR.startedAt = 0;
+  adaptiveDPR.lastAdjust = 0;
+  adaptiveDPR.frames = 0;
+  if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatioCap));
+  if (starField) {
+    scene.remove(starField);
+    starField.geometry.dispose();
+    starField.material.dispose();
+    buildStarField();
+  }
+  if (earth) {
+    earth.geometry.dispose();
+    earth.geometry = new THREE.SphereGeometry(EARTH_RADIUS, q.earthSegments, q.earthSegments);
+  }
+  if (atmosphere) {
+    atmosphere.geometry.dispose();
+    atmosphere.geometry = new THREE.SphereGeometry(EARTH_RADIUS * 1.025, q.atmoSegments, q.atmoSegments);
+  }
+  const btn = document.getElementById('quality-btn');
+  if (btn) btn.innerHTML = qualityButtonLabel();
+}
+
+function qualityButtonLabel() {
+  const stored = getStoredQuality();
+  const eff = QUALITY_LEVELS[getEffectiveQuality()].label;
+  return stored === 'auto' ? `⚡ Auto · ${eff}` : `⚡ ${eff}`;
+}
+
+window.setQuality = function(choice) {
+  if (!QUALITY_ORDER.includes(choice)) return;
+  try { localStorage.setItem(QUALITY_KEY, choice); } catch (e) {}
+  applyQualityChange();
+  renderSettingsQuality();
+  const inGame = !document.getElementById('game').classList.contains('hidden');
+  if (inGame) {
+    showToast(`Graphics: ${choice === 'auto' ? 'Auto' : QUALITY_LEVELS[choice].label} — smaller textures apply after reload`, true);
+  }
+};
+
+window.cycleQuality = function() {
+  const cur = getStoredQuality();
+  const next = QUALITY_ORDER[(QUALITY_ORDER.indexOf(cur) + 1) % QUALITY_ORDER.length];
+  window.setQuality(next);
+};
+
+function renderSettingsQuality() {
+  const tabs = document.getElementById('quality-tabs');
+  if (!tabs) return;
+  const stored = getStoredQuality();
+  tabs.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b.dataset.q === stored);
+  });
+  const note = document.getElementById('quality-note');
+  if (note) {
+    note.textContent = stored === 'auto'
+      ? `Auto is active — detected ${QUALITY_LEVELS[getEffectiveQuality()].label} for this device.`
+      : `Manually set to ${QUALITY_LEVELS[stored].label}.`;
+  }
+  const det = document.getElementById('quality-detected');
+  if (det) det.textContent = QUALITY_LEVELS[detectQuality()].label;
+}
+
+// ====================================================================
 // STATE
 // ====================================================================
 const STATE = {
   money: 100_000,
   owned: new Set(),
   plots: [],
-  visiblePlots: [],             // updated each frame; subset of plots currently on near side
+  claimedPlots: [],             // plots owned by you OR others (businesses + owned pool)
   hoveredPlot: null,
   selectedPlot: null,
   inventory: {},                // { materialId: quantity (float) }
@@ -868,10 +1023,8 @@ function applyClaimColors() {
       // Owned by another user — show in muted purple
       p.userData.ownedByOther = true;
       p.userData.ownerName = owner;
-      p.material.color.setHex(OTHER_COLOR);
-      if (p.userData.outline) {
-        p.userData.outline.material.color.setHex(OTHER_OUTLINE);
-      }
+      setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
+      registerClaimedPlot(p);
     }
   }
 }
@@ -964,14 +1117,8 @@ function loadGame(username) {
     if (ownedIds.has(p.userData.id)) {
       p.userData.owned = true;
       STATE.owned.add(p.userData.id);
-      p.material.color.setHex(0xf5cc74);
-      p.material.opacity = 0.85;
-      p.scale.setScalar(1.05);
-      if (p.userData.outline) {
-        p.userData.outline.material.color.setHex(0xf5cc74);
-        p.userData.outline.material.opacity = 0.9;
-        p.userData.outline.scale.setScalar(1.05);
-      }
+      setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+      registerClaimedPlot(p);
     }
   }
 
@@ -1037,6 +1184,10 @@ function addBusinessToPlot(plot, bt, index) {
     .addScaledVector(wAxis, offset.w);
   bizMesh.lookAt(pos.clone().multiplyScalar(2));
   bizMesh.position.copy(pos);
+  // Business meshes never move again — freeze the matrix so the
+  // renderer skips per-frame matrix updates for them.
+  bizMesh.updateMatrix();
+  bizMesh.matrixAutoUpdate = false;
 
   const entry = { type: bt.id, builtAt: Date.now(), mesh: bizMesh };
   if (!plot.userData.businesses) plot.userData.businesses = [];
@@ -1045,12 +1196,7 @@ function addBusinessToPlot(plot, bt, index) {
 
   // Recolor plot to the FIRST business color (primary business)
   if (plot.userData.businesses.length === 1) {
-    plot.material.color.setHex(bt.color);
-    plot.material.opacity = 0.5;
-    if (plot.userData.outline) {
-      plot.userData.outline.material.color.setHex(bt.color);
-      plot.userData.outline.material.opacity = 0.7;
-    }
+    setPlotColors(plot, bt.color, bt.color);
   }
 }
 
@@ -1558,8 +1704,9 @@ function initScene() {
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000);
   camera.position.set(0, 0, STATE.zoomMax);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const q = QUALITY_LEVELS[getEffectiveQuality()];
+  renderer = new THREE.WebGLRenderer({ antialias: q.antialias, alpha: false, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatioCap));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0x05080d, 1);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1603,6 +1750,9 @@ function initScene() {
   renderer.domElement.addEventListener('pointermove', onPointerMove);
   renderer.domElement.addEventListener('click', onPointerClick);
 
+  const qbtn = document.getElementById('quality-btn');
+  if (qbtn) qbtn.innerHTML = qualityButtonLabel();
+
   animate();
 }
 
@@ -1610,8 +1760,9 @@ function initScene() {
 // STAR FIELD
 // ====================================================================
 function buildStarField() {
+  const q = QUALITY_LEVELS[getEffectiveQuality()];
   const starGeo = new THREE.BufferGeometry();
-  const starCount = 6000;
+  const starCount = q.stars;
   const positions = new Float32Array(starCount * 3);
   const colors = new Float32Array(starCount * 3);
   for (let i = 0; i < starCount; i++) {
@@ -1643,26 +1794,57 @@ let _waterMaskCanvas = null;   // offscreen canvas with earth-water.png data
 let _waterMaskData = null;     // ImageData for pixel sampling
 let _topologyData = null;      // ImageData for elevation sampling (mountain detection)
 
+// Load an image and hand back a texture downscaled to maxWidth.
+// On Balanced/Low this decodes the 4K NASA maps once and keeps only a
+// small canvas copy — cutting GPU memory and load time on Chromebooks.
+function loadScaledTexture(url, maxWidth, onLoad) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    let tex;
+    if (img.width <= maxWidth) {
+      tex = new THREE.Texture(img);
+      tex.needsUpdate = true;
+    } else {
+      const h = Math.round(img.height * maxWidth / img.width);
+      const cv = document.createElement('canvas');
+      cv.width = maxWidth; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, maxWidth, h);
+      tex = new THREE.CanvasTexture(cv);
+    }
+    onLoad(tex);
+  };
+  img.onerror = () => { /* leave the material without this map */ };
+  img.src = url;
+}
+
+let earthMat = null;   // Earth material — maps attach as scaled textures arrive
+
 function buildEarth() {
-  const geo = new THREE.SphereGeometry(EARTH_RADIUS, 96, 96);
+  const q = QUALITY_LEVELS[getEffectiveQuality()];
+  const geo = new THREE.SphereGeometry(EARTH_RADIUS, q.earthSegments, q.earthSegments);
 
-  const loader = new THREE.TextureLoader();
-  loader.crossOrigin = 'anonymous';
-
-  const mapTex     = loader.load('https://unpkg.com/three-globe@2.31.0/example/img/earth-blue-marble.jpg', hideLoader, undefined, hideLoader);
-  const bumpTex    = loader.load('https://unpkg.com/three-globe@2.31.0/example/img/earth-topology.png');
-  const specularTex= loader.load('https://unpkg.com/three-globe@2.31.0/example/img/earth-water.png');
-
-  const mat = new THREE.MeshPhongMaterial({
-    map: mapTex,
-    bumpMap: bumpTex,
-    bumpScale: 0.015,
-    specularMap: specularTex,
+  earthMat = new THREE.MeshPhongMaterial({
     specular: new THREE.Color(0x2a4a5a),
     shininess: 18
   });
+  const TEX = 'https://unpkg.com/three-globe@2.31.0/example/img/';
+  loadScaledTexture(TEX + 'earth-blue-marble.jpg', q.textureWidth, (tex) => {
+    if (!earthMat) return;
+    earthMat.map = tex; earthMat.needsUpdate = true; hideLoader();
+  });
+  if (q.bump) {
+    loadScaledTexture(TEX + 'earth-topology.png', q.textureWidth, (tex) => {
+      if (!earthMat) return;
+      earthMat.bumpMap = tex; earthMat.bumpScale = 0.015; earthMat.needsUpdate = true;
+    });
+  }
+  loadScaledTexture(TEX + 'earth-water.png', q.textureWidth, (tex) => {
+    if (!earthMat) return;
+    earthMat.specularMap = tex; earthMat.needsUpdate = true;
+  });
 
-  earth = new THREE.Mesh(geo, mat);
+  earth = new THREE.Mesh(geo, earthMat);
   earth.name = 'earth';
   earth.frustumCulled = false;   // never cull — camera gets very close
   scene.add(earth);
@@ -1677,12 +1859,15 @@ function loadWaterMask() {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
+    const maxW = QUALITY_LEVELS[getEffectiveQuality()].maskWidth;
+    const w = Math.min(img.width, maxW);
+    const h = Math.round(img.height * w / img.width);
     _waterMaskCanvas = document.createElement('canvas');
-    _waterMaskCanvas.width = img.width;
-    _waterMaskCanvas.height = img.height;
+    _waterMaskCanvas.width = w;
+    _waterMaskCanvas.height = h;
     const ctx = _waterMaskCanvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    _waterMaskData = ctx.getImageData(0, 0, img.width, img.height);
+    ctx.drawImage(img, 0, 0, w, h);
+    _waterMaskData = ctx.getImageData(0, 0, w, h);
     // Now that we have the mask, classify all existing plots
     classifyPlotsByTerrain();
     // Load topology mask next (for mountain detection / region bonuses)
@@ -1704,12 +1889,15 @@ function loadTopologyMask() {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
+    const maxW = QUALITY_LEVELS[getEffectiveQuality()].maskWidth;
+    const w = Math.min(img.width, maxW);
+    const h = Math.round(img.height * w / img.width);
     const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    _topologyData = ctx.getImageData(0, 0, img.width, img.height);
+    ctx.drawImage(img, 0, 0, w, h);
+    _topologyData = ctx.getImageData(0, 0, w, h);
     // Re-classify now that we have elevation data (mountains/highlands)
     classifyPlotsByTerrain();
   };
@@ -1823,7 +2011,8 @@ function classifyPlotsByTerrain() {
 
 function buildAtmosphere() {
   // Glow shell slightly larger than Earth
-  const geo = new THREE.SphereGeometry(EARTH_RADIUS * 1.025, 64, 64);
+  const q = QUALITY_LEVELS[getEffectiveQuality()];
+  const geo = new THREE.SphereGeometry(EARTH_RADIUS * 1.025, q.atmoSegments, q.atmoSegments);
   const mat = new THREE.ShaderMaterial({
     uniforms: { glowColor: { value: new THREE.Color(0x6cc8ff) } },
     vertexShader: `
@@ -1897,6 +2086,95 @@ function mulberry32(seed) {
     t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
+}
+
+// --------------------------------------------------------------------
+// PLOT RENDER POOLS — all 2,200 cells are drawn with 4 merged objects
+// (unowned fills, owned fills, unowned outlines, owned outlines) using
+// per-vertex colors, instead of one Mesh + one LineSegments per plot
+// (~4,400 draw calls plus per-frame sorting — unusable on Chromebooks).
+// Back-side cells are hidden by the depth test against the globe.
+// --------------------------------------------------------------------
+const PLOT_UNOWNED_OUTLINE = 0x2a8b6f;
+const OWNED_FILL    = 0xf5cc74;
+const OWNED_OUTLINE = 0xf5cc74;
+const _PLOT_SHELL_GEO = new THREE.BufferGeometry();   // shared dummy — shells are never rendered
+const _PLOT_SHELL_MAT = new THREE.MeshBasicMaterial();
+
+let plotFillMesh = null, plotOwnedMesh = null, plotOutlineMesh = null, plotOwnedOutlineMesh = null;
+let fillTriToPlot = null, ownedTriToPlot = null;   // triangle index → plot index (for raycast)
+let _plotPoolsDirty = false;
+
+function setPlotColors(p, fillHex, outlineHex) {
+  p.userData._fillHex = fillHex;
+  p.userData._outlineHex = outlineHex;
+  _plotPoolsDirty = true;
+}
+function flushPlotPools() {
+  if (_plotPoolsDirty) { _plotPoolsDirty = false; rebuildPlotPools(); }
+}
+function registerClaimedPlot(p) {
+  if (!STATE.claimedPlots.includes(p)) STATE.claimedPlots.push(p);
+}
+
+function rebuildPlotPools() {
+  if (!plotFillMesh) return;
+  const plots = STATE.plots;
+  // Pass 1 — total buffer sizes for both pools
+  let unV = 0, owV = 0, unE = 0, owE = 0, unT = 0, owT = 0;
+  for (let i = 0; i < plots.length; i++) {
+    const ud = plots[i].userData;
+    const owned = ud.owned || ud.ownedByOther;
+    const nv = ud._tris.length / 3;
+    const ne = ud._edges.length / 3;
+    if (owned) { owV += nv; owT += nv / 3; owE += ne; }
+    else       { unV += nv; unT += nv / 3; unE += ne; }
+  }
+  const unPos = new Float32Array(unV * 3), unCol = new Float32Array(unV * 3);
+  const owPos = new Float32Array(owV * 3), owCol = new Float32Array(owV * 3);
+  const unOPos = new Float32Array(unE * 3), unOCol = new Float32Array(unE * 3);
+  const owOPos = new Float32Array(owE * 3), owOCol = new Float32Array(owE * 3);
+  fillTriToPlot = new Uint32Array(unT);
+  ownedTriToPlot = new Uint32Array(owT);
+  // Pass 2 — copy vertex data with the plot's current colors
+  const c = new THREE.Color();
+  let vu = 0, vo = 0, eu = 0, eo = 0, tu = 0, to = 0;
+  for (let i = 0; i < plots.length; i++) {
+    const ud = plots[i].userData;
+    const owned = ud.owned || ud.ownedByOther;
+    const scale = ud.owned ? 1.05 : 1.0;   // your plots sit slightly proud of the surface
+    const t = ud._tris, n = t.length;
+    const dPos = owned ? owPos : unPos, dCol = owned ? owCol : unCol;
+    const base = owned ? vo : vu;
+    for (let k = 0; k < n; k++) dPos[base + k] = t[k] * scale;
+    c.setHex(ud._fillHex);
+    for (let k = 0; k < n / 3; k++) {
+      dCol[base + k * 3] = c.r; dCol[base + k * 3 + 1] = c.g; dCol[base + k * 3 + 2] = c.b;
+    }
+    if (owned) { for (let x = 0; x < n / 9; x++) ownedTriToPlot[to + x] = i; to += n / 9; vo += n; }
+    else       { for (let x = 0; x < n / 9; x++) fillTriToPlot[tu + x] = i;   tu += n / 9; vu += n; }
+    const e = ud._edges, m = e.length;
+    const dOPos = owned ? owOPos : unOPos, dOCol = owned ? owOCol : unOCol;
+    const ebase = owned ? eo : eu;
+    for (let k = 0; k < m; k++) dOPos[ebase + k] = e[k] * scale;
+    c.setHex(ud._outlineHex);
+    for (let k = 0; k < m / 3; k++) {
+      dOCol[ebase + k * 3] = c.r; dOCol[ebase + k * 3 + 1] = c.g; dOCol[ebase + k * 3 + 2] = c.b;
+    }
+    if (owned) eo += m; else eu += m;
+  }
+  _setPooledGeometry(plotFillMesh, unPos, unCol);
+  _setPooledGeometry(plotOwnedMesh, owPos, owCol);
+  _setPooledGeometry(plotOutlineMesh, unOPos, unOCol);
+  _setPooledGeometry(plotOwnedOutlineMesh, owOPos, owOCol);
+}
+
+function _setPooledGeometry(obj, positions, colors) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  if (obj.geometry) obj.geometry.dispose();
+  obj.geometry = g;
 }
 
 function generatePlots() {
@@ -2029,18 +2307,18 @@ function generatePlots() {
       sphereVerts.push(pos3D);
     }
 
-    // Build BufferGeometry: triangle fan from centroid to each edge
-    const fanPositions = [];
+    // Triangle fan from centroid to each edge, kept as a flat
+    // Float32Array — cells are merged into pooled meshes (see PLOT
+    // RENDER POOLS above) rather than one Mesh per plot.
+    const tris = new Float32Array(sphereVerts.length * 9);
     for (let k = 0; k < sphereVerts.length; k++) {
       const v1 = sphereVerts[k];
       const v2 = sphereVerts[(k + 1) % sphereVerts.length];
-      fanPositions.push(centroid3D.x, centroid3D.y, centroid3D.z);
-      fanPositions.push(v1.x, v1.y, v1.z);
-      fanPositions.push(v2.x, v2.y, v2.z);
+      let o = k * 9;
+      tris[o] = centroid3D.x; tris[o+1] = centroid3D.y; tris[o+2] = centroid3D.z;
+      tris[o+3] = v1.x; tris[o+4] = v1.y; tris[o+5] = v1.z;
+      tris[o+6] = v2.x; tris[o+7] = v2.y; tris[o+8] = v2.z;
     }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(fanPositions, 3));
-    geo.computeVertexNormals();
 
     // Build 2D polygon for area computation (shoelace on tangent plane)
     let area = 0;
@@ -2051,16 +2329,15 @@ function generatePlots() {
     }
     area = Math.abs(area / 2);
 
-    // For the outline, build LineSegments along the boundary edges in 3D
-    const edgePositions = [];
+    // Boundary edges for the outline, as a flat Float32Array (3D, Earth-local)
+    const edges = new Float32Array(sphereVerts.length * 6);
     for (let k = 0; k < sphereVerts.length; k++) {
       const v1 = sphereVerts[k];
       const v2 = sphereVerts[(k + 1) % sphereVerts.length];
-      edgePositions.push(v1.x, v1.y, v1.z);
-      edgePositions.push(v2.x, v2.y, v2.z);
+      let o = k * 6;
+      edges[o] = v1.x; edges[o+1] = v1.y; edges[o+2] = v1.z;
+      edges[o+3] = v2.x; edges[o+4] = v2.y; edges[o+5] = v2.z;
     }
-    const edgesGeo = new THREE.BufferGeometry();
-    edgesGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
 
     // ---- Pricing ----
     const absLat = Math.abs(seed.lat);
@@ -2089,26 +2366,10 @@ function generatePlots() {
     const hueShift = (rng() - 0.5) * 0.05;
     const baseColor = new THREE.Color().setHSL(0.42 + hueShift, 0.65, 0.55);
 
-    const mat = new THREE.MeshBasicMaterial({
-      color: baseColor,
-      transparent: true,
-      opacity: 0.0,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    // Mesh stays at origin with identity rotation — geometry vertices are
-    // already in Earth-local 3D coords (will be transformed by Earth parent).
-
-    // Outline uses the pre-built edge geometry (already in 3D coords)
-    const edgesMat = new THREE.LineBasicMaterial({
-      color: 0x2a8b6f,
-      transparent: true,
-      opacity: 0.0,
-      depthWrite: false
-    });
-    const edges = new THREE.LineSegments(edgesGeo, edgesMat);
-
+    // Logical plot object — NOT added to the scene (rendering goes through
+    // the merged pools). Kept as a Mesh so gameplay code (modal, buy,
+    // build, save, market) treats it exactly like before.
+    const mesh = new THREE.Mesh(_PLOT_SHELL_GEO, _PLOT_SHELL_MAT);
     mesh.userData = {
       isPlot: true,
       id: i,
@@ -2131,12 +2392,26 @@ function generatePlots() {
       name: plotName(seed.lat, seed.lon),
       localDir: p_i.clone(),
       baseColor: baseColor.getHex(),
-      outline: edges
+      sizeA: Math.sqrt(area),   // linear plot size (business layout on plot)
+      _tris: tris,              // fill triangles, Earth-local coords
+      _edges: edges,            // outline segments, Earth-local coords
+      _fillHex: baseColor.getHex(),
+      _outlineHex: PLOT_UNOWNED_OUTLINE
     };
-    plotGroup.add(mesh);
-    plotGroup.add(edges);  // outline as sibling so it shares Earth's transform
     STATE.plots.push(mesh);
   }
+
+  // ---- Merged render pools: 4 draw calls for all 2,200 plots ----
+  const fillMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+  const ownedFillMat = fillMat.clone();
+  const outlineMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthWrite: false });
+  const ownedOutlineMat = outlineMat.clone();
+  plotFillMesh = new THREE.Mesh(new THREE.BufferGeometry(), fillMat);
+  plotOwnedMesh = new THREE.Mesh(new THREE.BufferGeometry(), ownedFillMat);
+  plotOutlineMesh = new THREE.LineSegments(new THREE.BufferGeometry(), outlineMat);
+  plotOwnedOutlineMesh = new THREE.LineSegments(new THREE.BufferGeometry(), ownedOutlineMat);
+  plotGroup.add(plotFillMesh, plotOwnedMesh, plotOutlineMesh, plotOwnedOutlineMesh);
+  rebuildPlotPools();
   earth.add(plotGroup);
 }
 
@@ -2179,93 +2454,79 @@ function regionName(lat, lon) {
 // ====================================================================
 // VISIBILITY — fade plots based on camera distance
 // ====================================================================
-// OPTIMIZATION: With 3500 plots we can't afford per-frame matrix math
-// (getWorldPosition/getWorldQuaternion). Instead we precompute each plot's
-// local direction (in Earth's local space) at creation time, then each frame
-// we just transform the CAMERA into Earth's local space once, and do a cheap
-// dot-product per plot.
-//
-// Per-frame work scales with the number of CURRENTLY VISIBLE plots (not total).
-// When zoomed out, almost all plots are hidden, so the loop is cheap.
-// Opacity only updates when the zoom "bucket" changes (every 5% of zoom range).
+// Plots render through 4 merged pools (see PLOT RENDER POOLS), so this
+// is now just opacity bookkeeping on 4 materials — no per-plot work.
+// Back-side cells are depth-rejected by the globe itself. Only business
+// meshes (children of Earth, a handful at most) get a per-frame near-
+// side dot check. Opacity only updates when the zoom "bucket" changes
+// (every 5% of the zoom range).
 const _camLocal = new THREE.Vector3();
 let _lastOpacityBucket = -1;
 
 function updatePlotVisibility() {
+  if (!plotFillMesh) return;
   const dist = camera.position.length();
   // 0 when far (zoomMax), 1 when close (plotFullDist)
   const t = 1 - THREE.MathUtils.clamp((dist - STATE.plotFullDist) / (STATE.plotRevealDist - STATE.plotFullDist), 0, 1);
   const baseOpacity = t;
   const showAny = t > 0.02;
+  const hasClaims = STATE.claimedPlots.length > 0;
 
   // Only update opacity when bucket changes (20 buckets across the zoom range)
   const bucket = Math.round(t * 20);
   const opacityChanged = bucket !== _lastOpacityBucket;
   if (opacityChanged) _lastOpacityBucket = bucket;
 
-  // Transform camera position into Earth's local space (Earth is the parent of plots)
-  _camLocal.copy(camera.position);
-  earth.worldToLocal(_camLocal);
-  const camLen = _camLocal.length();
-  const dotThreshold = 0.06 * camLen;
-  const dotThresholdOwned = 0.03 * camLen;
+  // Unowned cells only appear when zoomed in; owned/claimed cells
+  // (yours + other players') stay visible from space.
+  plotFillMesh.visible = showAny;
+  plotOutlineMesh.visible = showAny;
+  plotOwnedMesh.visible = hasClaims;
+  plotOwnedOutlineMesh.visible = hasClaims;
 
-  // Reset visiblePlots array (reuse to avoid GC)
-  STATE.visiblePlots.length = 0;
+  if (opacityChanged) {
+    plotFillMesh.material.opacity = baseOpacity * 0.6;
+    plotOutlineMesh.material.opacity = baseOpacity * 0.9;
+    plotOwnedMesh.material.opacity = Math.max(baseOpacity * 0.95, 0.4);
+    plotOwnedOutlineMesh.material.opacity = Math.max(baseOpacity * 1.0, 0.7);
+  }
 
-  // Cache values for the inner loop
-  const unownedOpacity = baseOpacity * 0.6;
-  const ownedOpacity = Math.max(baseOpacity * 0.95, 0.4);
-  // Outline opacity scales a bit higher than fill so cells remain visible
-  const unownedOutline = baseOpacity * 0.9;
-  const ownedOutline = Math.max(baseOpacity * 1.0, 0.7);
-
-  for (let i = 0; i < STATE.plots.length; i++) {
-    const p = STATE.plots[i];
-    const dir = p.userData.localDir;
-    const dot = dir.x * _camLocal.x + dir.y * _camLocal.y + dir.z * _camLocal.z;
-    const outline = p.userData.outline;
-
-    if (!p.userData.owned && !p.userData.ownedByOther) {
-      if (showAny && dot > dotThreshold) {
-        if (opacityChanged) {
-          p.material.opacity = unownedOpacity;
-          if (outline) outline.material.opacity = unownedOutline;
-        }
-        p.visible = true;
-        if (outline) outline.visible = true;
-        STATE.visiblePlots.push(p);
-      } else {
-        p.visible = false;
-        if (outline) outline.visible = false;
-      }
-    } else {
-      // Owned (by you OR another user) — always visible on near side
-      const onNearSide = dot > dotThresholdOwned;
-      p.visible = onNearSide;
-      if (outline) outline.visible = onNearSide;
-      // Set opacity for owned/other plots (higher than unowned)
-      if (onNearSide && opacityChanged) {
-        if (p.userData.ownedByOther) {
-          p.material.opacity = Math.max(baseOpacity * 0.7, 0.3);
-          if (outline) outline.material.opacity = Math.max(baseOpacity * 0.8, 0.4);
-        } else {
-          p.material.opacity = ownedOpacity;
-          if (outline) outline.material.opacity = ownedOutline;
-        }
-      }
-      // Business meshes visibility follows the plot (only for your own plots)
-      const bizVisible = onNearSide && baseOpacity > 0.05;
-      if (p.userData.businesses) {
-        for (const entry of p.userData.businesses) {
+  // Business meshes follow their plot's near side (the Earth rotates)
+  if (hasClaims) {
+    _camLocal.copy(camera.position);
+    earth.worldToLocal(_camLocal);
+    const dotThresholdOwned = 0.03 * _camLocal.length();
+    const bizNear = baseOpacity > 0.05;
+    for (const p of STATE.claimedPlots) {
+      const dir = p.userData.localDir;
+      const dot = dir.x * _camLocal.x + dir.y * _camLocal.y + dir.z * _camLocal.z;
+      const bizVisible = dot > dotThresholdOwned && bizNear;
+      const businesses = p.userData.businesses;
+      if (businesses) {
+        for (const entry of businesses) {
           if (entry.mesh) entry.mesh.visible = bizVisible;
         }
       }
-      if (onNearSide) {
-        STATE.visiblePlots.push(p);
-      }
     }
   }
+}
+
+// Raycast pick against the merged plot pools. Maps the hit triangle
+// back to its logical plot via the triangle→plot lookup tables.
+function pickPlot() {
+  if (!plotFillMesh) return null;
+  const targets = [];
+  if (plotFillMesh.visible && plotFillMesh.material.opacity > 0.05) targets.push(plotFillMesh);
+  if (plotOwnedMesh.visible && plotOwnedMesh.material.opacity > 0.05) targets.push(plotOwnedMesh);
+  if (!targets.length) return null;
+  const hits = raycaster.intersectObjects(targets, false);
+  for (const h of hits) {
+    const map = (h.object === plotFillMesh) ? fillTriToPlot : ownedTriToPlot;
+    if (!map || h.faceIndex === undefined || h.faceIndex >= map.length) continue;
+    const p = STATE.plots[map[h.faceIndex]];
+    if (p) return p;
+  }
+  return null;
 }
 
 // ====================================================================
@@ -2280,15 +2541,9 @@ function onPointerMove(e) {
   // Ensure matrices are current (Earth rotates each frame)
   if (earth) earth.updateMatrixWorld(true);
 
-  // Raycast ONLY against currently-visible plots (perf optimization for 5000 plots)
+  // Pick against the merged plot pools (triangle lookup → logical plot)
   raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(STATE.visiblePlots, false);
-
-  // Find the first hit with non-trivial opacity
-  let hitPlot = null;
-  for (const h of hits) {
-    if (h.object.material.opacity > 0.05) { hitPlot = h.object; break; }
-  }
+  const hitPlot = pickPlot();
 
   const tip = document.getElementById('plot-tip');
   if (hitPlot) {
@@ -2348,12 +2603,10 @@ function onPointerClick(e) {
   pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   if (earth) earth.updateMatrixWorld(true);
   raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(STATE.visiblePlots, false);
-  for (const h of hits) {
-    if (h.object.material.opacity > 0.05) {
-      openPlotModal(h.object);
-      return;
-    }
+  const hit = pickPlot();
+  if (hit) {
+    openPlotModal(hit);
+    return;
   }
   // Fallback: try previously-hovered plot
   if (STATE.hoveredPlot) openPlotModal(STATE.hoveredPlot);
@@ -2551,18 +2804,10 @@ window.buySelectedPlot = function() {
   p.userData.ownedByOther = false;  // clear flag just in case
   STATE.owned.add(p.userData.id);
   claimPlot(p.userData.id);  // register in global claims
-  // Color & visibility — turn gold
-  p.material.color.setHex(0xf5cc74);
-  p.material.opacity = 0.85;
-  p.visible = true;
-  // Resize slightly for emphasis
-  p.scale.setScalar(1.05);
-  // Recolor outline to bright gold too
-  if (p.userData.outline) {
-    p.userData.outline.material.color.setHex(0xf5cc74);
-    p.userData.outline.material.opacity = 0.9;
-    p.userData.outline.scale.setScalar(1.05);
-  }
+  registerClaimedPlot(p);
+  // Turn gold in the merged pool (slight lift is handled by the rebuild)
+  setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+  flushPlotPools();
 
   updateHUD();
   // Re-open modal to show business panel now that plot is owned
@@ -2626,21 +2871,12 @@ window.demolishBusiness = function(businessIndex) {
   p.userData.businesses.splice(businessIndex, 1);
   // If no businesses left, restore gold; otherwise recolor to first remaining
   if (p.userData.businesses.length === 0) {
-    p.material.color.setHex(0xf5cc74);
-    p.material.opacity = 0.85;
-    if (p.userData.outline) {
-      p.userData.outline.material.color.setHex(0xf5cc74);
-      p.userData.outline.material.opacity = 0.9;
-    }
+    setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
   } else {
     const firstBt = getBusinessType(p.userData.businesses[0].type);
-    if (firstBt) {
-      p.material.color.setHex(firstBt.color);
-      if (p.userData.outline) {
-        p.userData.outline.material.color.setHex(firstBt.color);
-      }
-    }
+    if (firstBt) setPlotColors(p, firstBt.color, firstBt.color);
   }
+  flushPlotPools();
   updateHUD();
   openPlotModal(p);
   showToast(`Demolished ${bt ? bt.name : 'business'}`, true);
@@ -2900,18 +3136,10 @@ function showToast(msg, success) {
 // ====================================================================
 let earthAutoRotate = true;
 let lastInteractionTime = 0;
+let _lastZoomDom = 0;   // throttle zoom-meter DOM writes (~10/s)
 function animate() {
   requestAnimationFrame(animate);
-  // Slow auto-rotate, paused while user is interacting OR hovering the canvas
-  // (so they can reliably click plots without the world drifting).
-  const sinceInteract = performance.now() - lastInteractionTime;
-  const paused = controls._isInteracting || sinceInteract < 1500;
-  if (earthAutoRotate && !paused) {
-    earth.rotation.y += 0.0004;
-  }
-  controls.update();
-  updatePlotVisibility();
-  updateZoomMeter();
+  flushPlotPools();  // apply pending plot recolors (buy/build/demolish)
   tickProduction();  // accumulate materials from businesses
   updateMarket();    // update market prices every 5 minutes
   // Update market countdown if modal is open
@@ -2926,6 +3154,24 @@ function animate() {
         cdEl.textContent = getMarketCountdown();
       }
     }
+  }
+  // Skip all 3D work while the game screen is hidden (login/menu) —
+  // the canvas isn't visible, so frame rendering is pure waste.
+  if (document.getElementById('game').classList.contains('hidden')) return;
+  const now = performance.now();
+  tickAdaptiveQuality(now);
+  // Slow auto-rotate, paused while user is interacting OR hovering the canvas
+  // (so they can reliably click plots without the world drifting).
+  const sinceInteract = now - lastInteractionTime;
+  const paused = controls._isInteracting || sinceInteract < 1500;
+  if (earthAutoRotate && !paused) {
+    earth.rotation.y += 0.0004;
+  }
+  controls.update();
+  updatePlotVisibility();
+  if (now - _lastZoomDom > 100) {
+    _lastZoomDom = now;
+    updateZoomMeter();
   }
   renderer.render(scene, camera);
 }
@@ -2970,7 +3216,7 @@ window.exitGame = function() {
   document.getElementById('menu').classList.remove('hidden');
 };
 
-window.openSettings = function() { document.getElementById('settings').classList.add('show'); };
+window.openSettings = function() { renderSettingsQuality(); document.getElementById('settings').classList.add('show'); };
 window.closeSettings = function() { document.getElementById('settings').classList.remove('show'); };
 window.startGame = window.enterGame; // legacy
 
