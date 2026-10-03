@@ -143,6 +143,10 @@ python3 -m http.server 8000
 
 ## Changelog
 
+### v1.3.1 (2026-10-03) — Bugfix
+- Fixed mirrored longitude in plot labels and terrain detection: plots now show their true coordinates and terrain (a plot over Canada was labeled "Asian Steppes 93°E" and classified Deep Ocean; plot positions were always correct — only the labels and map sampling were mirrored)
+- All plot names and terrain re-derive on reload; existing ownership, businesses, and prices are unaffected
+
 ### v1.3 (2026-10-03) — Military & conquest
 - **Barracks** business (land, $250k): trains ⚔️ troops, a military resource excluded from the market
 - **Army HUD chip** shows your troop strength at a glance
