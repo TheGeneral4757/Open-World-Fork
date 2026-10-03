@@ -93,6 +93,14 @@ An interactive 3D Earth strategy game — claim land, build businesses, produce 
 - 🎰 **Casinos** are volatile but can hit 10× jackpots
 - 📈 **Watch the market** — hold materials when prices are low, sell when they spike
 - 🏆 **Bigger plots** (estate/province/territory) hold multiple businesses
+- 📱 **On a Chromebook or older laptop?** Set Graphics to Balanced or Low in Settings (Auto usually picks the right one for you)
+
+### ⚡ Performance (Chromebook-friendly)
+- **Device-aware graphics quality** — Auto / High / Balanced / Low. Auto detects your hardware on first run (CPU cores, memory, GPU, ChromeOS); override it in **Settings** or with the in-game quality button. The choice is remembered per browser.
+- **All 2,200 plots render in 4 draw calls** — cells and outlines are merged into pooled meshes with per-vertex colors, instead of one mesh per plot (~4,400 draw calls before) — the single biggest win for weak GPUs
+- **Adaptive resolution** — in Auto mode, the render scale steps down (and back up) automatically to hold a smooth frame rate
+- **Quality-scaled assets** — Balanced/Low load downscaled Earth textures and terrain masks, a lower-poly globe, fewer stars, and can disable antialiasing — faster load and far less GPU memory
+- 3D rendering pauses while on the login/menu screens
 
 ## Tech
 
@@ -101,8 +109,10 @@ An interactive 3D Earth strategy game — claim land, build businesses, produce 
 - Earth textures from [three-globe](https://github.com/vasturiano/three-globe) CDN
 - **Seeded PRNG** (mulberry32) for deterministic plot generation (shared ownership)
 - **Spherical Voronoi** via tangent-plane half-space intersection + Sutherland-Hodgman clipping
+- **Merged plot render pools** — per-vertex-colored meshes/lines for all cells in 4 draw calls, with triangle→plot lookup for raycast picking
+- **Quality levels + device detection** with adaptive resolution scaling
 - **Water mask + topology** textures sampled for terrain/elevation detection
-- **localStorage** for persistence (saves, claims, profiles)
+- **localStorage** for persistence (saves, claims, profiles, quality setting)
 - Auto-deploys to GitHub Pages on every push to `main` via `.github/workflows/deploy.yml`
 
 ## Running locally
@@ -116,6 +126,15 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.1 (2026-10-03) — Performance & device optimization
+- Graphics quality system: Auto / High / Balanced / Low with hardware auto-detection, persisted choice, Settings UI and in-game quality button
+- Merged all 2,200 plot meshes + outlines into 4 pooled draw calls (was ~4,400 draw calls when zoomed in)
+- Adaptive resolution scaling in Auto mode (dynamic render-scale to hold smooth FPS)
+- Downscaled Earth textures and terrain masks on Balanced/Low (big cut in GPU memory and load time)
+- Quality-scaled star count, Earth/atmosphere geometry, and antialiasing
+- Rendering pauses while on login/menu screens; zoom-meter DOM updates throttled
+- Fixed: second business on a plot could get a NaN position (missing plot size field)
 
 ### v1.0 (2026-10-02)
 - 3D Earth with Voronoi plot tessellation (2,200 non-overlapping cells)
