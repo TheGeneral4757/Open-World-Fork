@@ -2268,7 +2268,12 @@ function generatePlots() {
     dir.add(offset).normalize();
 
     const lat = Math.asin(dir.y) * 180 / Math.PI;
-    const lon = Math.atan2(dir.z, dir.x) * 180 / Math.PI;
+    // Three.js SphereGeometry maps texture u=0 to the vertex at x = -R·cos(φ),
+    // so the geographic longitude of a 3D point is the NEGATIVE of atan2(z, x).
+    // With the wrong sign, terrain sampling reads the mask on the mirrored
+    // meridian — e.g. a plot over Canada (93°W) would sample 93°E, a Mongolian
+    // lake district, and get classified as Deep Ocean.
+    const lon = -Math.atan2(dir.z, dir.x) * 180 / Math.PI;
     seeds.push({ dir, lat, lon });
   }
 
