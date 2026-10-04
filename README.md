@@ -21,6 +21,23 @@ An interactive 3D Earth strategy game — claim land, build businesses, produce 
 - **Backup buttons**: Export all accounts to a JSON file / Import them back on any device
 - **Optional cloud saving (Supabase)**: paste your project URL + anon key at the top of the game script (see `supabase-setup.sql`) and every account + save is mirrored to the cloud automatically — accounts survive cleared browsers and are shared across all devices. Old local accounts migrate to the cloud on first visit. The login screen shows whether cloud saving is ON or OFF.
 
+### 🌐 Playing online together (Supabase)
+The game can run as **one shared world across devices** using a free [Supabase](https://supabase.com) project as its backend — no server to run.
+
+**One-time setup (~5 minutes):**
+1. Create a free project at [supabase.com](https://supabase.com)
+2. Dashboard → **SQL Editor** → paste the contents of [`supabase-setup.sql`](supabase-setup.sql) → **Run**
+3. Dashboard → **Settings → API**: copy the **Project URL** and the **anon public key**
+4. Paste both into `SUPABASE_URL` / `SUPABASE_ANON_KEY` at the top of the game script in `index.html` and commit — GitHub Pages redeploys automatically
+
+The login screen shows **🌐 Online multiplayer: ON** when configured. What you get:
+- **One shared world** — every account, save, and plot claim lives in the cloud; players on any device see each other's plots
+- **Live sync** — while playing, the world refreshes every 30 seconds: new claims appear, enemy army sizes stay current, and plots conquered while you were online are stripped from your game with a notification (your next autosave agrees with the cloud instead of reverting it)
+- **Cross-device progression** — log in on any device and continue where you left off; old local accounts migrate to the cloud on first visit
+- **The leaderboard and wars span devices** — attack players who are playing on a different device than you
+
+Notes: passwords are lightly hashed client-side and the anon key is public by design — this is a game for friends, not a bank. Supabase's free tier comfortably handles a group of friends playing casually.
+
 ### 🏞️ Plots
 - **Non-overlapping Voronoi cells** — every plot is a unique irregular polygon (4-12 sides)
 - **5 size tiers**: cottage, standard, estate, province, territory
@@ -146,6 +163,13 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.6 (2026-10-04) — Online multiplayer
+- Live world sync: while playing online, the world refreshes every 30 seconds — new claims from other devices appear on your globe, and enemy army sizes stay current for war
+- Conquests propagate live: if one of your plots is conquered while you're online, it's stripped from your game with a notification and your next autosave agrees with the cloud (previously your device could silently revert another player's conquest)
+- Conquest rewrites of a victim's save now carry a fresh timestamp so the ownership change wins cloud merges
+- Login screen now reads "🌐 Online multiplayer: ON/OFF" and the code carries step-by-step setup instructions
+- See the new "Playing online together" section for the 5-minute Supabase setup
 
 ### v1.5 (2026-10-04) — Navy & air force
 - **⚓ Naval Yard** ($650k): builds warships on ocean plots and coastal land plots; ships fight and defend sea plots
