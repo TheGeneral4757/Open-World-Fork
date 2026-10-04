@@ -1646,6 +1646,8 @@ const MATERIALS = [
   { id: 'capital',  name: 'Capital',       icon: '💼', basePrice: 2500, color: 0xf5cc74, producedBy: 'bank' },
   { id: 'tech',     name: 'Electronics',   icon: '💻', basePrice: 6000, color: 0x7c4dff, producedBy: 'techhub' },
   { id: 'troops',   name: 'Troops',        icon: '⚔️', basePrice: 500,  color: 0xc62828, producedBy: 'barracks', military: true },
+  { id: 'ships',    name: 'Ships',         icon: '⚓', basePrice: 800,  color: 0x4a7a9b, producedBy: 'navalyard', military: true },
+  { id: 'planes',   name: 'Planes',        icon: '✈️', basePrice: 2000, color: 0x90a4ae, producedBy: 'airfield', military: true },
 ];
 
 // ====================================================================
@@ -1712,6 +1714,18 @@ const BUSINESS_TYPES = [
     color: 0x9c3428, shape: 'barracks', military: true,
     desc: 'Trains troops. Your army defends your plots and conquers other commanders\' plots.'
   },
+  {
+    id: 'navalyard', name: 'Naval Yard', icon: '⚓',
+    buildCost: 650000, produces: 'ships', rate: 0.35,
+    color: 0x2b5f75, shape: 'navalyard', military: true,
+    desc: 'Builds warships on coasts and oceans. Ships fight naval invasions and defend sea plots.'
+  },
+  {
+    id: 'airfield', name: 'Airfield', icon: '✈️',
+    buildCost: 900000, produces: 'planes', rate: 0.25,
+    color: 0x78909c, shape: 'airfield', military: true,
+    desc: 'Operates an airstrip. Planes provide air support to every battle you fight.'
+  },
 ];
 
 // Helper: get material by id
@@ -1722,6 +1736,19 @@ function getMaterial(id) {
 // Helper: get business type by id
 function getBusinessType(id) {
   return BUSINESS_TYPES.find(b => b.id === id);
+}
+
+// Where each building may be built: oil rigs at sea, naval yards on
+// coasts or oceans, everything else on land
+function buildTerrainRule(b, plot) {
+  if (b.id === 'oilrig') {
+    return plot.userData.isWater ? { ok: true } : { ok: false, reason: 'Ocean only' };
+  }
+  if (b.id === 'navalyard') {
+    return (plot.userData.isWater || plot.userData.isCoastal)
+      ? { ok: true } : { ok: false, reason: 'Coast or ocean only' };
+  }
+  return !plot.userData.isWater ? { ok: true } : { ok: false, reason: 'Land only' };
 }
 
 // Build the 3D mesh for a business type at a given scale.
@@ -1738,6 +1765,8 @@ function buildBusinessMesh(businessType, scale) {
     case 'sphere':     geo = new THREE.SphereGeometry(s * 0.7, 16, 12); break;
     case 'octahedron': geo = new THREE.OctahedronGeometry(s * 0.8, 0); break;
     case 'barracks':   geo = new THREE.CylinderGeometry(s * 0.75, s * 0.85, s * 0.7, 6); break;
+    case 'navalyard':  geo = new THREE.CylinderGeometry(s * 1.1, s * 1.2, s * 0.35, 8); break;
+    case 'airfield':   geo = new THREE.BoxGeometry(s * 1.8, s * 0.12, s * 0.35); break;
     default:           geo = new THREE.BoxGeometry(s, s, s);
   }
   const mat = new THREE.MeshBasicMaterial({
@@ -1758,8 +1787,9 @@ function buildBusinessMesh(businessType, scale) {
     ring.rotation.x = Math.PI / 2;
     mesh.add(ring);
   }
-  // Lift so base sits on the surface (roughly)
-  mesh.position.y = s * 0.6;
+  // Lift so base sits on the surface (roughly) — low-profile military
+  // shapes (dock platform, runway) sit closer to the ground
+  mesh.position.y = (businessType.shape === 'navalyard' || businessType.shape === 'airfield') ? s * 0.12 : s * 0.6;
   return mesh;
 }
 
@@ -2075,13 +2105,33 @@ function getRegionBonus(businessId, plot) {
   return config.regions[region] !== undefined ? config.regions[region] : config.default;
 }
 
+// A land plot is coastal when water sits within roughly one cell of it —
+// coastal plots (and ocean plots) are where Naval Yards can be built
+function isCoastalPlot(plot) {
+  if (plot.userData.isWater) return false;
+  const d = (plot.userData.sizeA || 0.05) * 1.7 * 180 / Math.PI;   // degrees, ~1 cell out
+  const lat = plot.userData.lat, lon = plot.userData.lon;
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4;
+    if (isWaterAt(lat + Math.cos(a) * d, lon + Math.sin(a) * d)) return true;
+  }
+  return false;
+}
+
 // Classify all plots as water or land based on the water mask,
 // and assign region for bonus purposes
 function classifyPlotsByTerrain() {
   for (const p of STATE.plots) {
     p.userData.isWater = isWaterAt(p.userData.lat, p.userData.lon);
     p.userData.region = classifyRegion(p);
+    p.userData.isCoastal = isCoastalPlot(p);
+    // Coastal land plots get a bluer outline so naval-build spots are
+    // visible at a glance (unowned only — owned colors are set later)
+    if (p.userData.isCoastal && !p.userData.owned && !p.userData.ownedByOther) {
+      setPlotColors(p, p.userData._fillHex, COASTAL_OUTLINE);
+    }
   }
+  flushPlotPools();
 }
 
 function buildAtmosphere() {
@@ -2171,6 +2221,7 @@ function mulberry32(seed) {
 // Back-side cells are hidden by the depth test against the globe.
 // --------------------------------------------------------------------
 const PLOT_UNOWNED_OUTLINE = 0x2a8b6f;
+const COASTAL_OUTLINE = 0x3f8fb0;   // bluer outline marks coastal land (Naval Yard sites)
 const OWNED_FILL    = 0xf5cc74;
 const OWNED_OUTLINE = 0xf5cc74;
 const _PLOT_SHELL_GEO = new THREE.BufferGeometry();   // shared dummy — shells are never rendered
@@ -2805,9 +2856,9 @@ function openPlotModal(plot) {
         const effRate = baseRate * regionBonus;
         const mat = getMaterial(b.produces);
         const canAfford = STATE.money >= effCost;
-        const needsWater = (b.id === 'oilrig');
-        const terrainOk = needsWater ? isWater : !isWater;
-        const terrainReason = !terrainOk ? (needsWater ? 'Ocean only' : 'Land only') : null;
+        const terr = buildTerrainRule(b, plot);
+        const terrainOk = terr.ok;
+        const terrainReason = terrainOk ? null : terr.reason;
         const canBuild = canAfford && terrainOk;
         const bonusPct = Math.round((regionBonus - 1) * 100);
         const bonusLabel = bonusPct > 0 ? `+${bonusPct}%` : (bonusPct < 0 ? `${bonusPct}%` : '');
@@ -2849,26 +2900,33 @@ function openPlotModal(plot) {
   // War panel — plots held by another commander can be taken by force
   let warPanel = '';
   if (ownedByOther) {
-    const defSave = getSave(ownerName);
-    const defenderTroops = Math.floor((defSave && defSave.inventory && defSave.inventory.troops) || 0);
+    const kind = warKind(plot);
+    const kIcon = warKindIcon(kind);
+    const defender = getDefenderForce(ownerName, kind);
     const tb = warTerrainBonus(plot);
+    const myForce = Math.floor(STATE.inventory[kind] || 0);
     const myTroops = Math.floor(STATE.inventory.troops || 0);
+    const myShips = Math.floor(STATE.inventory.ships || 0);
+    const myPlanes = Math.floor(STATE.inventory.planes || 0);
+    const panelTitle = kind === 'ships' ? '⚓ Naval Invasion' : '⚔️ Conquest';
     warPanel = `
       <div class="war-panel">
-        <div class="war-title">⚔️ Conquest</div>
-        <div class="war-row">Defense: <b>${defenderTroops.toLocaleString()} ⚔️</b>${tb > 1 ? ` · terrain ×${tb}` : ''}</div>
-        <div class="war-row">Your army: <b>${myTroops.toLocaleString()} ⚔️</b></div>
-        ${myTroops > 0 ? `
+        <div class="war-title">${panelTitle}</div>
+        <div class="war-row">Defense: <b>${defender.toLocaleString()} ${kIcon}</b>${tb > 1 ? ` · terrain ×${tb}` : ''}</div>
+        <div class="war-row">Your forces: <b>⚔️ ${myTroops.toLocaleString()}</b> · <b>⚓ ${myShips.toLocaleString()}</b> · <b>✈️ ${myPlanes.toLocaleString()}</b>${myPlanes > 0 ? ` <span style="color:#7fffd4">(air support +${Math.round(airBonus(myPlanes) * 100)}%)</span>` : ''}</div>
+        ${myForce > 0 ? `
           <div class="war-commit">
-            <span>Commit</span>
-            <input type="number" id="war-commit-input" min="1" max="${myTroops}" value="${Math.max(1, Math.floor(myTroops / 2))}" oninput="updateWarEstimate()">
+            <span>Commit ${kind === 'ships' ? 'ships' : 'troops'}</span>
+            <input type="number" id="war-commit-input" min="1" max="${myForce}" value="${Math.max(1, Math.floor(myForce / 2))}" oninput="updateWarEstimate()">
             <button class="war-chip" onclick="setWarCommit(0.25)">25%</button>
             <button class="war-chip" onclick="setWarCommit(0.5)">½</button>
             <button class="war-chip" onclick="setWarCommit(1)">ALL</button>
           </div>
           <div class="war-estimate" id="war-estimate"></div>
-          <button class="war-attack" id="war-attack-btn" onclick="attackPlot()">⚔️ ATTACK</button>
-        ` : `<div class="war-hint">Build Barracks, train ⚔️ troops, and come back to take this plot by force.</div>`}
+          <button class="war-attack" id="war-attack-btn" onclick="attackPlot()">${kIcon} ATTACK</button>
+        ` : `<div class="war-hint">${kind === 'ships'
+          ? 'Build a Naval Yard on a coast or ocean plot to train ⚓ ships for sea invasions.'
+          : 'Build Barracks, train ⚔️ troops, and come back to take this plot by force.'}</div>`}
         <div id="war-result"></div>
       </div>
     `;
@@ -2952,14 +3010,11 @@ window.buildBusiness = function(businessId) {
   }
   const bt = BUSINESS_TYPES.find(b => b.id === businessId);
   if (!bt) return;
-  // Terrain restriction: Oil Rig only on water, everything else only on land
-  const needsWater = (businessId === 'oilrig');
-  if (needsWater && !p.userData.isWater) {
-    showToast('Oil Rigs can only be built in the ocean', false);
-    return;
-  }
-  if (!needsWater && p.userData.isWater) {
-    showToast(`${bt.name} can only be built on land`, false);
+  // Terrain restriction: oil rigs at sea, naval yards on coasts or oceans,
+  // everything else on land
+  const rule = buildTerrainRule(bt, p);
+  if (!rule.ok) {
+    showToast(`${bt.name}: ${rule.reason}`, false);
     return;
   }
   const effCost = Math.round(bt.buildCost * p.userData.areaMultiplier);
@@ -3428,19 +3483,37 @@ function warTerrainBonus(plot) {
   return 1.2;
 }
 
-function getDefenderTroops(ownerName) {
+// Sea battles are fought with ships, land battles with troops
+function warKind(plot) {
+  return plot.userData.isWater ? 'ships' : 'troops';
+}
+function warKindIcon(kind) {
+  return kind === 'ships' ? '⚓' : '⚔️';
+}
+
+function getDefenderForce(ownerName, kind) {
   const defSave = getSave(ownerName);
-  return Math.floor((defSave && defSave.inventory && defSave.inventory.troops) || 0);
+  return Math.floor((defSave && defSave.inventory && defSave.inventory[kind]) || 0);
+}
+
+function getDefenderPlanes(ownerName) {
+  const defSave = getSave(ownerName);
+  return (defSave && defSave.inventory && defSave.inventory.planes) || 0;
+}
+
+// Planes provide air support to any battle: +0.05% per plane, capped at +50%
+function airBonus(planes) {
+  return Math.min(0.5, (planes || 0) * 0.0005);
 }
 
 // Monte-Carlo the roll formula for the UI's win-chance estimate
-function estimateWinChance(committed, defender, terrainBonus) {
+function estimateWinChance(committed, defender, terrainBonus, atkAir, defAir) {
   if (committed <= 0) return 0;
   if (defender <= 0) return 1;
   let wins = 0;
   const n = 400;
   for (let i = 0; i < n; i++) {
-    if (committed * (0.85 + Math.random() * 0.3) > defender * terrainBonus * (0.85 + Math.random() * 0.3)) wins++;
+    if (committed * (1 + atkAir) * (0.85 + Math.random() * 0.3) > defender * terrainBonus * (1 + defAir) * (0.85 + Math.random() * 0.3)) wins++;
   }
   return wins / n;
 }
@@ -3450,38 +3523,50 @@ window.updateWarEstimate = function() {
   const est = document.getElementById('war-estimate');
   if (!input || !est || !STATE.selectedPlot || !STATE.selectedPlot.userData.ownedByOther) return;
   const p = STATE.selectedPlot;
-  const myTroops = Math.floor(STATE.inventory.troops || 0);
-  const committed = Math.max(0, Math.min(myTroops, Math.floor(parseFloat(input.value) || 0)));
-  const defender = getDefenderTroops(p.userData.ownerName);
+  const kind = warKind(p);
+  const myForce = Math.floor(STATE.inventory[kind] || 0);
+  const committed = Math.max(0, Math.min(myForce, Math.floor(parseFloat(input.value) || 0)));
+  const defender = getDefenderForce(p.userData.ownerName, kind);
   const tb = warTerrainBonus(p);
-  const pct = Math.round(estimateWinChance(committed, defender, tb) * 100);
+  const pct = Math.round(estimateWinChance(committed, defender, tb, airBonus(STATE.inventory.planes), airBonus(getDefenderPlanes(p.userData.ownerName))) * 100);
   const color = pct >= 60 ? '#7fffd4' : (pct >= 35 ? '#f5cc74' : '#ff8080');
   const expectedLoss = Math.min(committed, Math.round(committed * 0.4 + 0.45 * defender * tb));
-  est.innerHTML = `Win chance ≈ <b style="color:${color}">${pct}%</b>${defender > 0 ? ` · expected losses ≈ ${expectedLoss.toLocaleString()} ⚔️` : ''}`;
+  est.innerHTML = `Win chance ≈ <b style="color:${color}">${pct}%</b>${defender > 0 ? ` · expected losses ≈ ${expectedLoss.toLocaleString()} ${warKindIcon(kind)}` : ''}`;
 };
 
 window.setWarCommit = function(frac) {
   const input = document.getElementById('war-commit-input');
-  if (!input) return;
-  const myTroops = Math.floor(STATE.inventory.troops || 0);
-  input.value = Math.max(1, Math.floor(myTroops * frac));
+  if (!input || !STATE.selectedPlot) return;
+  const kind = warKind(STATE.selectedPlot);
+  const myForce = Math.floor(STATE.inventory[kind] || 0);
+  input.value = Math.max(1, Math.floor(myForce * frac));
   window.updateWarEstimate();
 };
 
 window.attackPlot = function() {
   const p = STATE.selectedPlot;
   if (!p || !p.userData.ownedByOther) return;
-  const myTroops = Math.floor(STATE.inventory.troops || 0);
+  // Sea plots are invaded with ships, land plots with troops
+  const kind = warKind(p);
+  const kIcon = warKindIcon(kind);
+  const myForce = Math.floor(STATE.inventory[kind] || 0);
   const input = document.getElementById('war-commit-input');
-  const committed = Math.max(1, Math.min(myTroops, Math.floor(parseFloat(input && input.value) || 0)));
-  if (committed > myTroops) { showToast('Not enough troops — wait for your Barracks', false); return; }
+  const committed = Math.max(1, Math.min(myForce, Math.floor(parseFloat(input && input.value) || 0)));
+  if (committed > myForce) {
+    showToast(kind === 'ships'
+      ? 'Not enough ships — build a Naval Yard on a coast or ocean plot'
+      : 'Not enough troops — wait for your Barracks', false);
+    return;
+  }
   const owner = p.userData.ownerName;
-  const defender = getDefenderTroops(owner);
+  const defender = getDefenderForce(owner, kind);
   const tb = warTerrainBonus(p);
+  const atkAir = airBonus(STATE.inventory.planes);
+  const defAir = airBonus(getDefenderPlanes(owner));
 
-  // Roll the battle (±15% luck on both sides)
-  const atkRoll = committed * (0.85 + Math.random() * 0.3);
-  const defRoll = defender * tb * (0.85 + Math.random() * 0.3);
+  // Roll the battle (±15% luck on both sides, plus air support)
+  const atkRoll = committed * (1 + atkAir) * (0.85 + Math.random() * 0.3);
+  const defRoll = defender * tb * (1 + defAir) * (0.85 + Math.random() * 0.3);
   const win = atkRoll > defRoll;
   let atkLoss, defLoss;
   if (win) {
@@ -3493,14 +3578,14 @@ window.attackPlot = function() {
   }
 
   // Attacker casualties
-  STATE.inventory.troops = Math.max(0, (STATE.inventory.troops || 0) - atkLoss);
+  STATE.inventory[kind] = Math.max(0, (STATE.inventory[kind] || 0) - atkLoss);
 
   // Defender's save: apply their losses; on victory strip the plot from them
   const vs = getSave(owner);
   const captured = (win && vs) ? (vs.businesses || []).filter(b => b.plotId === p.userData.id) : [];
   if (vs) {
     vs.inventory = vs.inventory || {};
-    vs.inventory.troops = Math.max(0, defender - defLoss);
+    vs.inventory[kind] = Math.max(0, defender - defLoss);
     if (win) {
       vs.ownedPlotIds = (vs.ownedPlotIds || []).filter(id => id !== p.userData.id);
       vs.businesses = (vs.businesses || []).filter(b => b.plotId !== p.userData.id);
@@ -3523,9 +3608,9 @@ window.attackPlot = function() {
     if (!p.userData.businesses.length) setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
     flushPlotPools();
     const spoils = captured.length ? ` with ${captured.length} business${captured.length > 1 ? 'es' : ''}` : '';
-    showToast(`⚔️ Victory! Captured ${p.userData.name}${spoils} — lost ${atkLoss.toLocaleString()} ⚔️`, true);
+    showToast(`${kIcon} Victory! Captured ${p.userData.name}${spoils} — lost ${atkLoss.toLocaleString()} ${kIcon}`, true);
   } else {
-    showToast(`💀 Defeat — all ${atkLoss.toLocaleString()} troops lost. ${owner} holds the plot.`, false);
+    showToast(`💀 Defeat — all ${atkLoss.toLocaleString()} ${kind === 'ships' ? 'ships' : 'troops'} lost. ${owner} holds the plot.`, false);
   }
   updateHUD();
   saveGame();
