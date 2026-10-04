@@ -41,14 +41,17 @@ An interactive 3D Earth strategy game — claim land, build businesses, produce 
 - **Demolish** any business individually
 
 ### ⚔️ Military & Conquest
-- **Barracks** train ⚔️ troops — a military resource that can't be sold on the market
-- Your army defends all your plots automatically; enemies see your strength before attacking
-- **Conquer other commanders' plots**: click a claimed plot, commit troops, and attack
+- **Barracks** (land) train ⚔️ troops, **Naval Yards** (coasts & oceans) train ⚓ ships, and **Airfields** (land) train ✈️ planes — military resources that can't be sold on the market
+- Your forces defend your plots automatically; enemies see your strength before attacking
+- **Conquer other commanders' plots**: click a claimed plot, commit forces, and attack
+  - Land plots are fought with ⚔️ troops (⚔️ Conquest); sea plots are fought with ⚓ ships (⚓ Naval Invasion)
+  - ✈️ planes from your Airfields give air support to every battle: +0.05% strength per plane, up to +50%
   - Defenders get terrain bonuses: mountains ×1.5, highlands ×1.35, ocean ×1.3, other land ×1.2
   - Battles roll strength with ±15% luck — the modal shows your estimated win chance before you commit
   - **Win**: the plot becomes yours — captured businesses keep producing for you — and both sides take casualties
-  - **Lose**: the entire committed force is lost; the defender's army takes light losses
+  - **Lose**: the entire committed force is lost; the defender takes light losses
 - The 📊 **Army** chip in the HUD shows your current troop strength
+- **Coastal land plots show a bluer outline** — that's where Naval Yards can be built (ocean plots work too)
 - **Military buildings are clearly distinct** from businesses: a separate red ⚔️ Military section in the build menu, MILITARY badges on army buildings, and a red base ring on the globe
 
 ### 🎰 Casino Gambling
@@ -143,6 +146,14 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.5 (2026-10-04) — Navy & air force
+- **⚓ Naval Yard** ($650k): builds warships on ocean plots and coastal land plots; ships fight and defend sea plots
+- **✈️ Airfield** ($900k): operates a runway on land; planes provide air support to every battle (+0.05% strength each, up to +50% for both attacker and defender)
+- Sea plots are now invaded with ships (⚓ Naval Invasion) instead of troops — build a navy before attacking islands and ocean rigs
+- Coastal land plots show a bluer outline so Naval Yard sites are easy to spot
+- New meshes: an octagonal dock platform for the Naval Yard, a runway strip for the Airfield
+- War panel shows your full forces (⚔️ troops · ⚓ ships · ✈️ planes) and adapts per plot type
 
 ### v1.4.1 (2026-10-04) — Military/business distinction
 - Build menu split into 🏗️ Businesses and ⚔️ Military sections, with red military styling
