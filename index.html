@@ -761,7 +761,7 @@ const STATE = {
   marketTrend: {},              // { materialId: 'up'|'down'|'stable' }
   lastMarketUpdate: 0,          // timestamp of last market price change
   lastProductionTime: 0,        // timestamp of last production tick
-  marketUpdateInterval: 5 * 60 * 1000,  // 5 minutes in ms
+  marketUpdateInterval: 15 * 60 * 1000,  // 15 minutes in ms (v1.4 slow pacing)
   radius: 1.0,                // Earth radius in scene units
   zoomMin: 1.22,              // closest (just above surface — safe for rendering)
   zoomMax: 6.0,               // farthest (space view)
@@ -1648,58 +1648,62 @@ const MATERIALS = [
 // ====================================================================
 // Each business produces a specific material at a given rate (units/sec).
 // Rate scales with plot area — bigger plots produce proportionally more.
+// Balance note (v1.4, slow-paced): production rates are ~40% of the original
+// arcade pacing while build costs are doubled — a Farm now pays for itself in
+// ~8 minutes instead of ~90 seconds, and the whole tech tree takes hours of
+// casual play instead of minutes.
 const BUSINESS_TYPES = [
   {
     id: 'farm', name: 'Farm', icon: '🌾',
-    buildCost: 8000, produces: 'food', rate: 1.2,
+    buildCost: 16000, produces: 'food', rate: 0.5,
     color: 0x7cb342, shape: 'cone',
     desc: 'Grows food. Slow but steady production.'
   },
   {
     id: 'mine', name: 'Mine', icon: '⛏️',
-    buildCost: 20000, produces: 'ore', rate: 1.5,
+    buildCost: 40000, produces: 'ore', rate: 0.6,
     color: 0x8d6e63, shape: 'cylinder',
     desc: 'Extracts ore from the earth.'
   },
   {
     id: 'factory', name: 'Factory', icon: '🏭',
-    buildCost: 60000, produces: 'goods', rate: 1.6,
+    buildCost: 120000, produces: 'goods', rate: 0.6,
     color: 0x546e7a, shape: 'box',
     desc: 'Manufactures goods from raw materials.'
   },
   {
     id: 'resort', name: 'Resort', icon: '🏖️',
-    buildCost: 90000, produces: 'tourism', rate: 1.6,
+    buildCost: 180000, produces: 'tourism', rate: 0.6,
     color: 0x4dd0e1, shape: 'dome',
     desc: 'Generates tourism revenue from visitors.'
   },
   {
     id: 'oilrig', name: 'Oil Rig', icon: '🛢️',
-    buildCost: 140000, produces: 'oil', rate: 1.8,
+    buildCost: 280000, produces: 'oil', rate: 0.7,
     color: 0x37474f, shape: 'pyramid',
     desc: 'Pumps crude oil. High-value material.'
   },
   {
     id: 'casino', name: 'Casino', icon: '🎰',
-    buildCost: 180000, produces: 'fun', rate: 1.7,
+    buildCost: 360000, produces: 'fun', rate: 0.7,
     color: 0xd32f2f, shape: 'sphere',
     desc: 'Volatile gambling den. Each roll can hit jackpots (10×) or bust (0×). High risk, high reward.'
   },
   {
     id: 'bank', name: 'Bank', icon: '🏦',
-    buildCost: 300000, produces: 'capital', rate: 1.8,
+    buildCost: 600000, produces: 'capital', rate: 0.7,
     color: 0xf5cc74, shape: 'cylinder',
     desc: 'Generates financial capital services.'
   },
   {
     id: 'techhub', name: 'Tech Hub', icon: '💻',
-    buildCost: 600000, produces: 'tech', rate: 1.8,
+    buildCost: 1200000, produces: 'tech', rate: 0.7,
     color: 0x7c4dff, shape: 'octahedron',
     desc: 'Produces cutting-edge electronics.'
   },
   {
     id: 'barracks', name: 'Barracks', icon: '⚔️',
-    buildCost: 250000, produces: 'troops', rate: 1.0,
+    buildCost: 500000, produces: 'troops', rate: 0.4,
     color: 0x9c3428, shape: 'barracks',
     desc: 'Trains troops. Your army defends your plots and conquers other commanders\' plots.'
   },
@@ -2401,19 +2405,22 @@ function generatePlots() {
     }
 
     // ---- Pricing ----
+    // v1.4 (slow-paced): doubled from the original bands — with a $100k
+    // start you now begin on the cheap high-latitude frontier and work
+    // toward the valuable equator over time.
     const absLat = Math.abs(seed.lat);
     let basePrice;
-    if (absLat < 23)      basePrice = 35000;
-    else if (absLat < 45) basePrice = 22000;
-    else if (absLat < 66) basePrice = 12000;
-    else                  basePrice = 4000;
+    if (absLat < 23)      basePrice = 70000;
+    else if (absLat < 45) basePrice = 44000;
+    else if (absLat < 66) basePrice = 24000;
+    else                  basePrice = 8000;
 
     const areaMultiplier = area / REF_AREA;
     // Cells with more sides are slightly rarer/more interesting
     const sidesPremium = 1 + Math.max(0, cell.length - 4) * 0.04;
     const jitter = 0.85 + rng() * 0.30;
     const rawPrice = basePrice * areaMultiplier * sidesPremium * jitter;
-    const price = Math.max(500, Math.round(rawPrice / 100) * 100);
+    const price = Math.max(1000, Math.round(rawPrice / 100) * 100);
 
     // Tier name based on area
     let sizeName;
@@ -3006,7 +3013,7 @@ function updateMarket() {
   for (const m of MATERIALS) {
     const oldPrice = STATE.marketPrices[m.id];
     // Random walk: ±20% change
-    const change = (Math.random() - 0.5) * 0.4;  // -0.2 to +0.2
+    const change = (Math.random() - 0.5) * 0.16;  // -0.08 to +0.08 (gentle swings — v1.4 slow pacing)
     let newPrice = oldPrice * (1 + change);
     // Bound between 0.5× and 2× base price
     newPrice = Math.max(m.basePrice * 0.5, Math.min(m.basePrice * 2, newPrice));
