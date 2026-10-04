@@ -49,6 +49,7 @@ An interactive 3D Earth strategy game — claim land, build businesses, produce 
   - **Win**: the plot becomes yours — captured businesses keep producing for you — and both sides take casualties
   - **Lose**: the entire committed force is lost; the defender's army takes light losses
 - The 📊 **Army** chip in the HUD shows your current troop strength
+- **Military buildings are clearly distinct** from businesses: a separate red ⚔️ Military section in the build menu, MILITARY badges on army buildings, and a red base ring on the globe
 
 ### 🎰 Casino Gambling
 - Casinos don't produce steadily — each tick rolls a slot machine:
@@ -142,6 +143,11 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.4.1 (2026-10-04) — Military/business distinction
+- Build menu split into 🏗️ Businesses and ⚔️ Military sections, with red military styling
+- Owned military buildings show a MILITARY badge and a red-tinted card
+- Barracks (and future military buildings) render with a red base ring on the globe
 
 ### v1.4 (2026-10-04) — Slow-paced rebalance
 - Production rates cut to ~40% across all businesses (a Farm now pays for itself in ~8 minutes instead of ~90 seconds)
