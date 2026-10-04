@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Open World — Admin</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#05080d;color:#e8eef0;font-family:Arial,sans-serif;min-height:100vh;padding:30px 16px}
+  .wrap{max-width:980px;margin:0 auto}
+  h1{color:#f5cc74;font-size:26px;margin-bottom:4px;letter-spacing:1px}
+  .sub{color:#7fa0ab;font-size:12px;letter-spacing:1px;margin-bottom:24px}
+  .card{background:#0b1d29;border:1px solid #1a3340;border-radius:12px;padding:20px;margin-bottom:18px}
+  input[type=password],input[type=number],input[type=text]{background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Arial,sans-serif}
+  button{background:linear-gradient(180deg,#f7d98d,#e0b455);color:#221a05;border:none;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:bold;cursor:pointer;font-family:Arial,sans-serif}
+  button:hover{filter:brightness(1.08)}
+  button.ghost{background:transparent;border:1px solid #2c4a55;color:#9bb4bd}
+  button.ghost:hover{border-color:#f5cc74;color:#f5cc74}
+  button.danger{background:linear-gradient(180deg,#d9534f,#a83232);color:#fff}
+  button.small{padding:6px 12px;font-size:12px}
+  .err{color:#ff8080;font-size:13px;margin-top:10px;min-height:16px}
+  .ok{color:#7fffd4;font-size:13px;margin-top:10px;min-height:16px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{color:#7fa0ab;text-align:left;padding:8px 10px;border-bottom:1px solid #1a3340;font-size:11px;letter-spacing:1px}
+  td{padding:9px 10px;border-bottom:1px solid #10222e;vertical-align:middle}
+  tr:hover td{background:rgba(20,50,60,.35)}
+  .money{color:#f5cc74;font-weight:bold}
+  .mil{color:#ff9d9d}
+  .muted{color:#5d7885;font-size:11px}
+  .row-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .row-actions input{width:96px;padding:5px 8px;font-size:12px}
+  .topbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .cb{display:flex;align-items:center;gap:6px;color:#9bb4bd;font-size:13px}
+  .gate{max-width:420px;margin:60px auto 0;text-align:center}
+  .gate input{width:100%;margin:14px 0}
+  .gate button{width:100%}
+  .log{font-size:12px;color:#cbd7dc;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>👑 Open World — Admin</h1>
+  <div class="sub">Shared-world administration · only the owner of the admin account can use this page</div>
+
+  <div class="card gate" id="gate">
+    <div style="color:#cbd7dc;font-size:14px">Enter the <b style="color:#f5cc74">kingkanye26</b> account password to continue.</div>
+    <input type="password" id="pwd" placeholder="Account password...">
+    <button onclick="tryUnlock()">Unlock Admin Panel</button>
+    <div class="err" id="gate-err"></div>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="card">
+      <div class="topbar">
+        <button class="ghost" onclick="loadWorld()">⟳ Refresh</button>
+        <button class="danger" onclick="resetAll()">Reset ALL accounts</button>
+        <label class="cb"><input type="checkbox" id="all-zero-inv"> also zero inventories</label>
+        <button class="ghost" onclick="clearClaims()">Clear all plot claims</button>
+      </div>
+      <div class="muted">“Reset” = back to $100,000, no plots, no businesses. Fresh timestamps are written so every device pulls the reset state on its next sync.</div>
+      <table id="accounts" style="margin-top:14px">
+        <thead><tr>
+          <th>Account</th><th>Money</th><th>Plots</th><th>Biz</th><th>⚔ / ⚓ / ✈</th><th>Last save</th><th>Actions</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="log" id="log"></div>
+    </div>
+    <div class="muted" style="text-align:center">Open World admin · <a href="./index.html" style="color:#2c4a55">back to the game</a></div>
+  </div>
+</div>
+
+<script>
+const SB = 'https://wlnyqhdqophaiaqkqtgb.supabase.co';
+const KEY = 'sb_publishable_rdEPIEEhka_HBt2VYfMLDw_gToZQDEx';
+const HEADERS = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' };
+const ADMIN_ACCOUNT = 'kingkanye26';
+const STARTING_MONEY = 100000;
+const SAVE_PREFIX = 'openworld_save_';
+
+// Same client-side hash the game uses for account passwords
+function hashPassword(pwd) {
+  let hash = 5381;
+  for (let i = 0; i < pwd.length; i++) hash = ((hash << 5) + hash + pwd.charCodeAt(i)) | 0;
+  return (hash >>> 0).toString(16);
+}
+
+async function fetchRows() {
+  const r = await fetch(SB + '/rest/v1/openworld_data?select=key,data&order=key.asc', { headers: HEADERS });
+  if (!r.ok) throw new Error('Supabase read failed: ' + r.status);
+  return r.json();
+}
+async function upsertRow(key, data) {
+  const r = await fetch(SB + '/rest/v1/openworld_data', {
+    method: 'POST',
+    headers: Object.assign({ 'Prefer': 'resolution=merge-duplicates' }, HEADERS),
+    body: JSON.stringify([{ key, data, updated_at: new Date().toISOString() }])
+  });
+  if (!r.ok) throw new Error('Supabase write failed: ' + r.status);
+}
+async function deleteRow(key) {
+  const r = await fetch(SB + '/rest/v1/openworld_data?key=eq.' + encodeURIComponent(key), { method: 'DELETE', headers: HEADERS });
+  if (!r.ok) throw new Error('Supabase delete failed: ' + r.status);
+}
+
+function log(msg, ok) {
+  const el = document.getElementById('log');
+  el.innerHTML = (ok ? '<span class="ok">' : '<span class="err">') + msg + '</span>';
+}
+
+// ---- Gate ----
+async function tryUnlock() {
+  const err = document.getElementById('gate-err');
+  err.textContent = '';
+  const pwd = document.getElementById('pwd').value;
+  if (!pwd) { err.textContent = 'Enter the password.'; return; }
+  try {
+    const rows = await fetchRows();
+    const row = rows.find(r => r.key === SAVE_PREFIX + ADMIN_ACCOUNT);
+    if (!row) { err.textContent = 'Admin account "' + ADMIN_ACCOUNT + '" not found in the world.'; return; }
+    const stored = (row.data && row.data.passwordHash) || '';
+    if (!stored) { err.textContent = 'Admin account has no password on file.'; return; }
+    if (hashPassword(pwd) !== stored) { err.textContent = 'Wrong password.'; return; }
+    sessionStorage.setItem('ow-admin-ok', '1');
+    unlock();
+  } catch (e) { err.textContent = 'Could not reach the world database: ' + e.message; }
+}
+
+function unlock() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('panel').style.display = '';
+  loadWorld();
+}
+
+// ---- World state ----
+let world = { profiles: [], saves: {}, claims: {} };
+
+async function loadWorld() {
+  const rows = await fetchRows();
+  world = { profiles: [], saves: {}, claims: {} };
+  for (const r of rows) {
+    if (r.key === 'profiles') world.profiles = Array.isArray(r.data) ? r.data : [];
+    else if (r.key === 'openworld_claims') world.claims = r.data || {};
+    else if (r.key.startsWith(SAVE_PREFIX)) {
+      const name = r.key.slice(SAVE_PREFIX.length);
+      world.saves[name] = r.data;
+    }
+  }
+  // include any save found that isn't in profiles yet
+  for (const name of Object.keys(world.saves)) {
+    if (!world.profiles.includes(name)) world.profiles.push(name);
+  }
+  renderAccounts();
+}
+
+function fmt(n) { return '$' + Math.round(n || 0).toLocaleString(); }
+function fmtTime(ms) {
+  if (!ms) return '—';
+  const d = new Date(ms);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+}
+
+function renderAccounts() {
+  const tbody = document.querySelector('#accounts tbody');
+  const names = Object.keys(world.saves).sort();
+  if (!names.length) { tbody.innerHTML = '<tr><td colspan="7" class="muted">No accounts yet.</td></tr>'; return; }
+  tbody.innerHTML = names.map(name => {
+    const s = world.saves[name] || {};
+    const inv = s.inventory || {};
+    const biz = (s.businesses || []).length;
+    const plots = (s.ownedPlotIds || []).length;
+    return `<tr>
+      <td><b>${name}</b></td>
+      <td class="money">${fmt(s.money)}</td>
+      <td>${plots}</td>
+      <td>${biz}</td>
+      <td class="mil">${Math.floor(inv.troops || 0).toLocaleString()} / ${Math.floor(inv.ships || 0).toLocaleString()} / ${Math.floor(inv.planes || 0).toLocaleString()}</td>
+      <td class="muted">${fmtTime(s.savedAt)}</td>
+      <td><div class="row-actions">
+        <button class="small ghost" onclick="resetOne('${name}')">Reset</button>
+        <button class="small ghost" onclick="zeroInv('${name}')">Zero inv</button>
+        <input type="number" id="money-${name}" placeholder="set $">
+        <button class="small ghost" onclick="setMoney('${name}')">Set $</button>
+        <button class="small danger" onclick="deleteAccount('${name}')">Delete</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- Mutations ----
+function applyReset(save, zeroInv) {
+  save.money = STARTING_MONEY;
+  save.ownedPlotIds = [];
+  save.businesses = [];
+  if (zeroInv) save.inventory = {};
+  save.savedAt = Date.now();   // fresh: every device pulls this on next sync
+  return save;
+}
+
+async function persistSave(name) {
+  await upsertRow(SAVE_PREFIX + name, world.saves[name]);
+}
+
+async function resetOne(name) {
+  if (!confirm('Reset ' + name + ' to $' + STARTING_MONEY.toLocaleString() + ' with no plots and no businesses?')) return;
+  world.saves[name] = applyReset(world.saves[name], false);
+  await persistSave(name);
+  log('Reset ' + name + '.', true);
+  loadWorld();
+}
+
+async function zeroInv(name) {
+  if (!confirm('Zero ALL resources (materials + troops/ships/planes) for ' + name + '?')) return;
+  world.saves[name].inventory = {};
+  world.saves[name].savedAt = Date.now();
+  await persistSave(name);
+  log('Inventories zeroed for ' + name + '.', true);
+  loadWorld();
+}
+
+async function setMoney(name) {
+  const input = document.getElementById('money-' + name);
+  const v = Math.floor(parseFloat(input.value));
+  if (isNaN(v) || v < 0) { log('Enter a valid amount for ' + name + '.', false); return; }
+  world.saves[name].money = v;
+  world.saves[name].savedAt = Date.now();
+  await persistSave(name);
+  log('Set ' + name + ' to ' + fmt(v) + '.', true);
+  loadWorld();
+}
+
+async function deleteAccount(name) {
+  if (!confirm('DELETE the account "' + name + '" completely? Its plots become unclaimed. This cannot be undone.')) return;
+  await deleteRow(SAVE_PREFIX + name);
+  world.profiles = world.profiles.filter(p => p !== name);
+  delete world.saves[name];
+  for (const k of Object.keys(world.claims)) {
+    if (world.claims[k] === name) delete world.claims[k];
+  }
+  await upsertRow('profiles', world.profiles);
+  await upsertRow('openworld_claims', world.claims);
+  log('Deleted account ' + name + ' and freed its plots.', true);
+  loadWorld();
+}
+
+async function resetAll() {
+  const zeroInv = document.getElementById('all-zero-inv').checked;
+  const names = Object.keys(world.saves);
+  if (!names.length) { log('No accounts to reset.', false); return; }
+  if (!confirm('Reset ALL ' + names.length + ' account(s) to $' + STARTING_MONEY.toLocaleString() + ' with no plots' + (zeroInv ? ' and empty inventories' : '') + '? Every plot becomes unclaimed. This cannot be undone.')) return;
+  for (const name of names) {
+    world.saves[name] = applyReset(world.saves[name], zeroInv);
+    await persistSave(name);
+  }
+  world.claims = {};
+  await upsertRow('openworld_claims', world.claims);
+  log('Reset ' + names.length + ' account(s): ' + names.join(', '), true);
+  loadWorld();
+}
+
+async function clearClaims() {
+  if (!confirm('Free every claimed plot? Account money/businesses are untouched.')) return;
+  world.claims = {};
+  await upsertRow('openworld_claims', world.claims);
+  log('All plot claims cleared.', true);
+  loadWorld();
+}
+
+// ---- Boot ----
+if (sessionStorage.getItem('ow-admin-ok') === '1') unlock();
+document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+</script>
+</body>
+</html>
