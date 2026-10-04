@@ -66,7 +66,7 @@ An interactive 3D Earth strategy game — claim land, build businesses, produce 
 
 ### 📈 Market System
 - **8 materials** trade on a global market with fluctuating prices
-- Prices update every **5 minutes** via random walk (±20%, bounded 0.5×–2× base)
+- Prices update every **15 minutes** via a gentle random walk (±8%, bounded 0.5×–2× base) — position your stock, don't watch the clock
 - Trend indicators: ▲ up / ▼ down / ◆ stable
 - Live countdown timer to next price update
 - **Sell individual materials** or **Sell All** at once
@@ -142,6 +142,14 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.4 (2026-10-04) — Slow-paced rebalance
+- Production rates cut to ~40% across all businesses (a Farm now pays for itself in ~8 minutes instead of ~90 seconds)
+- Business build costs doubled (Farm $16k → Tech Hub $1.2M)
+- Plot prices doubled across all latitude bands — a $100k start now begins on the cheap high-latitude frontier, with the valuable equator as a long-term goal
+- Market prices update every 15 minutes (was 5) with gentler ±8% swings — sell on strategy, not on a stopwatch
+- Troops train slower (Barracks rate 0.4/s), making war preparation a deliberate investment
+- Existing saves are fully compatible; balances and businesses carry over unchanged
 
 ### v1.3.1 (2026-10-03) — Bugfix
 - Fixed mirrored longitude in plot labels and terrain detection: plots now show their true coordinates and terrain (a plot over Canada was labeled "Asian Steppes 93°E" and classified Deep Ocean; plot positions were always correct — only the labels and map sampling were mirrored)
