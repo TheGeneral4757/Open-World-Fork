@@ -225,6 +225,11 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .war-attack{width:100%;padding:11px;font-size:15px;font-weight:bold;letter-spacing:2px;background:linear-gradient(180deg,#d9534f,#a83232);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:Arial,sans-serif}
 .war-attack:hover{filter:brightness(1.12)}
 .war-hint{font-size:12px;color:#9bb4bd;margin-top:6px}
+/* Military vs business distinction */
+.mil-badge{display:inline-block;font-size:9px;font-weight:bold;letter-spacing:1px;color:#ff8080;border:1px solid #7a3535;background:rgba(80,20,20,.5);border-radius:4px;padding:1px 5px;margin-right:5px;vertical-align:middle;font-family:Arial,sans-serif}
+.war-build-title{font-size:14px;color:#ff8080;margin:14px 0 6px;font-weight:bold;letter-spacing:.5px}
+.biz-option.mil-option{border-color:#5a2424;background:rgba(80,20,20,.25)}
+.biz-option.mil-option:hover{background:rgba(80,20,20,.45)}
 .mat-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #1a3340;border-radius:8px;
   background:rgba(20,50,60,.4);margin-bottom:8px}
 .mat-row .mat-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center}
@@ -1704,7 +1709,7 @@ const BUSINESS_TYPES = [
   {
     id: 'barracks', name: 'Barracks', icon: '⚔️',
     buildCost: 500000, produces: 'troops', rate: 0.4,
-    color: 0x9c3428, shape: 'barracks',
+    color: 0x9c3428, shape: 'barracks', military: true,
     desc: 'Trains troops. Your army defends your plots and conquers other commanders\' plots.'
   },
 ];
@@ -1743,6 +1748,16 @@ function buildBusinessMesh(businessType, scale) {
     depthWrite: false
   });
   const mesh = new THREE.Mesh(geo, mat);
+  // Military buildings get a red base ring so armed sites read as distinct
+  // from businesses at a glance on the globe
+  if (businessType.military) {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(s * 1.05, s * 0.12, 6, 20),
+      new THREE.MeshBasicMaterial({ color: 0xff5252, transparent: true, opacity: 0.9, depthWrite: false })
+    );
+    ring.rotation.x = Math.PI / 2;
+    mesh.add(ring);
+  }
   // Lift so base sits on the surface (roughly)
   mesh.position.y = s * 0.6;
   return mesh;
@@ -2757,12 +2772,13 @@ function openPlotModal(plot) {
         `;
       }
 
+      const isMil = !!bt.military;
       return `
-        <div class="biz-card-multi" style="border:1px solid #1a3340;border-radius:8px;padding:10px;margin-bottom:8px;background:rgba(20,50,60,.3)">
+        <div class="biz-card-multi" style="border:1px solid ${isMil ? '#7a3535' : '#1a3340'};border-radius:8px;padding:10px;margin-bottom:8px;background:${isMil ? 'rgba(80,20,20,.28)' : 'rgba(20,50,60,.3)'}">
           <div class="business-current">
             <div class="biz-icon">${bt.icon}</div>
             <div class="biz-info">
-              <div class="biz-name">${bt.name} <span style="color:#9bb4bd;font-size:11px">→ ${mat.icon} ${mat.name}</span></div>
+              <div class="biz-name">${isMil ? '<span class="mil-badge">MILITARY</span>' : ''}${bt.name} <span style="color:#9bb4bd;font-size:11px">→ ${mat.icon} ${mat.name}</span></div>
               <div class="biz-income" style="font-size:11px">${bt.id === 'casino'
                 ? `🎲 Volatile base ${baseRate.toFixed(1)}/s × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b>`
                 : (mat.military
@@ -2777,11 +2793,12 @@ function openPlotModal(plot) {
       `;
     }).join('');
 
-    // Build options (shown if slots available)
+    // Build options (shown if slots available) — economy and military
+    // buildings are presented as separate, clearly-distinct sections
     let buildSection = '';
     if (businesses.length < maxBiz) {
       const slotsLeft = maxBiz - businesses.length;
-      const options = BUSINESS_TYPES.map(b => {
+      const makeOption = (b) => {
         const effCost = Math.round(b.buildCost * plot.userData.areaMultiplier);
         const baseRate = b.rate * plot.userData.areaMultiplier;
         const regionBonus = getRegionBonus(b.id, plot);
@@ -2797,7 +2814,7 @@ function openPlotModal(plot) {
         const bonusColor = bonusPct > 0 ? '#7fffd4' : (bonusPct < 0 ? '#ff8080' : '#9bb4bd');
         const bonusDisplay = bonusLabel ? ` · <span style="color:${bonusColor}">${bonusLabel}</span>` : '';
         return `
-          <button class="biz-option ${canBuild ? '' : 'disabled'}" ${canBuild ? '' : 'disabled'} onclick="buildBusiness('${b.id}')">
+          <button class="biz-option ${b.military ? 'mil-option' : ''} ${canBuild ? '' : 'disabled'}" ${canBuild ? '' : 'disabled'} onclick="buildBusiness('${b.id}')">
             <div class="biz-icon">${b.icon}</div>
             <div class="biz-info">
               <div class="biz-name">${b.name} <span style="color:#9bb4bd;font-size:11px">→ ${mat.icon} ${mat.name}</span></div>
@@ -2806,11 +2823,16 @@ function openPlotModal(plot) {
             <div class="biz-income">+${effRate.toFixed(1)}/s</div>
           </button>
         `;
-      }).join('');
+      };
+      const econOptions = BUSINESS_TYPES.filter(b => !b.military).map(makeOption).join('');
+      const milOptions = BUSINESS_TYPES.filter(b => b.military).map(makeOption).join('');
+      const econTitle = businesses.length === 0
+        ? '🏭 Build a Business'
+        : `🏭 Build Another Business (${slotsLeft} slot${slotsLeft > 1 ? 's' : ''} left)`;
       buildSection = `
         <div style="margin-top:10px">
-          <div class="biz-title" style="font-size:14px;margin-bottom:6px">${businesses.length === 0 ? 'Build a Business' : `Build Another Business (${slotsLeft} slot${slotsLeft > 1 ? 's' : ''} left)`}</div>
-          <div class="biz-list">${options}</div>
+          ${econOptions ? `<div class="biz-title" style="font-size:14px;margin-bottom:6px">${econTitle}</div><div class="biz-list">${econOptions}</div>` : ''}
+          ${milOptions ? `<div class="war-build-title">⚔️ Military</div><div class="biz-list">${milOptions}</div>` : ''}
         </div>
       `;
     }
