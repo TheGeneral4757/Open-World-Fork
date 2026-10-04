@@ -600,10 +600,17 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ====================================================================
-// CLOUD SAVING (optional) — paste your Supabase project URL + anon key
-// below to enable it. While empty, accounts save to this browser only
-// (exactly like before). When set, every account + save is mirrored to
-// the cloud automatically and shared across all devices.
+// ONLINE MULTIPLAYER (optional) — powered by a free Supabase project.
+// Setup (one time, ~5 minutes):
+//   1. Create a free project at https://supabase.com
+//   2. Dashboard → SQL Editor → paste supabase-setup.sql (from this
+//      repo) → Run
+//   3. Dashboard → Settings → API: copy the Project URL and the anon
+//      public key, paste them below between the quotes, then commit.
+// Every device that loads the game then shares one world: accounts,
+// saves, plot ownership and wars sync automatically (world refresh
+// every 30 seconds while playing). Leave both strings empty to play
+// offline on this browser only.
 // ====================================================================
 const SUPABASE_URL = '';
 const SUPABASE_ANON_KEY = '';
@@ -1066,10 +1073,11 @@ function getPlotOwner(plotId) {
 //   - Claimed by current user → gold (already set by loadGame)
 //   - Claimed by other user → muted purple
 //   - Unclaimed → default green/teal (already the default)
+const OTHER_COLOR = 0x7a4a8a;       // muted purple fill for others' plots
+const OTHER_OUTLINE = 0x9a6aaa;     // brighter purple outline
+
 function applyClaimColors() {
   const claims = getClaims();
-  const OTHER_COLOR = 0x7a4a8a;       // muted purple for others' plots
-  const OTHER_OUTLINE = 0x9a6aaa;     // brighter purple outline
   for (const p of STATE.plots) {
     const owner = claims[p.userData.id];
     if (owner && owner !== CURRENT_USER) {
@@ -1079,6 +1087,59 @@ function applyClaimColors() {
       setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
       registerClaimedPlot(p);
     }
+  }
+}
+
+// Apply cloud claim changes to the live game (called after each cloud
+// pull while playing, when playing online via Supabase):
+//   - other players' new claims appear purple in real time
+//   - a plot of yours that was conquered on another device is stripped
+//     from your live state (with a toast) so your next autosave agrees
+//     with the cloud instead of reverting the conquest
+function applyCloudWorldUpdates() {
+  if (!CURRENT_USER || !gameInitialized) return;
+  const claims = getClaims();
+  let changed = false;
+  for (const p of STATE.plots) {
+    const owner = claims[p.userData.id];
+    // One of MY plots was conquered while I was online
+    if (p.userData.owned && owner && owner !== CURRENT_USER) {
+      p.userData.owned = false;
+      p.userData.ownedByOther = true;
+      p.userData.ownerName = owner;
+      STATE.owned.delete(p.userData.id);
+      // Remove my businesses from it (meshes + state)
+      for (const entry of p.userData.businesses || []) {
+        if (entry.mesh) {
+          earth.remove(entry.mesh);
+          entry.mesh.geometry.dispose();
+          entry.mesh.material.dispose();
+        }
+      }
+      p.userData.businesses = [];
+      p.userData.gambling = {};
+      setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
+      registerClaimedPlot(p);
+      changed = true;
+      showToast(`⚔️ ${owner} conquered ${p.userData.name}!`, false);
+    }
+    // A new claim by another player on an unowned plot — appear purple
+    else if (!p.userData.owned && owner && owner !== CURRENT_USER && !p.userData.ownedByOther) {
+      p.userData.ownedByOther = true;
+      p.userData.ownerName = owner;
+      setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
+      registerClaimedPlot(p);
+      changed = true;
+    }
+    // Ownership of an already-enemy plot changed hands (third player)
+    else if (p.userData.ownedByOther && owner && owner !== p.userData.ownerName) {
+      p.userData.ownerName = owner;
+    }
+  }
+  if (changed) {
+    flushPlotPools();
+    updateHUD();
+    saveGame();
   }
 }
 
@@ -1292,8 +1353,8 @@ function renderLogin() {
     <button class="login-btn" onclick="loginSubmit()">${isSignup ? 'Create Account' : 'Login'}</button>
     <div class="login-error" id="login-error"></div>
     <div class="login-cloud ${CloudSync.status() === 'cloud' ? 'on' : ''}">${CloudSync.status() === 'cloud'
-      ? '☁ Cloud saving: ON — accounts shared across all devices'
-      : '⚠ Cloud saving: OFF — accounts stay in this browser only'}</div>
+      ? '🌐 Online multiplayer: ON — one shared world across all devices (live sync every 30s)'
+      : '⚠ Cloud saving: OFF — accounts stay in this browser only (online play disabled)'}</div>
     <div class="login-tools">
       <button class="login-tool-btn" onclick="exportAccounts()" title="Download a backup file of every account on this device">⬇ Export accounts</button>
       <button class="login-tool-btn" onclick="document.getElementById('import-file').click()" title="Restore accounts from a backup file">⬆ Import</button>
@@ -1625,6 +1686,22 @@ window.logout = function() {
 setInterval(() => {
   if (CURRENT_USER && gameInitialized) saveGame();
 }, 10000);
+
+// Live world sync (online play): while playing with cloud saving on,
+// pull other devices' changes every 30 seconds — new claims, newer
+// saves (so enemy army sizes stay current) — and apply them to the
+// running game. Conquests of your own plots arrive here too.
+let _cloudPullBusy = false;
+setInterval(async () => {
+  if (_cloudPullBusy || !CURRENT_USER || !gameInitialized) return;
+  if (CloudSync.status() !== 'cloud') return;
+  _cloudPullBusy = true;
+  try {
+    const changed = await CloudSync.pullAndMerge();
+    if (changed) applyCloudWorldUpdates();
+  } catch (e) { /* already logged inside pullAndMerge */ }
+  _cloudPullBusy = false;
+}, 30000);
 
 // Save on page hide (tab close / navigate away)
 window.addEventListener('beforeunload', () => {
@@ -3586,6 +3663,9 @@ window.attackPlot = function() {
   if (vs) {
     vs.inventory = vs.inventory || {};
     vs.inventory[kind] = Math.max(0, defender - defLoss);
+    // Fresh timestamp so the victim's stale local copy loses the next
+    // cloud merge and the conquest sticks across devices
+    vs.savedAt = Date.now();
     if (win) {
       vs.ownedPlotIds = (vs.ownedPlotIds || []).filter(id => id !== p.userData.id);
       vs.businesses = (vs.businesses || []).filter(b => b.plotId !== p.userData.id);
