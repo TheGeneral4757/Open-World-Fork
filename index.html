@@ -230,6 +230,20 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .war-build-title{font-size:14px;color:#ff8080;margin:14px 0 6px;font-weight:bold;letter-spacing:.5px}
 .biz-option.mil-option{border-color:#5a2424;background:rgba(80,20,20,.25)}
 .biz-option.mil-option:hover{background:rgba(80,20,20,.45)}
+/* In-game admin panel */
+.admin-topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.admin-cb{display:flex;align-items:center;gap:5px;color:#9bb4bd;font-size:12px;font-family:Arial,sans-serif}
+.admin-log{font-size:12px;color:#cbd7dc;margin-top:10px;min-height:16px;font-family:Arial,sans-serif}
+.admin-row-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.admin-row-actions input{width:84px;background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:6px;padding:5px 7px;font-size:12px;font-family:Arial,sans-serif}
+.admin-table{width:100%;border-collapse:collapse;font-size:12px}
+.admin-table th{color:#7fa0ab;text-align:left;padding:6px 7px;border-bottom:1px solid #1a3340;font-size:10px;letter-spacing:1px}
+.admin-table td{padding:7px 6px;border-bottom:1px solid #10222e;vertical-align:middle}
+.admin-table tr:hover td{background:rgba(20,50,60,.35)}
+.admin-money{color:#f5cc74;font-weight:bold}
+.admin-mil{color:#ff9d9d}
+.chip-danger{border-color:#7a3535 !important;color:#ff8080 !important}
+.chip-danger:hover{border-color:#ff8080 !important;color:#fff !important}
 .mat-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #1a3340;border-radius:8px;
   background:rgba(20,50,60,.4);margin-bottom:8px}
 .mat-row .mat-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center}
@@ -466,6 +480,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <div class="menu-btn-row">
           <button class="menu-btn-secondary" onclick="openLeaderboard()">🏆 Leaderboard</button>
           <button class="menu-btn-secondary" onclick="openSettings()">Settings</button>
+          <button class="menu-btn-secondary" id="admin-btn" onclick="openAdmin()" style="display:none">👑 Admin</button>
           <button class="menu-btn-secondary" onclick="logout()">Logout</button>
         </div>
       </div>
@@ -570,6 +585,12 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 
   <div class="plot-modal" id="gamble-modal">
     <div class="plot-card gamble-card" id="gamble-card">
+      <!-- filled dynamically -->
+    </div>
+  </div>
+
+  <div class="plot-modal" id="admin-modal">
+    <div class="plot-card gamble-card" id="admin-card">
       <!-- filled dynamically -->
     </div>
   </div>
@@ -1560,6 +1581,10 @@ function updateMenuWelcome() {
   if (!nameEl || !statsEl) return;
 
   nameEl.textContent = CURRENT_USER;
+
+  // Admin button — only the shared-world owner sees it
+  const adminBtn = document.getElementById('admin-btn');
+  if (adminBtn) adminBtn.style.display = CURRENT_USER === ADMIN_ACCOUNT ? '' : 'none';
 
   const save = getSave(CURRENT_USER);
   if (save) {
@@ -3697,6 +3722,178 @@ window.attackPlot = function() {
   openPlotModal(p);  // re-render with fresh ownership / defense numbers
 };
 
+// ====================================================================
+// ADMIN — shared-world administration, visible only to the owner
+// account (ADMIN_ACCOUNT) from the menu screen. Edits go straight to
+// the cloud with fresh timestamps so every device converges.
+// ====================================================================
+const ADMIN_ACCOUNT = 'kingkanye26';
+const STARTING_MONEY = 100000;
+let adminWorld = { profiles: [], saves: {}, claims: {} };
+
+function adminHeaders() {
+  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+}
+async function adminFetchRows() {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/openworld_data?select=key,data&order=key.asc', { headers: adminHeaders() });
+  if (!r.ok) throw new Error('read failed: ' + r.status);
+  return r.json();
+}
+async function adminUpsertRow(key, data) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/openworld_data', {
+    method: 'POST',
+    headers: Object.assign({ 'Prefer': 'resolution=merge-duplicates' }, adminHeaders()),
+    body: JSON.stringify([{ key, data, updated_at: new Date().toISOString() }])
+  });
+  if (!r.ok) throw new Error('write failed: ' + r.status);
+}
+async function adminDeleteRow(key) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/openworld_data?key=eq.' + encodeURIComponent(key), { method: 'DELETE', headers: adminHeaders() });
+  if (!r.ok) throw new Error('delete failed: ' + r.status);
+}
+function adminLog(msg, ok) {
+  const el = document.getElementById('admin-log');
+  if (el) el.innerHTML = '<span style="color:' + (ok ? '#7fffd4' : '#ff8080') + '">' + msg + '</span>';
+}
+
+window.openAdmin = function() {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) { showToast('Admin only', false); return; }
+  if (CloudSync.status() !== 'cloud') { showToast('Online multiplayer is not configured', false); return; }
+  renderAdmin();
+  document.getElementById('admin-modal').classList.add('show');
+  adminRefresh();
+};
+window.closeAdmin = function() {
+  document.getElementById('admin-modal').classList.remove('show');
+};
+
+function renderAdmin() {
+  const card = document.getElementById('admin-card');
+  card.innerHTML = `
+    <h2>👑 Admin — Shared World</h2>
+    <p class="gamble-sub">Changes sync to every device. Reload after changing your own account to see it live.</p>
+    <div class="admin-topbar">
+      <button class="bet-chip" onclick="adminRefresh()">⟳ Refresh</button>
+      <button class="bet-chip chip-danger" onclick="adminResetAll()">Reset ALL</button>
+      <label class="admin-cb"><input type="checkbox" id="admin-zero-inv"> zero inventories</label>
+      <button class="bet-chip chip-danger" onclick="adminClearClaims()">Clear claims</button>
+    </div>
+    <table class="admin-table">
+      <thead><tr><th>Account</th><th>Money</th><th>Plots</th><th>Biz</th><th>⚔/⚓/✈</th><th>Actions</th></tr></thead>
+      <tbody id="admin-tbody"></tbody>
+    </table>
+    <div class="admin-log" id="admin-log"></div>
+    <button class="close" onclick="closeAdmin()">CLOSE</button>
+  `;
+}
+
+window.adminRefresh = async function() {
+  try {
+    const rows = await adminFetchRows();
+    adminWorld = { profiles: [], saves: {}, claims: {} };
+    for (const r of rows) {
+      if (r.key === 'profiles') adminWorld.profiles = Array.isArray(r.data) ? r.data : [];
+      else if (r.key === 'openworld_claims') adminWorld.claims = r.data || {};
+      else if (r.key.startsWith(SAVE_PREFIX)) adminWorld.saves[r.key.slice(SAVE_PREFIX.length)] = r.data;
+    }
+    for (const name of Object.keys(adminWorld.saves)) {
+      if (!adminWorld.profiles.includes(name)) adminWorld.profiles.push(name);
+    }
+    adminRenderRows();
+  } catch (e) { adminLog('Could not load the world: ' + e.message, false); }
+};
+
+function adminRenderRows() {
+  const tbody = document.getElementById('admin-tbody');
+  const names = Object.keys(adminWorld.saves).sort();
+  if (!names.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:#5d7885">No accounts yet.</td></tr>'; return; }
+  tbody.innerHTML = names.map(name => {
+    const s = adminWorld.saves[name] || {};
+    const inv = s.inventory || {};
+    return `<tr>
+      <td><b>${name}</b></td>
+      <td class="admin-money">$${Math.round(s.money || 0).toLocaleString()}</td>
+      <td>${(s.ownedPlotIds || []).length}</td>
+      <td>${(s.businesses || []).length}</td>
+      <td class="admin-mil">${Math.floor(inv.troops || 0).toLocaleString()} / ${Math.floor(inv.ships || 0).toLocaleString()} / ${Math.floor(inv.planes || 0).toLocaleString()}</td>
+      <td><div class="admin-row-actions">
+        <button class="bet-chip" onclick="adminResetOne('${name}')">Reset</button>
+        <button class="bet-chip" onclick="adminZeroInv('${name}')">Zero</button>
+        <input type="number" id="adm-money-${name}" placeholder="set $">
+        <button class="bet-chip" onclick="adminSetMoney('${name}')">Set $</button>
+        <button class="bet-chip chip-danger" onclick="adminDelete('${name}')">Delete</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+window.adminResetOne = async function(name) {
+  if (!confirm('Reset ' + name + ' to $' + STARTING_MONEY.toLocaleString() + ' with no plots and no businesses?')) return;
+  const s = adminWorld.saves[name];
+  s.money = STARTING_MONEY;
+  s.ownedPlotIds = [];
+  s.businesses = [];
+  s.savedAt = Date.now();
+  await adminUpsertRow(SAVE_PREFIX + name, s);
+  adminLog('Reset ' + name + '.', true);
+  adminRefresh();
+};
+window.adminZeroInv = async function(name) {
+  if (!confirm('Zero ALL resources (materials + troops/ships/planes) for ' + name + '?')) return;
+  adminWorld.saves[name].inventory = {};
+  adminWorld.saves[name].savedAt = Date.now();
+  await adminUpsertRow(SAVE_PREFIX + name, adminWorld.saves[name]);
+  adminLog('Inventory zeroed for ' + name + '.', true);
+  adminRefresh();
+};
+window.adminSetMoney = async function(name) {
+  const input = document.getElementById('adm-money-' + name);
+  const v = Math.floor(parseFloat(input.value));
+  if (isNaN(v) || v < 0) { adminLog('Enter a valid amount for ' + name + '.', false); return; }
+  adminWorld.saves[name].money = v;
+  adminWorld.saves[name].savedAt = Date.now();
+  await adminUpsertRow(SAVE_PREFIX + name, adminWorld.saves[name]);
+  adminLog(name + ' set to $' + v.toLocaleString() + '.', true);
+  adminRefresh();
+};
+window.adminDelete = async function(name) {
+  if (!confirm('DELETE the account "' + name + '" completely? Its plots become unclaimed. This cannot be undone.')) return;
+  await adminDeleteRow(SAVE_PREFIX + name);
+  adminWorld.profiles = adminWorld.profiles.filter(p => p !== name);
+  delete adminWorld.saves[name];
+  for (const k of Object.keys(adminWorld.claims)) {
+    if (adminWorld.claims[k] === name) delete adminWorld.claims[k];
+  }
+  await adminUpsertRow('profiles', adminWorld.profiles);
+  await adminUpsertRow('openworld_claims', adminWorld.claims);
+  adminLog('Deleted account ' + name + ' and freed its plots.', true);
+  adminRefresh();
+};
+window.adminResetAll = async function() {
+  const zeroInv = document.getElementById('admin-zero-inv').checked;
+  const names = Object.keys(adminWorld.saves);
+  if (!names.length) { adminLog('No accounts to reset.', false); return; }
+  if (!confirm('Reset ALL ' + names.length + ' account(s) to $' + STARTING_MONEY.toLocaleString() + ' with no plots' + (zeroInv ? ' and empty inventories' : '') + '? Every plot becomes unclaimed. This cannot be undone.')) return;
+  for (const name of names) {
+    adminWorld.saves[name] = Object.assign(adminWorld.saves[name], {
+      money: STARTING_MONEY, ownedPlotIds: [], businesses: [], savedAt: Date.now()
+    });
+    if (zeroInv) adminWorld.saves[name].inventory = {};
+    await adminUpsertRow(SAVE_PREFIX + name, adminWorld.saves[name]);
+  }
+  adminWorld.claims = {};
+  await adminUpsertRow('openworld_claims', adminWorld.claims);
+  adminLog('Reset ' + names.length + ' account(s): ' + names.join(', '), true);
+  adminRefresh();
+};
+window.adminClearClaims = async function() {
+  if (!confirm('Free every claimed plot? Account money/businesses are untouched.')) return;
+  adminWorld.claims = {};
+  await adminUpsertRow('openworld_claims', adminWorld.claims);
+  adminLog('All plot claims cleared.', true);
+  adminRefresh();
+};
+
 function updateHUD() {
   document.getElementById('money').textContent = '$' + Math.floor(STATE.money).toLocaleString();
   document.getElementById('owned-count').textContent = STATE.owned.size;
@@ -3882,6 +4079,7 @@ window.addEventListener('keydown', (e) => {
     window.closePlotModal();
     window.closeMarketModal();
     window.closeGambling();
+    window.closeAdmin();
     window.closeLeaderboard();
     window.closeSettings();
   }
