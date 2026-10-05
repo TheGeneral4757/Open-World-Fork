@@ -230,22 +230,103 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .war-build-title{font-size:14px;color:#ff8080;margin:14px 0 6px;font-weight:bold;letter-spacing:.5px}
 .biz-option.mil-option{border-color:#5a2424;background:rgba(80,20,20,.25)}
 .biz-option.mil-option:hover{background:rgba(80,20,20,.45)}
-/* In-game admin panel */
-.admin-topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-.admin-cb{display:flex;align-items:center;gap:5px;color:#9bb4bd;font-size:12px;font-family:Arial,sans-serif}
-.admin-log{font-size:12px;color:#cbd7dc;margin-top:10px;min-height:16px;font-family:Arial,sans-serif}
+/* In-game admin panel — "world control center" */
+/* Admin modal must stack ABOVE the login/menu screens — the panel opens
+   over the home (menu) screen */
+#admin-modal{z-index:60}
+#admin-card{width:min(720px,94vw);padding:0;overflow:hidden;border-color:#3a5a68;
+  background:linear-gradient(160deg,#0d2231 0%,#0a1826 55%,#0b1520 100%);position:relative}
+#admin-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,#f5cc74 30%,#ffe9a8 50%,#f5cc74 70%,transparent)}
+@keyframes adminPop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+#admin-modal.show #admin-card{animation:adminPop .28s ease-out}
+.admin-head{display:flex;align-items:center;gap:14px;padding:20px 24px 16px;
+  border-bottom:1px solid rgba(44,74,85,.6);background:rgba(10,20,32,.5)}
+.admin-crown{width:46px;height:46px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:24px;background:linear-gradient(145deg,#f5cc74,#c9962e);
+  box-shadow:0 4px 18px rgba(245,204,116,.35),inset 0 1px 0 rgba(255,255,255,.5)}
+.admin-head-text{flex:1;min-width:0}
+.admin-eyebrow{font-family:Arial,sans-serif;font-size:9px;letter-spacing:2.5px;color:#7fa0ab;text-transform:uppercase}
+.admin-title{font-family:Georgia,serif;font-size:22px;color:#fff;margin-top:2px;line-height:1.1}
+.admin-owner-chip{display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:2px 9px;border-radius:20px;
+  font-family:Arial,sans-serif;font-size:11px;color:#f5cc74;border:1px solid rgba(245,204,116,.4);background:rgba(245,204,116,.08)}
+.admin-close-x{width:34px;height:34px;border-radius:10px;border:1px solid #2c4a55;background:rgba(10,20,32,.6);
+  color:#9bb4bd;font-size:16px;cursor:pointer;flex-shrink:0;font-family:Arial,sans-serif}
+.admin-close-x:hover{color:#fff;border-color:#7fa0ab}
+.admin-body{padding:16px 24px 22px}
+.admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.admin-stat{border:1px solid #1e3a48;border-radius:10px;padding:10px 12px;background:rgba(16,34,46,.55);text-align:center}
+.admin-stat-num{font-family:Georgia,serif;font-size:17px;color:#f5cc74;white-space:nowrap}
+.admin-stat-lbl{font-family:Arial,sans-serif;font-size:9px;letter-spacing:1.5px;color:#7fa0ab;text-transform:uppercase;margin-top:3px}
+.admin-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.admin-search{flex:1;min-width:150px;background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:8px;
+  padding:7px 11px;font-size:12px;font-family:Arial,sans-serif;outline:none}
+.admin-search:focus{border-color:#f5cc74}
+.admin-search::placeholder{color:#5d7885}
+.admin-cb{display:flex;align-items:center;gap:5px;color:#9bb4bd;font-size:11px;font-family:Arial,sans-serif;cursor:pointer}
+.admin-danger-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 10px;border-radius:10px;
+  border:1px dashed rgba(255,128,128,.35);background:rgba(80,20,20,.14)}
+.admin-danger-tag{font-family:Arial,sans-serif;font-size:9px;letter-spacing:1.5px;color:#ff8080;border:1px solid rgba(255,128,128,.4);
+  border-radius:4px;padding:2px 6px;text-transform:uppercase}
+.admin-table-wrap{border:1px solid #1a3340;border-radius:10px;overflow:hidden;background:rgba(8,19,29,.5)}
+.admin-table{width:100%;border-collapse:collapse;font-size:12px;font-family:Arial,sans-serif}
+.admin-table th{color:#7fa0ab;text-align:left;padding:9px 10px;border-bottom:1px solid #1a3340;font-size:9px;letter-spacing:1.5px;
+  text-transform:uppercase;background:rgba(16,34,46,.6)}
+.admin-table td{padding:9px 10px;border-bottom:1px solid #10222e;vertical-align:middle}
+.admin-table tr:last-child td{border-bottom:none}
+.admin-table tbody tr:nth-child(even) td{background:rgba(20,50,60,.14)}
+.admin-table tr:hover td{background:rgba(20,50,60,.38)}
+.admin-who{display:flex;align-items:center;gap:9px;min-width:110px}
+.admin-avatar{width:28px;height:28px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-weight:bold;font-size:13px;color:#fff;font-family:Arial,sans-serif;text-transform:uppercase;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.admin-who-name{font-weight:600;color:#e8eef0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.admin-who-crown{font-size:11px;margin-left:4px}
+.admin-pill{display:inline-block;min-width:26px;text-align:center;border-radius:20px;padding:2px 8px;font-size:11px;
+  background:rgba(44,74,85,.45);border:1px solid #1e3a48;color:#cbd7dc}
+.admin-mil-badge{display:inline-flex;align-items:center;gap:3px;border-radius:6px;padding:2px 6px;font-size:11px;margin-right:4px;
+  border:1px solid #3a2a2a;background:rgba(40,20,20,.4);color:#8a6f6f}
+.admin-mil-badge.has{border-color:#7a3535;background:rgba(80,20,20,.4);color:#ff9d9d}
+.admin-money{color:#f5cc74;font-weight:bold;font-family:Georgia,serif;font-size:13px;white-space:nowrap}
 .admin-row-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
-.admin-row-actions input{width:84px;background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:6px;padding:5px 7px;font-size:12px;font-family:Arial,sans-serif}
-.admin-table{width:100%;border-collapse:collapse;font-size:12px}
-.admin-table th{color:#7fa0ab;text-align:left;padding:6px 7px;border-bottom:1px solid #1a3340;font-size:10px;letter-spacing:1px}
-.admin-table td{padding:7px 6px;border-bottom:1px solid #10222e;vertical-align:middle}
-.admin-table tr:hover td{background:rgba(20,50,60,.35)}
-.admin-money{color:#f5cc74;font-weight:bold}
-.admin-mil{color:#ff9d9d}
+.admin-row-actions input{width:78px;background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:6px;
+  padding:5px 7px;font-size:12px;font-family:Arial,sans-serif}
+.admin-row-actions input:focus{border-color:#f5cc74;outline:none}
+.admin-empty{padding:34px 10px;text-align:center;color:#5d7885;font-family:Arial,sans-serif;font-size:13px}
+.admin-empty .big{font-size:30px;display:block;margin-bottom:8px;opacity:.7}
+.admin-log{font-size:12px;color:#cbd7dc;margin-top:12px;min-height:18px;font-family:Arial,sans-serif;
+  display:flex;align-items:center;gap:7px}
+.admin-log-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#3a5a68}
+.admin-log.ok .admin-log-dot{background:#7fffd4;box-shadow:0 0 8px rgba(127,255,212,.6)}
+.admin-log.err .admin-log-dot{background:#ff8080;box-shadow:0 0 8px rgba(255,128,128,.6)}
+.admin-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+.admin-updated{font-family:Arial,sans-serif;font-size:10px;color:#5d7885;letter-spacing:1px}
+.admin-foot .close{margin:0}
 .chip-danger{border-color:#7a3535 !important;color:#ff8080 !important}
 .chip-danger:hover{border-color:#ff8080 !important;color:#fff !important}
-.mat-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #1a3340;border-radius:8px;
+/* Owner password lock — shown EVERY time the admin panel is opened */
+.admin-lock{display:flex;flex-direction:column;align-items:center;text-align:center;padding:18px 8px 6px}
+.admin-lock-icon{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:30px;
+  background:rgba(245,204,116,.08);border:1px solid rgba(245,204,116,.35);
+  box-shadow:0 0 24px rgba(245,204,116,.15),inset 0 1px 0 rgba(255,255,255,.08);margin-bottom:14px}
+.admin-lock-title{font-family:Georgia,serif;font-size:19px;color:#fff}
+.admin-lock-sub{font-family:Arial,sans-serif;font-size:11.5px;color:#7fa0ab;margin-top:6px;line-height:1.55}
+.admin-lock-input{width:min(300px,80%);margin-top:14px;background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:10px;
+  padding:10px 14px;font-size:15px;font-family:Arial,sans-serif;letter-spacing:3px;text-align:center;outline:none}
+.admin-lock-input:focus{border-color:#f5cc74;box-shadow:0 0 0 3px rgba(245,204,116,.12)}
+.admin-lock-input::placeholder{color:#5d7885;letter-spacing:1px;font-size:12px}
+.admin-lock-err{min-height:16px;margin-top:9px;font-family:Arial,sans-serif;font-size:11.5px;color:#ff9d9d}
+.admin-lock-btn{margin-top:4px;border:none;border-radius:10px;padding:10px 22px;cursor:pointer;
+  font-family:Arial,sans-serif;font-size:12.5px;font-weight:bold;letter-spacing:.5px;color:#241a05;
+  background:linear-gradient(145deg,#f5cc74,#c9962e);box-shadow:0 4px 16px rgba(245,204,116,.3),inset 0 1px 0 rgba(255,255,255,.5)}
+.admin-lock-btn:hover{filter:brightness(1.08)}
+.admin-lock-btn:active{transform:translateY(1px)}
+.admin-lock-hint{margin-top:13px;font-family:Arial,sans-serif;font-size:9.5px;letter-spacing:1.5px;color:#5d7885;text-transform:uppercase}
+@keyframes adminShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+.admin-shake{animation:adminShake .4s ease}
+.mat-row{display:flex;flex-direction:column;align-items:stretch;gap:9px;padding:12px;border:1px solid #1a3340;border-radius:8px;
   background:rgba(20,50,60,.4);margin-bottom:8px}
+.mat-row .mat-main{display:flex;align-items:center;gap:12px;width:100%}
 .mat-row .mat-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center}
 .mat-row .mat-info{flex:1;min-width:0}
 .mat-row .mat-name{font-family:Arial,sans-serif;font-size:14px;color:#e8eef0;font-weight:600}
@@ -263,6 +344,23 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .mat-row .mat-sell:disabled{opacity:.3;cursor:not-allowed}
 .mat-row .mat-sell.all{background:linear-gradient(135deg,#f5cc74,#d4a44a);color:#08141d;border-color:#f5cc74;font-weight:bold}
 .mat-row .mat-sell.all:hover:not(:disabled){filter:brightness(1.1)}
+/* Sell-amount strip — choose exactly how much of the stored material to sell */
+.mat-sell-ctrl{display:flex;align-items:center;flex-wrap:wrap;gap:5px;padding-left:44px}
+.mat-sell-ctrl .amt-btn{width:28px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;
+  border:1px solid #2c4a55;border-radius:6px;background:rgba(29,74,87,.6);color:#cbd7dc;cursor:pointer;
+  font-family:Arial,sans-serif;font-size:15px;line-height:1;transition:all .15s}
+.mat-sell-ctrl .amt-btn:hover{background:rgba(40,100,110,.8);color:#fff}
+.mat-sell-ctrl .amt-btn:active{transform:translateY(1px)}
+.mat-sell-ctrl .amt-input{width:76px;flex-shrink:0;background:#0a1420;border:1px solid #2c4a55;border-radius:6px;
+  color:#e8f4ff;font-family:Arial,sans-serif;font-size:12.5px;padding:7px 4px;text-align:center;outline:none;
+  -moz-appearance:textfield;appearance:textfield}
+.mat-sell-ctrl .amt-input:focus{border-color:#f5cc74;box-shadow:0 0 0 2px rgba(245,204,116,.12)}
+.mat-sell-ctrl .amt-input::-webkit-outer-spin-button,.mat-sell-ctrl .amt-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.mat-sell-ctrl .amt-chip{flex-shrink:0;padding:7px 8px;border:1px solid #2c4a55;border-radius:6px;background:transparent;
+  color:#9bb4bd;cursor:pointer;font-family:Arial,sans-serif;font-size:9.5px;font-weight:bold;letter-spacing:.5px;
+  text-transform:uppercase;transition:all .15s}
+.mat-sell-ctrl .amt-chip:hover{color:#f5cc74;border-color:#f5cc74}
+.mat-sell-ctrl .mat-sell{margin-left:auto}
 .market-actions{display:flex;gap:10px;margin-top:14px}
 .market-actions .btn{flex:1;padding:13px;border-radius:8px;border:1px solid #2c4a55;cursor:pointer;font-family:Arial,sans-serif;
   font-size:13px;letter-spacing:2px;text-transform:uppercase;transition:all .2s;background:#14323c;color:#cbd7dc}
@@ -298,6 +396,51 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .plot-tip.owned .price{color:#7fffd4}
 
 /* Plot modal (buy dialog) */
+/* ---- Clans & Alliances overlay (body-level: opens over menu AND world) ---- */
+.clans-overlay{position:fixed;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;background:rgba(2,6,10,.74);backdrop-filter:blur(5px)}
+.clans-overlay.show{display:flex}
+.clans-card{width:min(620px,94vw);max-height:86vh;overflow-y:auto;padding:24px 26px;border:1px solid #2c4a55;border-radius:14px;background:linear-gradient(165deg,#0b1d29 0%,#0a1420 100%);color:#e8f4ff;font-family:Arial,sans-serif;box-shadow:0 24px 80px rgba(0,0,0,.65)}
+.cl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cl-head h2{font-size:20px;color:#f5cc74;letter-spacing:1px;margin:0}
+.cl-close{background:transparent;border:1px solid #2c4a55;color:#9bb4bd;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;font-family:Arial,sans-serif}
+.cl-close:hover{color:#ff8080;border-color:#ff8080}
+.cl-note{color:#9bb4bd;font-size:14px;padding:18px 0;text-align:center}
+.cl-sub{color:#7fa0ab;font-size:12px;letter-spacing:.5px;margin:12px 0 6px}
+.cl-tag{color:#7fffd4;font-weight:bold;font-size:12px;white-space:nowrap}
+.cl-clan-title{font-size:18px;font-weight:bold;color:#e8f4ff}
+.cl-crown{color:#f5cc74;font-size:12px;font-weight:normal;margin-left:8px}
+.cl-desc{color:#cbd7dc;font-size:13px;font-style:italic;margin:6px 0 2px}
+.cl-myclan,.cl-create{background:rgba(15,40,55,.45);border:1px solid #1a3340;border-radius:10px;padding:14px}
+.cl-roster{margin-top:4px}
+.cl-member-row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #10222e;font-size:13px}
+.cl-member-row:last-child{border-bottom:none}
+.cl-member-name{flex:1}
+.cl-joined{color:#5d7885;font-size:11px}
+.cl-form{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.cl-input{background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:8px;padding:9px 12px;font-size:14px;font-family:Arial,sans-serif;width:100%}
+.cl-tag-input{max-width:140px;text-transform:uppercase}
+.cl-btn{background:linear-gradient(180deg,#f7d98d,#e0b455);color:#221a05;border:none;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:bold;cursor:pointer;font-family:Arial,sans-serif}
+.cl-btn:hover{filter:brightness(1.08)}
+.cl-btn.ghost{background:transparent;border:1px solid #2c4a55;color:#9bb4bd}
+.cl-btn.danger{background:linear-gradient(180deg,#d9534f,#a83232);color:#fff}
+.cl-actions{display:flex;gap:8px;margin-top:12px}
+.cl-list{display:flex;flex-direction:column;gap:6px}
+.cl-row{display:flex;align-items:center;gap:8px;background:rgba(15,40,55,.45);border:1px solid #1a3340;border-radius:8px;padding:8px 10px;font-size:13px;flex-wrap:wrap}
+.cl-name{font-weight:bold;color:#e8f4ff}
+.cl-owner{color:#5d7885;font-size:11px}
+.cl-count{color:#7fa0ab;font-size:11px;margin-left:auto;white-space:nowrap}
+.cl-rel{font-size:10px;letter-spacing:1px;padding:2px 7px;border-radius:10px}
+.cl-rel.you{background:#1b4a3a;color:#7fffd4}
+.cl-rel.ally{background:#1b3a4a;color:#4dd0e1}
+.cl-mini{background:transparent;border:1px solid #2c4a55;color:#f5cc74;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Arial,sans-serif;white-space:nowrap}
+.cl-mini:hover{border-color:#f5cc74}
+.cl-mini.danger{color:#ff9d9d}
+.cl-mini.danger:hover{border-color:#ff8080}
+.cl-ally-row{display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:13px}
+.cl-log{background:rgba(5,12,18,.5);border-radius:8px;padding:8px 10px;font-size:12px;color:#cbd7dc;max-height:130px;overflow-y:auto}
+.cl-log-row{padding:2px 0;border-bottom:1px solid #0d1c26}
+.cl-log-row:last-child{border-bottom:none}
+.cl-log-time{color:#5d7885;font-size:10px;margin-right:8px}
 .plot-modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;
   background:rgba(0,0,0,.75);backdrop-filter:blur(10px)}
 .plot-modal.show{display:flex}
@@ -355,19 +498,6 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .btn.demolish{background:rgba(90,36,36,.4);border-color:#5a2424;color:#ff8080;width:100%;margin-top:4px}
 .btn.demolish:hover{background:rgba(120,48,48,.6)}
 
-/* Casino gambling panel */
-.gambling-panel{margin:14px 0;padding:14px;border:1px solid #5a2424;border-radius:10px;background:rgba(90,36,36,.2)}
-.gamble-title{font-family:Georgia,serif;color:#f5cc74;font-size:15px;margin-bottom:10px}
-.gamble-stats{display:flex;flex-wrap:wrap;gap:10px;font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;margin-bottom:10px}
-.gamble-stats span{white-space:nowrap}
-.gamble-stats b{font-weight:600}
-.gamble-history{display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto}
-.gamble-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border:1px solid #1a3340;border-radius:5px;background:rgba(20,50,60,.4);font-family:Arial,sans-serif;font-size:11px;gap:8px}
-.gamble-row span:first-child{flex:1}
-.gamble-row span:nth-child(2){color:#9bb4bd;font-weight:600}
-.gamble-empty{font-family:Arial,sans-serif;font-size:11px;color:#5e7d87;padding:8px;text-align:center;font-style:italic}
-.gamble-total{font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;margin-top:8px;padding-top:8px;border-top:1px solid #1a3340;text-align:right}
-
 /* Loading overlay */
 .loader{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:#08141d;transition:opacity .8s}
@@ -421,11 +551,6 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .login-card .login-error{color:#ff8080;font-family:Arial,sans-serif;font-size:12px;margin-top:12px;min-height:16px}
 .login-cloud{font-family:Arial,sans-serif;font-size:11px;letter-spacing:.5px;margin-top:14px;color:#c9a24a}
 .login-cloud.on{color:#7fffd4}
-.login-tools{display:flex;gap:10px;justify-content:center;margin-top:10px}
-.login-tool-btn{padding:8px 18px;border:1px solid #2c4a55;border-radius:8px;background:rgba(8,19,29,.6);
-  color:#9bb4bd;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;
-  cursor:pointer;transition:all .15s}
-.login-tool-btn:hover{color:#f5cc74;border-color:#4a7a85}
 
 /* Logout button in game HUD */
 .logout-btn{flex-shrink:0;padding:9px 14px;border:1px solid #5a2424;border-radius:8px;background:rgba(90,36,36,.4);
@@ -478,9 +603,10 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
       <div class="menu-buttons">
         <button class="menu-btn-play" onclick="enterGame()">Enter World</button>
         <div class="menu-btn-row">
+          <button class="menu-btn-secondary" id="clans-menu-btn" onclick="openClans()">🛡 Clans</button>
           <button class="menu-btn-secondary" onclick="openLeaderboard()">🏆 Leaderboard</button>
           <button class="menu-btn-secondary" onclick="openSettings()">Settings</button>
-          <button class="menu-btn-secondary" id="admin-btn" onclick="openAdmin()" style="display:none">👑 Admin</button>
+          <button class="menu-btn-secondary" id="admin-btn" onclick="openAdmin()" style="display:none" title="World-owner administration (kingkanye26 only)">👑 Admin</button>
           <button class="menu-btn-secondary" onclick="logout()">Logout</button>
         </div>
       </div>
@@ -548,8 +674,9 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <div class="stat-chip"><span class="icon">💰</span><span>Budget</span><b id="money">$100,000</b></div>
         <div class="stat-chip stock-chip" onclick="openMarketModal()" title="Open Market"><span class="icon">📦</span><span>Stock</span><b id="stock-value">$0</b></div>
         <div class="stat-chip"><span class="icon">🌍</span><span>Owned</span><b id="owned-count">0</b></div>
-        <div class="stat-chip" title="Your army — trained by Barracks. Used to conquer other commanders' plots."><span class="icon">⚔️</span><span>Army</span><b id="army-count">0</b></div>
+        <div class="stat-chip" title="Your army — each Barracks houses 500 troops. Deploy troops to other commanders' plots to take them."><span class="icon">⚔️</span><span>Army</span><b id="army-count">0</b></div>
         <button class="market-btn" onclick="openMarketModal()">📈 Market</button>
+        <button class="market-btn" id="clans-btn" onclick="openClans()" title="Clans & Alliances — team up with other commanders">🛡 Clans</button>
         <button class="market-btn" id="gamble-btn" onclick="openGambling()" style="display:none" title="Play at your casinos">🎰 Casino</button>
       </div>
     </div>
@@ -589,18 +716,34 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
     </div>
   </div>
 
-  <div class="plot-modal" id="admin-modal">
-    <div class="plot-card gamble-card" id="admin-card">
-      <!-- filled dynamically -->
-    </div>
-  </div>
-
   <div class="toast" id="toast"></div>
 
   <div class="loader" id="loader">
     <div class="ring"></div>
     <div class="text">Loading Earth</div>
     <div class="sub">Generating world plots</div>
+  </div>
+</div>
+
+<!-- Admin modal lives OUTSIDE #game so it can open over ANY screen —
+     the owner reaches it from the 👑 Admin button on the home (menu)
+     screen right after logging in, never from inside the world. -->
+<div class="plot-modal" id="admin-modal">
+  <div class="plot-card gamble-card" id="admin-card">
+    <!-- filled dynamically -->
+  </div>
+</div>
+
+<!-- Clans & Alliances lives OUTSIDE #game so it opens over the menu
+     screen AND the world — team management should never cost you the
+     view of your plots, and founding a clan works before you deploy. -->
+<div class="clans-overlay" id="clans-overlay">
+  <div class="clans-card">
+    <div class="cl-head">
+      <h2>🛡 Clans & Alliances</h2>
+      <button class="cl-close" onclick="closeClans()">✕</button>
+    </div>
+    <div id="clans-body"><div class="cl-note">Loading clans…</div></div>
   </div>
 </div>
 
@@ -807,78 +950,6 @@ const STATE = {
 const EARTH_RADIUS = STATE.radius;
 
 // ====================================================================
-// CASINO GAMBLING SYSTEM
-// ====================================================================
-// Casinos don't produce at a steady rate. Instead, each production tick
-// rolls a slot-machine outcome that multiplies the base rate:
-//   🎰 JACKPOT (3 cherries): 10× — rare, big win
-//   ✨ BIG WIN  (2 cherries): 3× — occasional
-//   🎲 NORMAL   (mixed):      1× — most common
-//   💀 BUST     (no cherries): 0× — frequent dry spell
-// Average over time ≈ 1.0× (slightly higher due to jackpot skew),
-// but variance is huge — you can go minutes with nothing, then hit
-// a 10× jackpot that fills your stock.
-const CASINO_OUTCOMES = [
-  { id: 'jackpot', label: '🎰 JACKPOT!',  multiplier: 10,  weight: 2,  color: '#f5cc74' },
-  { id: 'bigwin',  label: '✨ Big Win',   multiplier: 3,   weight: 10, color: '#7fffd4' },
-  { id: 'normal',  label: '🎲 Normal',    multiplier: 1,   weight: 45, color: '#cbd7dc' },
-  { id: 'bust',    label: '💀 Bust',      multiplier: 0,   weight: 43, color: '#ff8080' },
-];
-
-// Per-casino gambling state stored in plot.userData.gambling
-//   { lastRoll: outcomeId, lastRollAt: timestamp, rollHistory: [{outcome, amount, time}] }
-// Global recent jackpots for toast notifications (max 1 toast per 5s to avoid spam)
-let _lastJackpotToast = 0;
-
-function rollCasino() {
-  const totalWeight = CASINO_OUTCOMES.reduce((s, o) => s + o.weight, 0);
-  let r = Math.random() * totalWeight;
-  for (const o of CASINO_OUTCOMES) {
-    r -= o.weight;
-    if (r <= 0) return o;
-  }
-  return CASINO_OUTCOMES[CASINO_OUTCOMES.length - 1];
-}
-
-// Roll for a casino plot and return the production amount for this tick
-function rollCasinoProduction(plot, bt, dt) {
-  const outcome = rollCasino();
-  const baseRate = bt.rate * plot.userData.areaMultiplier;
-  const regionBonus = getRegionBonus(bt.id, plot);
-  const amount = baseRate * regionBonus * outcome.multiplier * dt;
-
-  // Store roll state on the plot
-  if (!plot.userData.gambling) plot.userData.gambling = {};
-  plot.userData.gambling.lastRoll = outcome.id;
-  plot.userData.gambling.lastRollAt = Date.now();
-  plot.userData.gambling.lastMultiplier = outcome.multiplier;
-
-  // Track history (last 10 rolls)
-  if (!plot.userData.gambling.rollHistory) plot.userData.gambling.rollHistory = [];
-  plot.userData.gambling.rollHistory.unshift({
-    outcome: outcome.id,
-    label: outcome.label,
-    multiplier: outcome.multiplier,
-    amount: amount,
-    time: Date.now()
-  });
-  if (plot.userData.gambling.rollHistory.length > 10) {
-    plot.userData.gambling.rollHistory.length = 10;
-  }
-
-  // Jackpot toast (throttled to 1 per 5 seconds globally)
-  if (outcome.id === 'jackpot') {
-    const now = Date.now();
-    if (now - _lastJackpotToast > 5000) {
-      _lastJackpotToast = now;
-      showToast(`🎰 JACKPOT! Casino hit 10× — +${amount.toFixed(1)} 🎰 Entertainment`, true);
-    }
-  }
-
-  return amount;
-}
-
-// ====================================================================
 // PERSISTENCE — save/load to localStorage
 // ====================================================================
 // Save key: 'openworld_save_<username>'. Profile list: 'openworld_profiles'.
@@ -912,6 +983,64 @@ const CloudSync = (() => {
     return client ? 'cloud' : 'local';
   }
 
+  // ------------------------------------------------------------------
+  // ADMIN AUTHORITY TRACKING — the world owner (ADMIN_ACCOUNT) edits
+  // accounts/claims straight from the admin panel. Those cloud writes
+  // carry an `adminStamp` (and tombstones for deletions). Devices that
+  // still hold older state must NEVER push over a fresher owner
+  // decision, so every push checks these caches (filled by pullAndMerge).
+  // ------------------------------------------------------------------
+  let adminStamps = {};    // username → newest adminStamp seen in the cloud
+  let claimStamp = 0;      // newest admin claim-stamp seen in the cloud
+  let deletedNames = {};   // username → deletion time (tombstones)
+  const CLAIM_STAMP_KEY = 'openworld_claims_stamp';
+
+  function getLocalClaimStamp() {
+    try { return parseInt(localStorage.getItem(CLAIM_STAMP_KEY) || '0', 10) || 0; }
+    catch (e) { return 0; }
+  }
+  function setLocalClaimStamp(t) {
+    try { localStorage.setItem(CLAIM_STAMP_KEY, String(t)); } catch (e) {}
+  }
+
+  // Can this save be pushed to the cloud, or would it stomp a fresher
+  // owner decision / resurrect a deleted account?
+  function canPushSave(username, save) {
+    if (!save) return false;
+    const t = deletedNames[username] || 0;
+    if (t && t > ((save.created || 0))) return false;                    // deleted (a fresh re-signup is newer than the tombstone)
+    if (((save.adminStamp || 0)) < (adminStamps[username] || 0)) return false; // cloud holds a newer owner edit
+    return true;
+  }
+
+  // Record a stamp written by the admin panel on this device so push
+  // guards stay accurate without waiting for the next pull.
+  function noteAdminStamp(username, stamp) {
+    adminStamps[username] = Math.max(adminStamps[username] || 0, stamp || 0);
+  }
+  function noteClaimStamp(t) {
+    claimStamp = Math.max(claimStamp, t || 0);
+    setLocalClaimStamp(claimStamp);
+  }
+  // Register a deletion (tombstone) in the cloud so other devices drop
+  // the account instead of resurrecting it from local storage.
+  async function noteDeletion(username) {
+    if (!client || !username) return;
+    const t = Date.now();
+    deletedNames[username] = t;
+    try {
+      await uploadRow('openworld_deleted', Object.assign({}, deletedNames));
+    } catch (e) { console.warn('[OpenWorld] Could not write deletion tombstone:', e); }
+  }
+  // Remove a tombstone (used when someone re-signs-up with a deleted name).
+  async function clearTombstone(username) {
+    if (!client || !username || !deletedNames[username]) return;
+    delete deletedNames[username];
+    try {
+      await uploadRow('openworld_deleted', Object.assign({}, deletedNames));
+    } catch (e) { console.warn('[OpenWorld] Could not clear tombstone:', e); }
+  }
+
   async function uploadRow(key, data) {
     const { error } = await client
       .from(TABLE)
@@ -919,11 +1048,24 @@ const CloudSync = (() => {
     if (error) throw error;
   }
 
-  // Fire-and-forget: push one player's save to the cloud
-  function pushSave(username) {
+  // Fire-and-forget: push one player's save to the cloud.
+  // Read-before-write: if the cloud currently holds a NEWER owner stamp
+  // that this device hasn't pulled yet (10s autosave vs 30s sync race),
+  // skip the push — the next pull adopts the owner's version instead of
+  // this device clobbering it.
+  async function pushSave(username) {
     if (!client || !username) return;
     const save = getSave(username);
     if (!save) return;
+    if (!canPushSave(username, save)) return;
+    try {
+      const { data } = await client.from(TABLE).select('data').eq('key', SAVE_PREFIX + username).maybeSingle();
+      const cloudStamp = (data && data.data && data.data.adminStamp) || 0;
+      if (cloudStamp > (save.adminStamp || 0)) {
+        adminStamps[username] = Math.max(adminStamps[username] || 0, cloudStamp);
+        return;
+      }
+    } catch (e) { /* cloud unreachable — still attempt the push */ }
     uploadRow(SAVE_PREFIX + username, save)
       .catch(e => console.warn('[OpenWorld] Cloud push failed:', e));
   }
@@ -934,8 +1076,18 @@ const CloudSync = (() => {
       .catch(e => console.warn('[OpenWorld] Cloud push failed:', e));
   }
 
-  function pushClaims() {
+  async function pushClaims() {
     if (!client) return;
+    const localT = getLocalClaimStamp();
+    if (localT < claimStamp) return;   // a fresher admin claims decision is in the cloud
+    try {
+      const { data } = await client.from(TABLE).select('data').eq('key', CLAIM_STAMP_KEY).maybeSingle();
+      const cloudT = parseInt((data && data.data) || 0, 10) || 0;
+      if (cloudT > localT) {
+        claimStamp = Math.max(claimStamp, cloudT);
+        return;   // don't clobber a newer owner claims decision
+      }
+    } catch (e) { /* cloud unreachable — still attempt the push */ }
     uploadRow(CLAIMS_KEY, getClaims())
       .catch(e => console.warn('[OpenWorld] Cloud push failed:', e));
   }
@@ -945,11 +1097,19 @@ const CloudSync = (() => {
     client.from(TABLE).delete().eq('key', SAVE_PREFIX + username)
       .then(({ error }) => { if (error) console.warn('[OpenWorld] Cloud delete failed:', error); })
       .catch(e => console.warn('[OpenWorld] Cloud delete failed:', e));
+    noteDeletion(username);   // tombstone so other devices drop it too
   }
 
-  // One-time merge on boot: pull everything from the cloud into this
-  // browser, and push any local-only / newer accounts back up (so old
-  // accounts migrate to the cloud automatically on first visit).
+  // Saves the pull adopted because the world owner edited them while
+  // this device was running — the sync interval consumes this list to
+  // live-apply money/inventory and tell the player what happened.
+  let _adminAdopted = [];
+  function consumeAdminAdoptions() {
+    const list = _adminAdopted;
+    _adminAdopted = [];
+    return list;
+  }
+
   async function pullAndMerge() {
     if (!client) return false;
     try {
@@ -957,46 +1117,102 @@ const CloudSync = (() => {
       if (error) throw error;
       const cloud = {};
       (rows || []).forEach(r => { cloud[r.key] = r.data; });
+
+      // 0b) Social layer: clan + pact rows ride along with this pull —
+      //     rosters, alliances, kicks and disbands stay live on every
+      //     device with zero extra traffic. ingestClanRows is declared
+      //     later in this module (function declarations are hoisted).
+      try {
+        const clanPairs = [];
+        for (const k in cloud) {
+          if (k.lastIndexOf('openworld_clan_', 0) === 0 || k.lastIndexOf('openworld_alliance_', 0) === 0) {
+            clanPairs.push([k, cloud[k]]);
+          }
+        }
+        ingestClanRows(clanPairs);
+      } catch (e) { /* clans are optional — never break the save sync */ }
       let changed = false;
 
-      // 1) Profiles: union of local + cloud
+      // 0) Admin control rows: deletion tombstones + claims stamp
+      deletedNames = (cloud['openworld_deleted'] && typeof cloud['openworld_deleted'] === 'object')
+        ? cloud['openworld_deleted'] : {};
+      const cloudClaimStamp = parseInt(cloud['openworld_claims_stamp'] || 0, 10) || 0;
+      if (cloudClaimStamp > claimStamp) claimStamp = cloudClaimStamp;
+
+      // 1) Profiles: union of local + cloud, minus freshly-deleted accounts
       const cloudProfiles = Array.isArray(cloud['profiles']) ? cloud['profiles'] : [];
       const localProfiles = getProfiles();
-      const mergedProfiles = Array.from(new Set([...localProfiles, ...cloudProfiles]));
-      if (mergedProfiles.some(p => !localProfiles.includes(p))) {
+      const mergedProfiles = Array.from(new Set([...localProfiles, ...cloudProfiles]))
+        .filter(p => {
+          const t = deletedNames[p] || 0;
+          if (!t) return true;
+          const s = getSave(p);
+          // Keep the name only for accounts (re)created after the deletion
+          return s && (s.created || 0) > t;
+        });
+      if (JSON.stringify(mergedProfiles) !== JSON.stringify(localProfiles)) {
         localStorage.setItem(PROFILES_KEY, JSON.stringify(mergedProfiles));
         changed = true;
       }
 
-      // 2) Saves: newest savedAt wins; local-only or newer-local → push up
+      // 1b) Purge local remnants of owner-deleted accounts so they can't
+      //     be logged into (or pushed back up) from a stale device.
+      for (const [delName, delTime] of Object.entries(deletedNames)) {
+        const s = getSave(delName);
+        if (s && !((s.created || 0) > delTime)) {
+          localStorage.removeItem(SAVE_PREFIX + delName);
+          changed = true;
+        }
+      }
+
+      // 2) Saves — merge rule:
+      //    • a cloud save with a NEWER adminStamp always wins (the world
+      //      owner's decision beats any autosave), regardless of savedAt;
+      //    • otherwise the newest savedAt wins (original behavior);
+      //    • tombstoned saves are dropped, never pushed.
       const toPush = [];
       for (const p of mergedProfiles) {
         const local = getSave(p);
         const cloudSave = cloud[SAVE_PREFIX + p] || null;
-        if (cloudSave && (!local || (cloudSave.savedAt || 0) > (local.savedAt || 0))) {
+        const aLocal = (local && local.adminStamp) || 0;
+        const aCloud = (cloudSave && cloudSave.adminStamp) || 0;
+        if (cloudSave && (aCloud > aLocal || (aCloud === aLocal && (!local || (cloudSave.savedAt || 0) > (local.savedAt || 0))))) {
           try {
             localStorage.setItem(SAVE_PREFIX + p, JSON.stringify(cloudSave));
+            adminStamps[p] = Math.max(adminStamps[p] || 0, aCloud);
             changed = true;
+            if (aCloud > aLocal && aCloud > 0) _adminAdopted.push(p);
           } catch (e) { console.warn('[OpenWorld] Failed to store cloud save:', e); }
-        } else if (local && (!cloudSave || (local.savedAt || 0) > (cloudSave.savedAt || 0))) {
-          toPush.push(local);
+        } else if (local && (!cloudSave || (local.savedAt || 0) > (cloudSave.savedAt || 0) || aLocal > aCloud)) {
+          if (canPushSave(p, local)) toPush.push(local);
         }
       }
 
-      // 3) Claims: union, cloud wins conflicts
-      const cloudClaims = cloud[CLAIMS_KEY] || {};
-      const localClaims = getClaims();
-      const mergedClaims = Object.assign({}, localClaims, cloudClaims);
-      if (JSON.stringify(mergedClaims) !== JSON.stringify(localClaims)) {
+      // 3) Claims: if the owner re-stamped claims, adopt them wholesale;
+      //    otherwise union as before, cloud wins conflicts
+      let mergedClaims = null;
+      const localStamp = getLocalClaimStamp();
+      const cloudClaimsRaw = cloud[CLAIMS_KEY] || {};
+      if (claimStamp > localStamp) {
+        // Owner cleared/rewrote claims — their version is authoritative
+        mergedClaims = cloudClaimsRaw;
+        setLocalClaimStamp(claimStamp);
         localStorage.setItem(CLAIMS_KEY, JSON.stringify(mergedClaims));
         changed = true;
+      } else {
+        const localClaims = getClaims();
+        mergedClaims = Object.assign({}, localClaims, cloudClaimsRaw);
+        if (JSON.stringify(mergedClaims) !== JSON.stringify(localClaims)) {
+          localStorage.setItem(CLAIMS_KEY, JSON.stringify(mergedClaims));
+          changed = true;
+        }
       }
 
       // Push merged state back up so every device converges
       if (JSON.stringify(mergedProfiles) !== JSON.stringify(cloudProfiles)) {
         await uploadRow('profiles', mergedProfiles);
       }
-      if (JSON.stringify(mergedClaims) !== JSON.stringify(cloudClaims)) {
+      if (getLocalClaimStamp() >= claimStamp && JSON.stringify(mergedClaims) !== JSON.stringify(cloudClaimsRaw)) {
         await uploadRow(CLAIMS_KEY, mergedClaims);
       }
       for (const s of toPush) {
@@ -1010,12 +1226,19 @@ const CloudSync = (() => {
     }
   }
 
-  return { status, pushSave, pushProfiles, pushClaims, deleteSave, pullAndMerge };
+  return { status, pushSave, pushProfiles, pushClaims, deleteSave, pullAndMerge,
+           noteAdminStamp, noteClaimStamp, noteDeletion, clearTombstone,
+           consumeAdminAdoptions, getLocalClaimStamp };
 })();
 
 // --- Cloud mirror hooks: after every local change, sync to the cloud ---
+// _freezeSaves: set when the world owner edits THIS player's account
+// while the game is running — the adopted admin save in localStorage is
+// authoritative, so local saving pauses until the page reloads.
+let _freezeSaves = false;
 const _saveGame = saveGame;
 saveGame = function() {
+  if (_freezeSaves) return;
   _saveGame();
   if (CURRENT_USER) CloudSync.pushSave(CURRENT_USER);
 };
@@ -1035,6 +1258,634 @@ saveClaims = function(c) {
   _saveClaims(c);
   CloudSync.pushClaims();
 };
+
+// ====================================================================
+// CLANS & ALLIANCES — team up with other commanders
+// ====================================================================
+//   • Clan  = a roster (max 20) under one tag, founded for $50,000.
+//     Anyone may join; the owner can kick, and leaving hands the crown
+//     to the longest-standing member (last one out disbands).
+//   • Pact  = an alliance between two clans. One owner proposes, the
+//     other accepts/declines (max 3 pacts per clan). Clan-mates and
+//     allies CANNOT attack each other's plots.
+// Storage: one row per clan ('openworld_clan_<id>') + one row per
+// relationship ('openworld_alliance_<a>__<b>') in the SAME openworld_data
+// table — they ride along with every CloudSync pull, so no extra sync
+// traffic and no schema change. Membership lives ONLY here (never inside
+// a player save), so kicks and disbands propagate everywhere instantly
+// and can never be clobbered by an autosave.
+const Clans = (() => {
+  const OW_TABLE = 'openworld_data';   // same table CloudSync uses
+  const CPREFIX = 'openworld_clan_';
+  const APREFIX = 'openworld_alliance_';
+  const CLAN_COST = 50000;
+  const MAX_MEMBERS = 20;
+  const MAX_ALLIES = 3;
+  const MAX_LOG = 30;
+
+  let client = null;
+  if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
+    try { client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
+  }
+
+  const cache = {};        // clanId -> clan row (last seen cloud state)
+  const pacts = {};        // 'a__b' -> pact row
+  const memberIndex = {};  // username -> clanId
+
+  function status() { return client ? 'cloud' : 'local'; }
+  function slugify(name) {
+    return (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 20);
+  }
+
+  // ---------- derived views ----------
+  function rebuildIndex() {
+    for (const k of Object.keys(memberIndex)) delete memberIndex[k];
+    for (const [id, c] of Object.entries(cache)) {
+      for (const m of Object.keys(c.members || {})) memberIndex[m] = id;
+    }
+  }
+  function clanOf(username) {
+    const id = memberIndex[username];
+    return id ? (cache[id] || null) : null;
+  }
+  function tagOf(username) {
+    const c = clanOf(username);
+    return c ? c.tag : null;
+  }
+  function alliesOf(id) {
+    const out = [];
+    for (const p of Object.values(pacts)) {
+      if (p.status !== 'active') continue;
+      // dead-clan guard: a pact row is removed on disband, but a stale
+      // row that raced a disband must not render a ghost ally
+      if (p.a === id && cache[p.b]) out.push(p.b);
+      else if (p.b === id && cache[p.a]) out.push(p.a);
+    }
+    return out;
+  }
+  function incomingPacts(id) {
+    return Object.values(pacts).filter(p => p.status === 'pending' && (p.a === id || p.b === id) && p.requestedBy !== id);
+  }
+  function outgoingPacts(id) {
+    return Object.values(pacts).filter(p => p.status === 'pending' && p.requestedBy === id);
+  }
+  // Relation of ANOTHER player to the signed-in commander:
+  // 'clan' (same clan) | 'ally' (pact between our clans) | null
+  function relationTo(username) {
+    if (!CURRENT_USER || !username || username === CURRENT_USER) return null;
+    const mine = clanOf(CURRENT_USER), theirs = clanOf(username);
+    if (!mine || !theirs) return null;
+    if (mine.id === theirs.id) return 'clan';
+    if (alliesOf(mine.id).includes(theirs.id)) return 'ally';
+    return null;
+  }
+
+  // ---------- cloud plumbing ----------
+  async function fetchWorld() {
+    const { data: rows, error } = await client.from(OW_TABLE).select('key,data');
+    if (error) throw error;
+    const clans = {}, pactRows = {};
+    (rows || []).forEach(r => {
+      if (r.key.indexOf(CPREFIX) === 0 && r.data && r.data.id) clans[r.key.slice(CPREFIX.length)] = r.data;
+      else if (r.key.indexOf(APREFIX) === 0 && r.data && r.data.a) pactRows[r.key.slice(APREFIX.length)] = r.data;
+    });
+    return { clans, pactRows };
+  }
+  async function putRow(key, data) {
+    const { error } = await client.from(OW_TABLE).upsert({ key, data, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (error) throw error;
+  }
+  async function delRow(key) {
+    const { error } = await client.from(OW_TABLE).delete().eq('key', key);
+    if (error) throw error;
+  }
+  async function getClanRow(id) {
+    const { data, error } = await client.from(OW_TABLE).select('data').eq('key', CPREFIX + id).maybeSingle();
+    if (error) throw error;
+    return (data && data.data) || null;
+  }
+  function bump(row) {
+    row.stamp = Math.max(Date.now(), (parseInt(row.stamp, 10) || 0) + 1);
+    return row;
+  }
+  function logAdd(row, txt) {
+    row.log = [{ at: Date.now(), txt }].concat(row.log || []).slice(0, MAX_LOG);
+  }
+  function pactKey(a, b) { return a < b ? a + '__' + b : b + '__' + a; }
+
+  // Deduct money from the CURRENT session no matter which screen we're
+  // on. In-game it flows through STATE + saveGame() as usual; from the
+  // menu (before enterGame) it edits the stored save directly — safe,
+  // because the 10s autosave only runs once gameInitialized is true.
+  function spendMoney(amount) {
+    if (gameInitialized) {
+      if (STATE.money < amount) return false;
+      STATE.money -= amount;
+      saveGame();
+      updateHUD();
+      return true;
+    }
+    const s = CURRENT_USER && getSave(CURRENT_USER);
+    if (!s || (s.money || 0) < amount) return false;
+    s.money -= amount;
+    s.savedAt = Date.now();
+    try { localStorage.setItem(SAVE_PREFIX + CURRENT_USER, JSON.stringify(s)); } catch (e) { return false; }
+    CloudSync.pushSave(CURRENT_USER);
+    return true;
+  }
+
+  // ---------- state application (+ live toasts) ----------
+  function applyWorld(clans, pactRows, withToasts) {
+    for (const k of Object.keys(cache)) if (!clans[k]) delete cache[k];
+    Object.assign(cache, clans);
+    for (const k of Object.keys(pacts)) if (!pactRows[k]) delete pacts[k];
+    Object.assign(pacts, pactRows);
+    rebuildIndex();
+
+    if (withToasts && CURRENT_USER) {
+      const mine = clanOf(CURRENT_USER);
+      const myId = mine ? mine.id : null;
+      if (prevMyClan && !myId) {
+        const old = cache[prevMyClan];
+        showToast(old ? '🛡 You are no longer in [' + old.tag + '] ' + old.name : '🛡 Your clan has been disbanded.', false);
+      }
+      prevMyClan = myId;
+      if (mine) {
+        const members = Object.keys(mine.members || {}).sort();
+        if (prevMyMembers && members.length > prevMyMembers.length && mine.owner === CURRENT_USER) {
+          const joined = members.filter(m => !prevMyMembers.includes(m));
+          if (joined.length) showToast('🛡 ' + joined.join(', ') + ' joined [' + mine.tag + ']', true);
+        }
+        prevMyMembers = members;
+        const allies = alliesOf(mine.id).sort();
+        const added = allies.filter(a => !prevMyAllies.includes(a));
+        const removed = prevMyAllies.filter(a => !allies.includes(a));
+        if (added.length && cache[added[0]]) showToast('🤝 Pact with [' + cache[added[0]].tag + '] is now active!', true);
+        if (removed.length && cache[removed[0]]) showToast('🤝 Pact with [' + cache[removed[0]].tag + '] has ended.', false);
+        prevMyAllies = allies;
+        const inc = incomingPacts(mine.id).length;
+        if (inc > prevMyIncoming && mine.owner === CURRENT_USER) showToast('🤝 New alliance request — open 🛡 Clans.', true);
+        prevMyIncoming = inc;
+      } else {
+        prevMyMembers = null; prevMyAllies = []; prevMyIncoming = 0;
+      }
+    }
+    refreshOpenPanel();
+    if (typeof updateHUD === 'function') { try { updateHUD(); } catch (e) {} }
+  }
+  let prevMyClan = null, prevMyMembers = null, prevMyAllies = [], prevMyIncoming = 0;
+
+  // Full-table ingest — called by CloudSync.pullAndMerge with every
+  // clan/pact row it already pulled (absent keys = deleted rows).
+  function ingest(pairs) {
+    if (!client) return;
+    const clans = {}, pactRows = {};
+    (pairs || []).forEach(([k, v]) => {
+      if (k.indexOf(CPREFIX) === 0 && v && v.id) clans[k.slice(CPREFIX.length)] = v;
+      else if (k.indexOf(APREFIX) === 0 && v && v.a) pactRows[k.slice(APREFIX.length)] = v;
+    });
+    applyWorld(clans, pactRows, true);
+  }
+
+  async function refresh(withToasts) {
+    if (!client) return;
+    const { clans, pactRows } = await fetchWorld();
+    applyWorld(clans, pactRows, withToasts !== false);
+  }
+
+  // ---------- operations (each: fresh read → validate → write) ----------
+  async function createClan(name, tag, desc) {
+    if (!client) throw new Error('Clans live in the online world — cloud saving is not configured.');
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    name = (name || '').trim();
+    tag = (tag || '').trim().toUpperCase();
+    if (name.length < 3 || name.length > 24) throw new Error('Clan name must be 3-24 characters.');
+    if (!/^[A-Z0-9]{2,5}$/.test(tag)) throw new Error('Tag must be 2-5 letters/numbers (A-Z, 0-9).');
+    if (clanOf(CURRENT_USER)) throw new Error('You are already in a clan — leave it first.');
+    const id = slugify(name);
+    if (!id) throw new Error('Clan name needs at least one letter or number.');
+    const fresh = await fetchWorld();
+    if (fresh.clans[id]) throw new Error('A clan with that name already exists.');
+    for (const c of Object.values(fresh.clans)) {
+      if (c.tag === tag) throw new Error('Tag [' + tag + '] is already taken.');
+    }
+    if (!spendMoney(CLAN_COST)) throw new Error('Founding a clan costs $' + CLAN_COST.toLocaleString() + ' — not enough money.');
+    const row = bump({
+      id, name, tag,
+      desc: (desc || '').trim().slice(0, 140),
+      owner: CURRENT_USER,
+      created: Date.now(),
+      members: { [CURRENT_USER]: Date.now() },
+      log: [{ at: Date.now(), txt: 'Clan founded by ' + CURRENT_USER }]
+    });
+    await putRow(CPREFIX + id, row);
+    await refresh(false);
+    return row;
+  }
+
+  async function joinClan(id) {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    if (clanOf(CURRENT_USER)) throw new Error('You are already in a clan — leave it first.');
+    const row = await getClanRow(id);
+    if (!row) throw new Error('That clan no longer exists.');
+    const members = row.members || {};
+    if (members[CURRENT_USER]) throw new Error('You are already in this clan.');
+    if (Object.keys(members).length >= MAX_MEMBERS) throw new Error('This clan is full (' + MAX_MEMBERS + ' members).');
+    members[CURRENT_USER] = Date.now();
+    row.members = members;
+    logAdd(row, CURRENT_USER + ' joined');
+    bump(row);
+    await putRow(CPREFIX + id, row);
+    await refresh(false);
+    return row;
+  }
+
+  async function leaveClan() {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (mine.owner === CURRENT_USER && !window.confirm('Leave [' + mine.tag + '] ' + mine.name + '? The crown passes to the longest-standing member (or the clan disbands if you are alone).')) return false;
+    if (mine.owner !== CURRENT_USER && !window.confirm('Leave [' + mine.tag + '] ' + mine.name + '?')) return false;
+    const row = await getClanRow(mine.id);
+    if (!row) { await refresh(false); return true; }
+    const members = row.members || {};
+    delete members[CURRENT_USER];
+    row.members = members;
+    if (row.owner === CURRENT_USER) {
+      const rest = Object.keys(members).sort((a, b) => (members[a] || 0) - (members[b] || 0));
+      if (rest.length) {
+        row.owner = rest[0];
+        logAdd(row, '👑 ' + rest[0] + ' now leads the clan (' + CURRENT_USER + ' left)');
+      } else {
+        // last one out lights the candle — clan and its pacts dissolve
+        await delRow(CPREFIX + mine.id);
+        for (const k of Object.keys(pacts)) {
+          const p = pacts[k];
+          if (p && (p.a === mine.id || p.b === mine.id)) await delRow(APREFIX + k);
+        }
+        await refresh(false);
+        return true;
+      }
+    } else {
+      logAdd(row, CURRENT_USER + ' left');
+    }
+    bump(row);
+    await putRow(CPREFIX + mine.id, row);
+    await refresh(false);
+    return true;
+  }
+
+  async function kick(name) {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (name === CURRENT_USER) throw new Error('Use Leave instead.');
+    if (!window.confirm('Kick ' + name + ' from [' + mine.tag + ']?')) return false;
+    // validate against the FRESH cloud row — a stale local view must not
+    // let a non-owner kick (e.g. right after an ownership hand-off)
+    const row = await getClanRow(mine.id);
+    if (!row) throw new Error('Clan not found.');
+    if (row.owner !== CURRENT_USER) throw new Error('Only the clan owner can kick members.');
+    if (!(row.members || {})[name]) throw new Error(name + ' is not in your clan.');
+    delete row.members[name];
+    logAdd(row, name + ' was kicked');
+    bump(row);
+    await putRow(CPREFIX + mine.id, row);
+    await refresh(false);
+    return true;
+  }
+
+  async function disband() {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (!window.confirm('Disband [' + mine.tag + '] ' + mine.name + '? Members are released and pacts end. This cannot be undone.')) return false;
+    // fresh cloud row decides ownership — a stale cache view must not
+    // let a non-owner disband a clan they were just handed or removed from
+    const row = await getClanRow(mine.id);
+    if (!row) throw new Error('Clan not found.');
+    if (row.owner !== CURRENT_USER) throw new Error('Only the clan owner can disband.');
+    await delRow(CPREFIX + mine.id);
+    for (const k of Object.keys(pacts)) {
+      const p = pacts[k];
+      if (p && (p.a === mine.id || p.b === mine.id)) await delRow(APREFIX + k);
+    }
+    await refresh(false);
+    return true;
+  }
+
+  async function proposePact(otherId) {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (mine.owner !== CURRENT_USER) throw new Error('Only the clan owner can propose alliances.');
+    if (otherId === mine.id) throw new Error('That is your own clan.');
+    const target = await getClanRow(otherId);
+    if (!target) throw new Error('That clan no longer exists.');
+    const k = pactKey(mine.id, otherId);
+    const { data } = await client.from(OW_TABLE).select('data').eq('key', APREFIX + k).maybeSingle();
+    const existing = data && data.data;
+    if (existing && existing.status === 'active') throw new Error('You are already allied with [' + target.tag + '].');
+    if (existing && existing.status === 'pending') throw new Error('A proposal with [' + target.tag + '] is already pending.');
+    if (alliesOf(mine.id).length >= MAX_ALLIES) throw new Error('Your clan already has the maximum ' + MAX_ALLIES + ' allies.');
+    if (alliesOf(otherId).length >= MAX_ALLIES) throw new Error('[' + target.tag + '] already has the maximum ' + MAX_ALLIES + ' allies.');
+    await putRow(APREFIX + k, bump({
+      a: mine.id < otherId ? mine.id : otherId,
+      b: mine.id < otherId ? otherId : mine.id,
+      status: 'pending',
+      requestedBy: mine.id,
+      requestedAt: Date.now()
+    }));
+    await refresh(false);
+    return target;
+  }
+
+  async function answerPact(otherId, accept) {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (mine.owner !== CURRENT_USER) throw new Error('Only the clan owner can answer alliance requests.');
+    const k = pactKey(mine.id, otherId);
+    const { data } = await client.from(OW_TABLE).select('data').eq('key', APREFIX + k).maybeSingle();
+    const p = data && data.data;
+    if (!p || p.status !== 'pending' || p.requestedBy === mine.id) throw new Error('No pending request from that clan.');
+    const other = await getClanRow(otherId);
+    if (accept) {
+      if (alliesOf(mine.id).length >= MAX_ALLIES || alliesOf(otherId).length >= MAX_ALLIES) {
+        throw new Error('An alliance cap (' + MAX_ALLIES + ') would be exceeded.');
+      }
+      p.status = 'active';
+      await putRow(APREFIX + k, bump(p));
+      if (other) { logAdd(other, '🤝 Alliance with [' + mine.tag + '] formed'); bump(other); await putRow(CPREFIX + otherId, other); }
+      const mineRow = await getClanRow(mine.id);
+      if (mineRow) { logAdd(mineRow, '🤝 Alliance with [' + (other ? other.tag : otherId) + '] formed'); bump(mineRow); await putRow(CPREFIX + mine.id, mineRow); }
+    } else {
+      await delRow(APREFIX + k);
+      if (other) { logAdd(other, 'Alliance request to [' + mine.tag + '] declined'); bump(other); await putRow(CPREFIX + otherId, other); }
+    }
+    await refresh(false);
+    return true;
+  }
+
+  async function breakPact(otherId) {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (mine.owner !== CURRENT_USER) throw new Error('Only the clan owner can break alliances.');
+    const other = cache[otherId];
+    if (!window.confirm('Break the pact with [' + (other ? other.tag : otherId) + ']? Their plots become attackable again.')) return false;
+    await delRow(APREFIX + pactKey(mine.id, otherId));
+    const otherRow = await getClanRow(otherId);
+    if (otherRow) { logAdd(otherRow, 'Pact with [' + mine.tag + '] broken by ' + CURRENT_USER); bump(otherRow); await putRow(CPREFIX + otherId, otherRow); }
+    await refresh(false);
+    return true;
+  }
+
+  return { status, ingest, refresh, createClan, joinClan, leaveClan, kick, disband,
+           proposePact, answerPact, breakPact, clanOf, tagOf, relationTo, alliesOf,
+           incomingPacts, outgoingPacts, CLAN_COST, MAX_MEMBERS, MAX_ALLIES, get cache() { return cache; } };
+})();
+
+// Bridge for CloudSync.pullAndMerge (declared before this block — function
+// declarations are hoisted module-wide, so the sync loop can call it).
+function ingestClanRows(rows) {
+  try { Clans.ingest(rows); } catch (e) { console.warn('[OpenWorld] clan sync failed:', e); }
+}
+
+function clanRelationTo(username) {
+  try { return Clans.relationTo(username); } catch (e) { return null; }
+}
+function clanTagOf(username) {
+  try { return Clans.tagOf(username); } catch (e) { return null; }
+}
+// Small colored [TAG] chip for names rendered anywhere in the game
+function clanTagHtml(username) {
+  const tag = clanTagOf(username);
+  return tag ? ' <span style="color:#7fffd4;font-size:12px;font-weight:bold">[' + clEsc(tag) + ']</span>' : '';
+}
+function clEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+// Window-exposed for debugging/QA (the peace rule can be probed from the console)
+window.clanRelationTo = clanRelationTo;
+window.clanTagOf = clanTagOf;
+
+// ====================================================================
+// CLANS PANEL UI
+// ====================================================================
+function renderClansPanel() {
+  const body = document.getElementById('clans-body');
+  if (!body) return;
+  // Preserve in-progress form values across re-renders — a background
+  // sync landing while the player types must never eat their input.
+  const prevForm = {};
+  ['cl-name', 'cl-tag', 'cl-desc'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) prevForm[id] = el.value;
+  });
+  if (!CURRENT_USER) { body.innerHTML = '<div class="cl-note">Sign in to found or join a clan.</div>'; return; }
+  if (Clans.status() !== 'cloud') { body.innerHTML = '<div class="cl-note">Clans live in the shared online world — cloud saving must be configured.</div>'; return; }
+
+  const mine = Clans.clanOf(CURRENT_USER);
+  let html = '';
+
+  if (mine) {
+    const isOwner = mine.owner === CURRENT_USER;
+    const allies = Clans.alliesOf(mine.id);
+    const members = Object.keys(mine.members || {})
+      .sort((a, b) => (mine.members[a] || 0) - (mine.members[b] || 0));
+    html += `
+      <div class="cl-myclan">
+        <div class="cl-clan-title"><span class="cl-tag">[${clEsc(mine.tag)}]</span> ${clEsc(mine.name)}${isOwner ? '<span class="cl-crown">👑 You lead this clan</span>' : ''}</div>
+        ${mine.desc ? `<div class="cl-desc">“${clEsc(mine.desc)}”</div>` : ''}
+        <div class="cl-sub">Founded ${new Date(mine.created).toLocaleDateString()} · ${members.length}/${Clans.MAX_MEMBERS} members · ${allies.length}/${Clans.MAX_ALLIES} pacts</div>
+        <div class="cl-sub" style="margin-top:8px">👥 Roster</div>
+        <div class="cl-roster">
+          ${members.map(m => `
+            <div class="cl-member-row">
+              <span class="cl-member-name">${m === mine.owner ? '👑 ' : '• '}${clEsc(m)}${m === CURRENT_USER ? ' <span class="cl-owner">(you)</span>' : ''}</span>
+              <span class="cl-joined">joined ${new Date(mine.members[m] || 0).toLocaleDateString()}</span>
+              ${isOwner && m !== CURRENT_USER ? `<button class="cl-mini danger" onclick="clKick('${clEsc(m)}')">Kick</button>` : ''}
+            </div>`).join('')}
+        </div>
+        ${allies.length ? `
+          <div class="cl-sub">🤝 Allied clans</div>
+          ${allies.map(a => { const c = Clans.cache[a]; return c ? `
+            <div class="cl-ally-row"><span class="cl-tag">[${clEsc(c.tag)}]</span> ${clEsc(c.name)} <span class="cl-owner">@${clEsc(c.owner)}</span>
+            ${isOwner ? `<button class="cl-mini danger" onclick="clBreakPact('${clEsc(a)}')">Break</button>` : ''}</div>` : ''; }).join('')}` : ''}
+        ${isOwner && Clans.incomingPacts(mine.id).length ? `
+          <div class="cl-sub">🤝 Incoming alliance requests</div>
+          ${Clans.incomingPacts(mine.id).map(p => { const c = Clans.cache[p.a === mine.id ? p.b : p.a]; return c ? `
+            <div class="cl-ally-row"><span class="cl-tag">[${clEsc(c.tag)}]</span> ${clEsc(c.name)}
+              <button class="cl-mini" onclick="clAnswerPact('${clEsc(c.id)}',true)">Accept</button>
+              <button class="cl-mini danger" onclick="clAnswerPact('${clEsc(c.id)}',false)">Decline</button></div>` : ''; }).join('')}` : ''}
+        ${isOwner && Clans.outgoingPacts(mine.id).length ? `
+          <div class="cl-sub">⏳ Pending proposals</div>
+          ${Clans.outgoingPacts(mine.id).map(p => { const c = Clans.cache[p.a === mine.id ? p.b : p.a]; return c ? `
+            <div class="cl-ally-row"><span class="cl-tag">[${clEsc(c.tag)}]</span> ${clEsc(c.name)} <span class="cl-owner">awaiting their answer</span>
+              <button class="cl-mini danger" onclick="clBreakPact('${clEsc(c.id)}')">Cancel</button></div>` : ''; }).join('')}` : ''}
+        <div class="cl-actions">
+          <button class="cl-btn ghost" onclick="clLeave()">Leave clan</button>
+          ${isOwner ? '<button class="cl-btn danger" onclick="clDisband()">Disband</button>' : ''}
+        </div>
+        ${(mine.log || []).length ? `
+          <div class="cl-sub">📜 Recent events</div>
+          <div class="cl-log">${mine.log.slice(0, 8).map(l => `<div class="cl-log-row"><span class="cl-log-time">${new Date(l.at).toLocaleTimeString()}</span>${clEsc(l.txt)}</div>`).join('')}</div>` : ''}
+      </div>`;
+  } else {
+    html += `
+      <div class="cl-create">
+        <div class="cl-sub" style="margin-top:0">Found a new clan — one-time fee <b style="color:#f5cc74">$${Clans.CLAN_COST.toLocaleString()}</b></div>
+        <div class="cl-form">
+          <input id="cl-name" class="cl-input" maxlength="24" placeholder="Clan name (3-24 characters)" autocomplete="off">
+          <input id="cl-tag" class="cl-input cl-tag-input" maxlength="5" placeholder="TAG (2-5)" autocomplete="off">
+          <input id="cl-desc" class="cl-input" maxlength="140" placeholder="Motto / description (optional)" autocomplete="off">
+          <button class="cl-btn" onclick="clCreate()">🛡 Found clan — $${Clans.CLAN_COST.toLocaleString()}</button>
+        </div>
+      </div>`;
+  }
+
+  // Browse every clan in the world
+  const list = Object.values(Clans.cache).sort((a, b) =>
+    Object.keys(b.members || {}).length - Object.keys(a.members || {}).length || (a.name < b.name ? -1 : 1));
+  const amOwner = mine && mine.owner === CURRENT_USER;
+  html += `<div class="cl-sub">🌍 Clans in the world (${list.length})</div>`;
+  if (list.length) {
+    html += '<div class="cl-list">' + list.map(c => {
+      const members = Object.keys(c.members || {});
+      const isMine = mine && c.id === mine.id;
+      const isAlly = mine && Clans.alliesOf(mine.id).includes(c.id);
+      const rel = isMine ? '<span class="cl-rel you">YOUR CLAN</span>'
+        : (isAlly ? '<span class="cl-rel ally">ALLY</span>' : '');
+      let act = '';
+      if (!mine) {
+        act = `<button class="cl-mini" onclick="clJoin('${clEsc(c.id)}')">Join</button>`;
+      } else if (amOwner && !isMine) {
+        if (isAlly) act = `<button class="cl-mini danger" onclick="clBreakPact('${clEsc(c.id)}')">Break pact</button>`;
+        else if (Clans.incomingPacts(mine.id).some(p => p.a === c.id || p.b === c.id)) act = `<button class="cl-mini" onclick="clAnswerPact('${clEsc(c.id)}',true)">Accept</button>`;
+        else if (Clans.outgoingPacts(mine.id).some(p => p.a === c.id || p.b === c.id)) act = `<span class="cl-owner">⏳ pending</span>`;
+        else act = `<button class="cl-mini" onclick="clProposePact('${clEsc(c.id)}')">🤝 Propose</button>`;
+      }
+      return `
+        <div class="cl-row">
+          <span class="cl-tag">[${clEsc(c.tag)}]</span>
+          <span class="cl-name">${clEsc(c.name)}</span>
+          <span class="cl-owner">@${clEsc(c.owner)}</span>
+          <span class="cl-count">${members.length}/${Clans.MAX_MEMBERS} 👥 · ${Clans.alliesOf(c.id).length} 🤝</span>
+          ${rel}${act}
+        </div>`;
+    }).join('') + '</div>';
+  } else {
+    html += '<div class="cl-note">No clans yet — found the first one!</div>';
+  }
+  body.innerHTML = html;
+  // restore the create-form values the player had typed
+  if (!mine) {
+    ['cl-name', 'cl-tag', 'cl-desc'].forEach(id => {
+      if (prevForm[id] !== undefined) {
+        const el = document.getElementById(id);
+        if (el && !el.value) el.value = prevForm[id];
+      }
+    });
+  }
+}
+
+// Panel dirty-flag lives at module level (refreshOpenPanel + openClans
+// + the 10s refresh interval all live outside the Clans IIFE).
+let clansPanelDirty = false;
+
+function refreshOpenPanel() {
+  const ov = document.getElementById('clans-overlay');
+  if (!ov || !ov.classList.contains('show')) return;
+  // don't rebuild under someone who's typing — mark dirty instead
+  const ae = document.activeElement;
+  if (ae && ov.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) { clansPanelDirty = true; return; }
+  clansPanelDirty = false;
+  try { renderClansPanel(); } catch (e) {}
+}
+
+window.openClans = async function() {
+  const ov = document.getElementById('clans-overlay');
+  if (!ov) return;
+  ov.classList.add('show');
+  try { renderClansPanel(); } catch (e) {}
+  if (Clans.status() === 'cloud' && CURRENT_USER) {
+    try { await Clans.refresh(false); } catch (e) { console.warn('[OpenWorld] clan refresh failed:', e); }
+  }
+  clansPanelDirty = false;
+  try { renderClansPanel(); } catch (e) {}
+};
+window.closeClans = function() {
+  const ov = document.getElementById('clans-overlay');
+  if (ov) ov.classList.remove('show');
+};
+// click on the dark backdrop (not the card) closes the panel
+(() => {
+  const attach = () => {
+    const ov = document.getElementById('clans-overlay');
+    if (ov) ov.addEventListener('mousedown', (e) => { if (e.target === ov) window.closeClans(); });
+  };
+  if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', attach);
+  else attach();
+})();
+
+// ---------- panel action handlers ----------
+window.clCreate = async function() {
+  const name = (document.getElementById('cl-name') || {}).value || '';
+  const tag = (document.getElementById('cl-tag') || {}).value || '';
+  const desc = (document.getElementById('cl-desc') || {}).value || '';
+  try {
+    const c = await Clans.createClan(name, tag, desc);
+    showToast(`🛡 Clan [${c.tag}] ${c.name} founded! Recruit commanders to your banner.`, true);
+  } catch (e) { showToast(e.message || String(e), false); }
+};
+window.clJoin = async function(id) {
+  try {
+    const c = await Clans.joinClan(id);
+    showToast(`🛡 Joined [${c.tag}] ${c.name}!`, true);
+  } catch (e) { showToast(e.message || String(e), false); }
+};
+window.clLeave = async function() {
+  try { if (await Clans.leaveClan()) showToast('You left the clan.', true); }
+  catch (e) { showToast(e.message || String(e), false); }
+};
+window.clKick = async function(name) {
+  try { if (await Clans.kick(name)) showToast(name + ' was kicked.', true); }
+  catch (e) { showToast(e.message || String(e), false); }
+};
+window.clDisband = async function() {
+  try { if (await Clans.disband()) showToast('Clan disbanded.', true); }
+  catch (e) { showToast(e.message || String(e), false); }
+};
+window.clProposePact = async function(id) {
+  try {
+    const c = await Clans.proposePact(id);
+    showToast(`🤝 Alliance proposed to [${c.tag}] ${c.name} — their owner must accept.`, true);
+  } catch (e) { showToast(e.message || String(e), false); }
+};
+window.clAnswerPact = async function(id, accept) {
+  try {
+    if (accept) showToast('🤝 Alliance formed!', true);
+    else showToast('Alliance request declined.', true);
+    await Clans.answerPact(id, accept);
+  } catch (e) { showToast(e.message || String(e), false); }
+};
+window.clBreakPact = async function(id) {
+  try { if (await Clans.breakPact(id)) showToast('Pact broken.', true); }
+  catch (e) { showToast(e.message || String(e), false); }
+};
+
+// Live social refresh while the panel is open (rosters/pacts change
+// without waiting for the 30s world sync)
+setInterval(() => {
+  const ov = document.getElementById('clans-overlay');
+  if (ov && ov.classList.contains('show') && CURRENT_USER && Clans.status() === 'cloud') {
+    Clans.refresh(true).catch(() => {});
+  } else if (clansPanelDirty && ov && ov.classList.contains('show')) {
+    clansPanelDirty = false;
+    try { renderClansPanel(); } catch (e) {}
+  }
+}, 10000);
 
 // ====================================================================
 // GLOBAL CLAIMS — shared plot ownership across accounts
@@ -1138,7 +1989,6 @@ function applyCloudWorldUpdates() {
         }
       }
       p.userData.businesses = [];
-      p.userData.gambling = {};
       setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
       registerClaimedPlot(p);
       changed = true;
@@ -1208,6 +2058,12 @@ function saveGame() {
     username: CURRENT_USER,
     savedAt: Date.now(),
     passwordHash: existing ? existing.passwordHash : hashPassword('default'),
+    // `created` = account creation time — preserved across saves so admin
+    // deletion tombstones can tell stale devices from fresh re-signups.
+    created: existing ? existing.created : Date.now(),
+    // `adminStamp` = last world-owner edit applied to this save (see the
+    // ADMIN section). Preserved so every device converges on it.
+    adminStamp: existing ? existing.adminStamp : undefined,
     money: STATE.money,
     ownedPlotIds: Array.from(STATE.owned),
     // Map of plotId → array of business types (plots can hold multiple)
@@ -1376,11 +2232,6 @@ function renderLogin() {
     <div class="login-cloud ${CloudSync.status() === 'cloud' ? 'on' : ''}">${CloudSync.status() === 'cloud'
       ? '🌐 Online multiplayer: ON — one shared world across all devices (live sync every 30s)'
       : '⚠ Cloud saving: OFF — accounts stay in this browser only (online play disabled)'}</div>
-    <div class="login-tools">
-      <button class="login-tool-btn" onclick="exportAccounts()" title="Download a backup file of every account on this device">⬇ Export accounts</button>
-      <button class="login-tool-btn" onclick="document.getElementById('import-file').click()" title="Restore accounts from a backup file">⬆ Import</button>
-      <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importAccounts(this)">
-    </div>
   `;
   setTimeout(() => {
     const nameInput = document.getElementById('login-name');
@@ -1455,6 +2306,7 @@ window.loginSubmit = function() {
       version: 1,
       username: name,
       savedAt: Date.now(),
+      created: Date.now(),
       passwordHash: hashPassword(pwd),
       money: 100_000,
       ownedPlotIds: [],
@@ -1472,8 +2324,10 @@ window.loginSubmit = function() {
       return;
     }
     addProfile(name);
-    // Mirror the brand-new account to the cloud immediately (if enabled)
+    // Mirror the brand-new account to the cloud immediately (if enabled).
+    // Also lift any deletion tombstone so the fresh account can sync.
     CloudSync.pushSave(name);
+    CloudSync.clearTombstone(name);
   } else {
     // === LOGIN ===
     const existingSave = getSave(name);
@@ -1500,78 +2354,6 @@ window.loginSubmit = function() {
   document.getElementById('menu').classList.remove('hidden');
 };
 
-// ============ ACCOUNT BACKUP — export/import every account ============
-window.exportAccounts = function() {
-  try {
-    const profiles = getProfiles();
-    const saves = {};
-    for (const p of profiles) {
-      const s = getSave(p);
-      if (s) saves[p] = s;
-    }
-    const backup = {
-      app: 'open-world',
-      type: 'accounts-backup',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      profiles,
-      saves,
-      claims: getClaims()
-    };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'open-world-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (e) {
-    alert('Export failed: ' + e.message);
-  }
-};
-
-window.importAccounts = function(input) {
-  const file = input.files && input.files[0];
-  input.value = ''; // allow re-selecting the same file later
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function() {
-    try {
-      const backup = JSON.parse(reader.result);
-      if (!backup || backup.type !== 'accounts-backup' || typeof backup.saves !== 'object') {
-        throw new Error('not a backup file');
-      }
-      let added = 0, updated = 0;
-      for (const [name, save] of Object.entries(backup.saves)) {
-        const local = getSave(name);
-        if (!local) {
-          localStorage.setItem(SAVE_PREFIX + name, JSON.stringify(save));
-          added++;
-        } else if ((save.savedAt || 0) > (local.savedAt || 0)) {
-          localStorage.setItem(SAVE_PREFIX + name, JSON.stringify(save));
-          updated++;
-        }
-        CloudSync.pushSave(name); // move imported accounts to cloud too
-      }
-      const profiles = getProfiles();
-      for (const name of Object.keys(backup.saves)) {
-        if (!profiles.includes(name)) profiles.push(name);
-      }
-      localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
-      CloudSync.pushProfiles();
-      if (backup.claims && typeof backup.claims === 'object') {
-        saveClaims(Object.assign({}, getClaims(), backup.claims));
-      }
-      alert('Import complete: ' + added + ' new account(s), ' + updated + ' updated.');
-      renderLogin();
-    } catch (e) {
-      alert('Import failed: not a valid Open World backup file.');
-    }
-  };
-  reader.readAsText(file);
-};
 
 // Populate the menu welcome panel with user's name and save stats
 function updateMenuWelcome() {
@@ -1582,7 +2364,9 @@ function updateMenuWelcome() {
 
   nameEl.textContent = CURRENT_USER;
 
-  // Admin button — only the shared-world owner sees it
+  // Admin button on the home (menu) screen — only the world owner sees it,
+  // and it opens the panel instantly (they already proved their password
+  // by logging in).
   const adminBtn = document.getElementById('admin-btn');
   if (adminBtn) adminBtn.style.display = CURRENT_USER === ADMIN_ACCOUNT ? '' : 'none';
 
@@ -1690,7 +2474,7 @@ function renderLeaderboard() {
         <div class="lb-rank ${rankClass}">${rankDisplay}</div>
         <div class="lb-avatar">${entry.name.charAt(0).toUpperCase()}</div>
         <div class="lb-info">
-          <div class="lb-name">${entry.name}${isMe ? ' (You)' : ''}</div>
+          <div class="lb-name">${entry.name}${clanTagHtml(entry.name)}${isMe ? ' (You)' : ''}</div>
           <div class="lb-meta">${formatMeta(entry)}</div>
         </div>
         <div class="lb-value">${formatVal(entry)}</div>
@@ -1724,6 +2508,20 @@ setInterval(async () => {
   try {
     const changed = await CloudSync.pullAndMerge();
     if (changed) applyCloudWorldUpdates();
+    // The world owner edited accounts while we were online — adopt ours
+    const adopted = CloudSync.consumeAdminAdoptions();
+    if (adopted.length && adopted.includes(CURRENT_USER)) {
+      if (!_freezeSaves) {
+        const s = getSave(CURRENT_USER);
+        if (s) {
+          STATE.money = (typeof s.money === 'number') ? s.money : STATE.money;
+          STATE.inventory = s.inventory || STATE.inventory;
+          updateHUD();
+        }
+        _freezeSaves = true;   // adopted save is authoritative until reload
+      }
+      showToast('👑 The world owner adjusted your account — log out and back in to apply everything.', false);
+    }
   } catch (e) { /* already logged inside pullAndMerge */ }
   _cloudPullBusy = false;
 }, 30000);
@@ -1761,6 +2559,10 @@ const MATERIALS = [
 // arcade pacing while build costs are doubled — a Farm now pays for itself in
 // ~8 minutes instead of ~90 seconds, and the whole tech tree takes hours of
 // casual play instead of minutes.
+// Military pricing (v1.7): Barracks / Naval Yard / Airfield deliberately sit
+// at the Factory / Resort / Oil-Rig tiers so conquest is reachable mid-game.
+// The brake on armies is housing, not cost — each Barracks houses 500 troops
+// (see TROOPS_PER_BARRACKS below).
 const BUSINESS_TYPES = [
   {
     id: 'farm', name: 'Farm', icon: '🌾',
@@ -1796,7 +2598,7 @@ const BUSINESS_TYPES = [
     id: 'casino', name: 'Casino', icon: '🎰',
     buildCost: 360000, produces: 'fun', rate: 0.7,
     color: 0xd32f2f, shape: 'sphere',
-    desc: 'Volatile gambling den. Each roll can hit jackpots (10×) or bust (0×). High risk, high reward.'
+    desc: 'Runs slot machines that produce Entertainment at a steady rate — and you can step up and spin them yourself. Every extra casino trims the bust chance at the tables.'
   },
   {
     id: 'bank', name: 'Bank', icon: '🏦',
@@ -1812,19 +2614,19 @@ const BUSINESS_TYPES = [
   },
   {
     id: 'barracks', name: 'Barracks', icon: '⚔️',
-    buildCost: 500000, produces: 'troops', rate: 0.4,
+    buildCost: 120000, produces: 'troops', rate: 0.4,
     color: 0x9c3428, shape: 'barracks', military: true,
-    desc: 'Trains troops. Your army defends your plots and conquers other commanders\' plots.'
+    desc: 'Trains troops. Each Barracks houses 500 troops — build more to raise your army cap. Deploy troops to conquer other commanders\' plots.'
   },
   {
     id: 'navalyard', name: 'Naval Yard', icon: '⚓',
-    buildCost: 650000, produces: 'ships', rate: 0.35,
+    buildCost: 180000, produces: 'ships', rate: 0.35,
     color: 0x2b5f75, shape: 'navalyard', military: true,
     desc: 'Builds warships on coasts and oceans. Ships fight naval invasions and defend sea plots.'
   },
   {
     id: 'airfield', name: 'Airfield', icon: '✈️',
-    buildCost: 900000, produces: 'planes', rate: 0.25,
+    buildCost: 280000, produces: 'planes', rate: 0.25,
     color: 0x78909c, shape: 'airfield', military: true,
     desc: 'Operates an airstrip. Planes provide air support to every battle you fight.'
   },
@@ -1838,6 +2640,21 @@ function getMaterial(id) {
 // Helper: get business type by id
 function getBusinessType(id) {
   return BUSINESS_TYPES.find(b => b.id === id);
+}
+
+// ARMY HOUSING — the limit on troop counts. Every Barracks you own
+// (including ones captured from other commanders) houses 500 troops, so
+// your army cap is 500 × barracks. Barracks stop training when full;
+// troops above the cap (e.g. granted by the world owner) are never removed.
+const TROOPS_PER_BARRACKS = 500;
+function troopCapacity() {
+  let barracks = 0;
+  for (const p of STATE.plots) {
+    for (const b of (p.userData.businesses || [])) {
+      if (b.type === 'barracks') barracks++;
+    }
+  }
+  return barracks * TROOPS_PER_BARRACKS;
 }
 
 // Where each building may be built: oil rigs at sea, naval yards on
@@ -1902,6 +2719,7 @@ let scene, camera, renderer, controls;
 let earth, atmosphere, starField;
 let raycaster, pointer;
 let canvasContainer;
+let sunLight; // camera-locked sun — keeps the whole world lit from every angle
 
 function initScene() {
   canvasContainer = document.getElementById('canvas-container');
@@ -1920,15 +2738,18 @@ function initScene() {
   renderer.toneMappingExposure = 1.0;
   canvasContainer.appendChild(renderer.domElement);
 
-  // Lighting — sun + soft ambient
-  const sun = new THREE.DirectionalLight(0xfff6e0, 2.2);
+  // Lighting — the sun is locked to the camera and ambient is strong, so the
+  // ENTIRE world stays evenly lit no matter where you orbit or how the globe
+  // spins. (A fixed low sun used to leave one whole hemisphere dark.)
+  const sun = new THREE.DirectionalLight(0xfff6e0, 2.0);
   sun.position.set(5, 2, 4);
   scene.add(sun);
+  sunLight = sun;
 
-  const ambient = new THREE.AmbientLight(0x4a6a85, 0.55);
+  const ambient = new THREE.AmbientLight(0x8fb4cc, 0.95);
   scene.add(ambient);
-  // Subtle fill light from opposite side so the night side is never fully black
-  const fill = new THREE.DirectionalLight(0x5577aa, 0.35);
+  // Gentle back-fill for soft edge shading around the globe's limb
+  const fill = new THREE.DirectionalLight(0x5577aa, 0.45);
   fill.position.set(-5, -2, -4);
   scene.add(fill);
 
@@ -2370,7 +3191,7 @@ function rebuildPlotPools() {
   for (let i = 0; i < plots.length; i++) {
     const ud = plots[i].userData;
     const owned = ud.owned || ud.ownedByOther;
-    const scale = ud.owned ? 1.05 : 1.0;   // your plots sit slightly proud of the surface
+    const scale = 1.0;   // owned plots hug the surface exactly like every other plot — no floating islands
     const t = ud._tris, n = t.length;
     const dPos = owned ? owPos : unPos, dCol = owned ? owCol : unCol;
     const base = owned ? vo : vu;
@@ -2844,15 +3665,7 @@ function onPointerMove(e) {
       const bonusPct = Math.round((regionBonus - 1) * 100);
       const bonusTag = bonusPct !== 0 ? ` (${bonusPct > 0 ? '+' : ''}${bonusPct}%)` : '';
       const countTag = businesses.length > 1 ? ` ×${businesses.length}` : '';
-      if (bt.id === 'casino') {
-        // Casino shows last roll result instead of steady rate
-        const gambling = hitPlot.userData.gambling || {};
-        const lastOutcome = CASINO_OUTCOMES.find(o => o.id === gambling.lastRoll);
-        const rollTag = lastOutcome ? ` · ${lastOutcome.label}` : ' · 🎲 rolling...';
-        tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name}${countTag} 🎲 volatile${bonusTag}${rollTag}</span>`;
-      } else {
-        tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name}${countTag} +${effectiveRate.toFixed(1)} ${mat.icon}/s${bonusTag}</span>`;
-      }
+      tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name}${countTag} +${effectiveRate.toFixed(1)} ${mat.icon}/s${bonusTag}</span>`;
       tip.classList.add('owned');
     } else if (owned) {
       tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">OWNED — build ready</span>`;
@@ -2936,35 +3749,12 @@ function openPlotModal(plot) {
       const bonusLabel = bonusPct > 0 ? `+${bonusPct}%` : `${bonusPct}%`;
       const bonusColor = bonusPct > 0 ? '#7fffd4' : (bonusPct < 0 ? '#ff8080' : '#9bb4bd');
 
-      // Casino gambling panel (only for casino businesses)
-      let gamblingPanel = '';
-      if (bt.id === 'casino') {
-        const gambling = plot.userData.gambling || {};
-        const lastOutcome = CASINO_OUTCOMES.find(o => o.id === gambling.lastRoll);
-        const history = gambling.rollHistory || [];
-        const rollCount = history.length;
-        const jackpots = history.filter(r => r.outcome === 'jackpot').length;
-        const bigwins = history.filter(r => r.outcome === 'bigwin').length;
-        const busts = history.filter(r => r.outcome === 'bust').length;
-        const totalWon = history.reduce((s, r) => s + r.amount, 0);
-        const historyRows = history.slice(0, 4).map(r => {
-          const oc = CASINO_OUTCOMES.find(o => o.id === r.outcome);
-          return `<div class="gamble-row"><span style="color:${oc.color}">${oc.label}</span><span>×${r.multiplier}</span><span style="color:#7fffd4">+${r.amount.toFixed(2)} 🎰</span></div>`;
-        }).join('');
-        gamblingPanel = `
-          <div class="gambling-panel" style="margin:8px 0">
-            <div class="gamble-stats" style="font-size:10px">
-              <span>Last: <b style="color:${lastOutcome ? lastOutcome.color : '#9bb4bd'}">${lastOutcome ? lastOutcome.label : '—'}</b></span>
-              <span>Rolls: <b>${rollCount}</b></span>
-              <span>🎰: <b style="color:#f5cc74">${jackpots}</b></span>
-              <span>✨: <b style="color:#7fffd4">${bigwins}</b></span>
-              <span>💀: <b style="color:#ff8080">${busts}</b></span>
-            </div>
-            ${historyRows ? `<div class="gamble-history" style="max-height:100px">${historyRows}</div>` : ''}
-            <button class="gamble-play-btn" onclick="playAtSelectedCasino()">🎰 Play Slots Here</button>
-          </div>
-        `;
-      }
+      // Casino: shortcut into the interactive slot machine (no passive
+      // rolls — Entertainment is produced at the steady rate like every
+      // other business; the slots are a game you choose to play)
+      const casinoPlayBtn = bt.id === 'casino'
+        ? `<button class="gamble-play-btn" onclick="playAtSelectedCasino()">🎰 Play Slots Here</button>`
+        : '';
 
       const isMil = !!bt.military;
       return `
@@ -2973,15 +3763,17 @@ function openPlotModal(plot) {
             <div class="biz-icon">${bt.icon}</div>
             <div class="biz-info">
               <div class="biz-name">${isMil ? '<span class="mil-badge">MILITARY</span>' : ''}${bt.name} <span style="color:#9bb4bd;font-size:11px">→ ${mat.icon} ${mat.name}</span></div>
-              <div class="biz-income" style="font-size:11px">${bt.id === 'casino'
-                ? `🎲 Volatile base ${baseRate.toFixed(1)}/s × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b>`
-                : (mat.military
-                  ? `+${effectiveRate.toFixed(1)} ${mat.icon}/s to your army`
-                  : `+${effectiveRate.toFixed(1)} ${mat.icon}/s · $${Math.round(effectiveRate * price).toLocaleString()}/s`)
+              <div class="biz-income" style="font-size:11px">${mat.military
+                ? (mat.id === 'troops'
+                    ? `+${effectiveRate.toFixed(1)} ${mat.icon}/s to your army · ${troopCapacity() > 0
+                      ? `housing ${Math.floor(STATE.inventory.troops || 0).toLocaleString()} / ${troopCapacity().toLocaleString()}`
+                      : 'no housing — build a Barracks to train troops'}`
+                    : `+${effectiveRate.toFixed(1)} ${mat.icon}/s to your army`)
+                : `+${effectiveRate.toFixed(1)} ${mat.icon}/s · $${Math.round(effectiveRate * price).toLocaleString()}/s`
               }</div>
             </div>
           </div>
-          ${gamblingPanel}
+          ${casinoPlayBtn}
           <button class="btn demolish" style="margin-top:6px;padding:7px;font-size:11px" onclick="demolishBusiness(${idx})">Demolish ${bt.name}</button>
         </div>
       `;
@@ -3040,9 +3832,19 @@ function openPlotModal(plot) {
     `;
   }
 
-  // War panel — plots held by another commander can be taken by force
+  // War panel — plots held by another commander can be taken by force.
+  // Peace rule: clan-mates and allies are UNTOUCHABLE — their card shows
+  // a protection banner instead of an invasion panel.
+  const protectedRel = (ownedByOther && CURRENT_USER) ? clanRelationTo(ownerName) : null;
   let warPanel = '';
-  if (ownedByOther) {
+  if (ownedByOther && protectedRel) {
+    warPanel = `
+      <div class="war-panel">
+        <div class="war-title">🛡 Protected by your ${protectedRel === 'clan' ? 'clan' : 'alliance'}</div>
+        <div class="war-hint">${clEsc(ownerName)} fights on your side — the pact forbids attacking clan-mates and allies.</div>
+      </div>
+    `;
+  } else if (ownedByOther) {
     const kind = warKind(plot);
     const kIcon = warKindIcon(kind);
     const defender = getDefenderForce(ownerName, kind);
@@ -3059,17 +3861,17 @@ function openPlotModal(plot) {
         <div class="war-row">Your forces: <b>⚔️ ${myTroops.toLocaleString()}</b> · <b>⚓ ${myShips.toLocaleString()}</b> · <b>✈️ ${myPlanes.toLocaleString()}</b>${myPlanes > 0 ? ` <span style="color:#7fffd4">(air support +${Math.round(airBonus(myPlanes) * 100)}%)</span>` : ''}</div>
         ${myForce > 0 ? `
           <div class="war-commit">
-            <span>Commit ${kind === 'ships' ? 'ships' : 'troops'}</span>
+            <span>Deploy ${kind === 'ships' ? 'ships' : 'troops'}</span>
             <input type="number" id="war-commit-input" min="1" max="${myForce}" value="${Math.max(1, Math.floor(myForce / 2))}" oninput="updateWarEstimate()">
             <button class="war-chip" onclick="setWarCommit(0.25)">25%</button>
             <button class="war-chip" onclick="setWarCommit(0.5)">½</button>
             <button class="war-chip" onclick="setWarCommit(1)">ALL</button>
           </div>
           <div class="war-estimate" id="war-estimate"></div>
-          <button class="war-attack" id="war-attack-btn" onclick="attackPlot()">${kIcon} ATTACK</button>
+          <button class="war-attack" id="war-attack-btn" onclick="attackPlot()">${kIcon} DEPLOY</button>
         ` : `<div class="war-hint">${kind === 'ships'
-          ? 'Build a Naval Yard on a coast or ocean plot to train ⚓ ships for sea invasions.'
-          : 'Build Barracks, train ⚔️ troops, and come back to take this plot by force.'}</div>`}
+          ? 'Build a Naval Yard ($180,000) on a coast or ocean plot to train ⚓ ships for sea invasions.'
+          : 'Build Barracks ($120,000) on one of your plots — each houses 500 ⚔️ troops you can deploy here to take this land.'}</div>`}
         <div id="war-result"></div>
       </div>
     `;
@@ -3087,10 +3889,10 @@ function openPlotModal(plot) {
       <span class="meta-chip">Capacity <b>${plot.userData.maxBusinesses || 1}</b></span>
     </div>
     <div class="desc">${ownedByOther
-      ? `This parcel is <b>claimed by ${ownerName}</b> and cannot be purchased. But where money fails, <b>force</b> prevails — train an army and take it.`
-      : `An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned
-        ? 'You hold the deed to this land. Build a business to produce materials for sale at the Market.'
-        : (borderLocked
+      ? (protectedRel
+        ? `This parcel is <b>claimed by ${ownerName}${clanTagHtml(ownerName)}</b> — a sworn ${protectedRel === 'clan' ? 'clan-mate' : 'ally'} who fights on your side.`
+        : `This parcel is <b>claimed by ${ownerName}${clanTagHtml(ownerName)}</b> and cannot be purchased. But where money fails, <b>force</b> prevails — train an army and take it.`)
+      : `An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Build a business to produce materials for sale at the Market.' : (borderLocked
           ? 'This parcel doesn\'t touch your territory — <b>new plots must border land you already own</b>, so your empire grows as one connected realm.'
           : (STATE.owned.size === 0
             ? 'Founding parcel — a commander\'s <b>first plot</b> may be claimed anywhere on Earth. Acquire this land to found your empire.'
@@ -3098,7 +3900,7 @@ function openPlotModal(plot) {
     }</div>
     <div class="price-row">
       <span class="price-label">${ownedByOther ? 'Owner' : (owned ? ((plot.userData.businesses && plot.userData.businesses.length > 0) ? `Producing (${plot.userData.businesses.length})` : 'Owned — Build Ready') : 'Asking Price')}</span>
-      <span class="price-value" style="${ownedByOther ? 'font-size:20px;color:#9a6aaa' : ''}">${ownedByOther ? ownerName : (owned ? ((plot.userData.businesses && plot.userData.businesses.length > 0) ? 'Active Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString())}<small>${ownedByOther || owned ? '' : ' USD'}</small></span>
+      <span class="price-value" style="${ownedByOther ? 'font-size:20px;color:#9a6aaa' : ''}">${ownedByOther ? ownerName + clanTagHtml(ownerName) : (owned ? ((plot.userData.businesses && plot.userData.businesses.length > 0) ? 'Active Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString())}<small>${ownedByOther || owned ? '' : ' USD'}</small></span>
     </div>
     ${businessPanel}
     ${warPanel}
@@ -3135,6 +3937,14 @@ function canBuyPlot(p) {
   if (STATE.owned.size === 0) return { ok: true, firstPlot: true };
   return plotBordersOwned(p) ? { ok: true } : { ok: false };
 }
+
+// Debug/QA helper: open a plot card straight from its plot id (used by
+// automated tests; harmless in normal play — same as clicking the plot)
+window.openPlotById = function(id) {
+  const p = STATE.plots.find(p => p.userData.id === id);
+  if (p) openPlotModal(p);
+  return !!p;
+};
 
 window.buySelectedPlot = function() {
   const p = STATE.selectedPlot;
@@ -3322,24 +4132,41 @@ window.openMarketModal = function() {
     const hasStock = stock > 0.01;
     const pctVsBase = ((price / m.basePrice - 1) * 100).toFixed(0);
     const pctSign = pctVsBase >= 0 ? '+' : '';
+    // Sell-amount strip: defaults to the full stock (one click still sells
+    // everything) but the commander can dial in any portion — type a number,
+    // use the − / + steppers, or hit the 25% / 50% / Max quick-fills. The
+    // Sell button previews the exact revenue for the chosen amount.
+    const sellCtrl = hasStock ? `
+      <div class="mat-sell-ctrl">
+        <button class="amt-btn" title="One less" onclick="nudgeSellAmount('${m.id}',-1)">−</button>
+        <input class="amt-input" id="sell-amt-${m.id}" type="number" min="0" step="any" inputmode="decimal"
+               value="${fmtQty(stock)}" title="Amount to sell (up to ${fmtQty(stock)})" oninput="updateSellPreview('${m.id}')">
+        <button class="amt-btn" title="One more" onclick="nudgeSellAmount('${m.id}',1)">+</button>
+        <button class="amt-chip" onclick="setSellPct('${m.id}',0.25)">25%</button>
+        <button class="amt-chip" onclick="setSellPct('${m.id}',0.5)">50%</button>
+        <button class="amt-chip" onclick="setSellPct('${m.id}',1)">Max</button>
+        <button class="mat-sell" id="sell-btn-${m.id}" onclick="sellMaterial('${m.id}')">Sell $${Math.round(stockValue).toLocaleString()}</button>
+      </div>
+    ` : '';
     return `
       <div class="mat-row">
-        <div class="mat-icon">${m.icon}</div>
-        <div class="mat-info">
-          <div class="mat-name">${m.name}</div>
-          <div class="mat-meta">Base $${m.basePrice} · ${pctSign}${pctVsBase}%</div>
+        <div class="mat-main">
+          <div class="mat-icon">${m.icon}</div>
+          <div class="mat-info">
+            <div class="mat-name">${m.name}</div>
+            <div class="mat-meta">Base $${m.basePrice} · ${pctSign}${pctVsBase}%</div>
+          </div>
+          <div>
+            <div class="mat-price">$${Math.round(price).toLocaleString()}</div>
+            <div class="mat-trend ${trendClass}">${trendIcon} ${trend}</div>
+          </div>
+          <div>
+            <div class="mat-stock">${hasStock ? stock.toFixed(1) : '—'}</div>
+            ${hasStock ? `<div class="mat-stock" style="color:#f5cc74">$${Math.round(stockValue).toLocaleString()}</div>` : ''}
+          </div>
+          ${hasStock ? '' : '<button class="mat-sell" disabled>Empty</button>'}
         </div>
-        <div>
-          <div class="mat-price">$${Math.round(price).toLocaleString()}</div>
-          <div class="mat-trend ${trendClass}">${trendIcon} ${trend}</div>
-        </div>
-        <div>
-          <div class="mat-stock">${hasStock ? stock.toFixed(1) : '—'}</div>
-          ${hasStock ? `<div class="mat-stock" style="color:#f5cc74">$${Math.round(stockValue).toLocaleString()}</div>` : ''}
-        </div>
-        <button class="mat-sell" ${hasStock ? '' : 'disabled'} onclick="sellMaterial('${m.id}')">
-          ${hasStock ? 'Sell' : 'Empty'}
-        </button>
+        ${sellCtrl}
       </div>
     `;
   }).join('');
@@ -3351,7 +4178,7 @@ window.openMarketModal = function() {
       Inventory value: <b>$${Math.round(invValue).toLocaleString()}</b> ·
       Next price update in: <b class="market-countdown">${countdown}</b>
     </div>
-    <div class="biz-hint" style="margin-bottom:14px">Prices fluctuate every 5 minutes. Sell when prices are high for maximum profit.</div>
+    <div class="biz-hint" style="margin-bottom:14px">Set exactly how much of each material to sell — type an amount, tap − / +, or use the quick chips. Prices fluctuate every 15 minutes; sell when they're high for maximum profit.</div>
     ${rows}
     <div class="market-actions">
       <button class="btn" onclick="closeMarketModal()">Close</button>
@@ -3365,18 +4192,73 @@ window.closeMarketModal = function() {
   document.getElementById('market-modal').classList.remove('show');
 };
 
+// Format a sell quantity for the amount input — trims float dust to 1 decimal
+function fmtQty(v) {
+  return String(+Number(v).toFixed(1));
+}
+
+// Clamp a requested sell quantity to what's actually in storage
+function clampSellQty(qty, stock) {
+  if (!isFinite(qty) || qty <= 0) return 0;
+  return Math.min(qty, stock);
+}
+
+// Live revenue preview — keeps the Sell button label in sync with the amount
+window.updateSellPreview = function(materialId) {
+  const inp = document.getElementById('sell-amt-' + materialId);
+  const btn = document.getElementById('sell-btn-' + materialId);
+  if (!inp || !btn) return;
+  const stock = STATE.inventory[materialId] || 0;
+  const qty = clampSellQty(parseFloat(inp.value), stock);
+  btn.textContent = qty > 0
+    ? 'Sell $' + Math.floor(qty * STATE.marketPrices[materialId]).toLocaleString()
+    : 'Sell';
+};
+
+// Quick-fill chips: put 25% / 50% / Max of the current stock into the input
+window.setSellPct = function(materialId, pct) {
+  const inp = document.getElementById('sell-amt-' + materialId);
+  if (!inp) return;
+  const stock = STATE.inventory[materialId] || 0;
+  const qty = pct >= 1 ? stock : Math.floor(stock * pct * 10) / 10;
+  inp.value = fmtQty(qty);
+  updateSellPreview(materialId);
+};
+
+// − / + steppers: adjust the amount by one unit, clamped to storage
+window.nudgeSellAmount = function(materialId, delta) {
+  const inp = document.getElementById('sell-amt-' + materialId);
+  if (!inp) return;
+  const stock = STATE.inventory[materialId] || 0;
+  const cur = parseFloat(inp.value);
+  const qty = clampSellQty((isFinite(cur) ? cur : 0) + delta, stock);
+  inp.value = fmtQty(qty);
+  updateSellPreview(materialId);
+};
+
 window.sellMaterial = function(materialId) {
   const m = getMaterial(materialId);
   if (!m) return;
-  const qty = STATE.inventory[materialId] || 0;
-  if (qty <= 0) return;
+  const stock = STATE.inventory[materialId] || 0;
+  if (stock <= 0) return;
+  // Sell exactly the amount chosen in the input (defaults to the full stock,
+  // so the single-click behaviour is unchanged); anything over stock is
+  // clamped, and zero/negative input is rejected with a hint.
+  const inp = document.getElementById('sell-amt-' + materialId);
+  const requested = inp ? parseFloat(inp.value) : stock;
+  const qty = clampSellQty(requested, stock);
+  if (qty <= 0) { showToast('Enter an amount to sell', false); return; }
   const price = STATE.marketPrices[materialId];
   const revenue = Math.floor(qty * price);
+  const remaining = stock - qty;
+  STATE.inventory[materialId] = remaining < 0.01 ? 0 : remaining;
   STATE.money += revenue;
-  STATE.inventory[materialId] = 0;
   updateHUD();
   openMarketModal();  // refresh to show updated stock
-  showToast(`Sold ${qty.toFixed(1)} ${m.icon} ${m.name} for $${revenue.toLocaleString()}`, true);
+  const left = STATE.inventory[materialId] > 0
+    ? ' · ' + fmtQty(STATE.inventory[materialId]) + ' left'
+    : '';
+  showToast(`Sold ${fmtQty(qty)} ${m.icon} ${m.name} for $${revenue.toLocaleString()}${left}`, true);
   saveGame();
 };
 
@@ -3412,13 +4294,20 @@ window.sellAllMaterials = function() {
 // ====================================================================
 // INTERACTIVE CASINO — slot machine minigame for owned casinos
 // ====================================================================
-// Visit any casino you own, place a bet, and spin the reels. Uses the
-// same paytable as the passive casino rolls (jackpot 10×, big win 3×,
-// push 1×, bust 0×). Every casino you own beyond the first trims the
-// bust chance (up to −18%), rewarding casino empires without breaking
-// the economy — expected return stays near break-even.
+// Visit any casino you own, place a bet, and spin the reels. Paytable:
+// jackpot 10×, big win 3×, push 1× (bet returned), bust 0×. Every
+// casino you own beyond the first trims the bust chance (up to −18%),
+// rewarding casino empires without breaking the economy — expected
+// return stays near break-even. This is the ONLY gambling in the game:
+// casino buildings themselves produce Entertainment at a steady rate.
 const SLOT_SYMBOLS = ['🍒','🍋','⭐','🔔','7️⃣','💎'];
 const SLOT_BIG_TRIPLE = ['7️⃣','🔔','⭐'];
+const SLOT_OUTCOMES = [
+  { id: 'jackpot', label: '🎰 JACKPOT!',  multiplier: 10,  color: '#f5cc74' },
+  { id: 'bigwin',  label: '✨ Big Win',   multiplier: 3,   color: '#7fffd4' },
+  { id: 'normal',  label: '🎲 Push',      multiplier: 1,   color: '#cbd7dc' },
+  { id: 'bust',    label: '💀 Bust',      multiplier: 0,   color: '#ff8080' },
+];
 let gamblePlot = null;          // currently selected casino plot
 let gambleBet = 5000;
 let gambleSpinning = false;
@@ -3591,7 +4480,7 @@ window.spinSlots = function() {
 
   const outcomeId = pickSlotOutcome();
   const finalSyms = symbolsForOutcome(outcomeId);
-  const outcome = CASINO_OUTCOMES.find(o => o.id === outcomeId);
+  const outcome = SLOT_OUTCOMES.find(o => o.id === outcomeId);
   const reels = [0, 1, 2].map(i => document.getElementById('slot-reel-' + i));
   const spinBtn = document.getElementById('slot-spin-btn');
   const resultEl = document.getElementById('slot-result');
@@ -3722,6 +4611,17 @@ window.setWarCommit = function(frac) {
 window.attackPlot = function() {
   const p = STATE.selectedPlot;
   if (!p || !p.userData.ownedByOther) return;
+  // Peace rule — clan-mates and allies are untouchable. Checked before
+  // any force is committed so a pact can never be betrayed in the heat
+  // of battle (the UI hides the war panel too, but never trust the UI).
+  const relNow = p.userData.ownerName ? clanRelationTo(p.userData.ownerName) : null;
+  if (relNow) {
+    const tag = clanTagOf(p.userData.ownerName);
+    showToast(relNow === 'clan'
+      ? `🛡 ${p.userData.ownerName} is in your clan — you fight together, not each other.`
+      : `🤝 [${tag}] is bound by your alliance — you cannot attack them.`, false);
+    return;
+  }
   // Sea plots are invaded with ships, land plots with troops
   const kind = warKind(p);
   const kIcon = warKindIcon(kind);
@@ -3797,9 +4697,17 @@ window.attackPlot = function() {
 };
 
 // ====================================================================
-// ADMIN — shared-world administration, visible only to the owner
-// account (ADMIN_ACCOUNT) from the menu screen. Edits go straight to
-// the cloud with fresh timestamps so every device converges.
+// ADMIN — shared-world administration, usable ONLY by the owner
+// account (ADMIN_ACCOUNT) from the 👑 Admin button on the HOME (menu)
+// screen right after logging in. The button is hidden for everyone
+// else and never shown on the login screen or inside the world:
+// entering the world force-closes any admin UI. No extra password is
+// needed at the panel — logging in as the owner already proved it.
+// Every mutation is stamped with `adminStamp` (a world-owner
+// decision) and written through to this device's localStorage mirror,
+// so no device's 10s autosave can ever stomp it — devices adopt owner
+// decisions via the merge rule in pullAndMerge. Deletions leave
+// tombstones.
 // ====================================================================
 const ADMIN_ACCOUNT = 'kingkanye26';
 const STARTING_MONEY = 100000;
@@ -3827,41 +4735,183 @@ async function adminDeleteRow(key) {
 }
 function adminLog(msg, ok) {
   const el = document.getElementById('admin-log');
-  if (el) el.innerHTML = '<span style="color:' + (ok ? '#7fffd4' : '#ff8080') + '">' + msg + '</span>';
+  if (el) {
+    el.classList.remove('ok', 'err');
+    if (ok === true) el.classList.add('ok');
+    else if (ok === false) el.classList.add('err');
+    const txt = document.getElementById('admin-log-text');
+    if (txt) txt.textContent = msg;
+  }
+}
+
+// Stamp + persist an admin-edited save to EVERY layer: cloud (caller
+// upserts), this device's localStorage mirror, and the live STATE when
+// the owner edits their own running game.
+function adminApplyLocal(name, s) {
+  // ALWAYS bump the stamp. The save this panel edits is the cloud
+  // snapshot, which already carries the PREVIOUS admin edit's stamp —
+  // reusing it (`|| Date.now()`) made devices think they already had
+  // this decision, so their newer-savedAt autosaves pushed the old
+  // values right back (admin resets "reverting"). Monotonic even for
+  // repeat edits landing in the same millisecond.
+  s.adminStamp = Math.max(Date.now(), (parseInt(s.adminStamp, 10) || 0) + 1);
+  s.savedAt = s.adminStamp;
+  try {
+    if (localStorage.getItem(SAVE_PREFIX + name)) {
+      localStorage.setItem(SAVE_PREFIX + name, JSON.stringify(s));
+    }
+  } catch (e) {}
+  CloudSync.noteAdminStamp(name, s.adminStamp);
+  if (name === CURRENT_USER && typeof gameInitialized !== 'undefined' && gameInitialized) {
+    if (typeof s.money === 'number') STATE.money = s.money;
+    if (s.inventory) STATE.inventory = s.inventory;
+    updateHUD();
+  }
+}
+
+// Rewrite the shared claims map as a world-owner decision: cloud row +
+// a fresh claims stamp so every device adopts it wholesale instead of
+// union-merging stale local claims back in.
+async function adminWriteClaims(newClaims) {
+  adminWorld.claims = newClaims;
+  const t = Date.now();
+  await adminUpsertRow('openworld_claims', newClaims);
+  await adminUpsertRow('openworld_claims_stamp', t);
+  CloudSync.noteClaimStamp(t);
+  try { localStorage.setItem(CLAIMS_KEY, JSON.stringify(newClaims)); } catch (e) {}
+  try { localStorage.setItem('openworld_claims_stamp', String(t)); } catch (e) {}
 }
 
 window.openAdmin = function() {
   if (CURRENT_USER !== ADMIN_ACCOUNT) { showToast('Admin only', false); return; }
   if (CloudSync.status() !== 'cloud') { showToast('Online multiplayer is not configured', false); return; }
-  renderAdmin();
+  // Every single open starts at the password lock — even mid-session,
+  // even right after unlocking. Closing the panel re-arms it.
+  renderAdminLock();
   document.getElementById('admin-modal').classList.add('show');
-  adminRefresh();
+  const inp = document.getElementById('admin-pass');
+  if (inp) setTimeout(() => inp.focus(), 60);
 };
 window.closeAdmin = function() {
   document.getElementById('admin-modal').classList.remove('show');
 };
 
+// The "Verification required" screen shown inside the admin card before
+// the control center itself is revealed.
+function renderAdminLock() {
+  const card = document.getElementById('admin-card');
+  card.innerHTML = `
+    <div class="admin-head">
+      <div class="admin-crown">👑</div>
+      <div class="admin-head-text">
+        <div class="admin-eyebrow">World Owner · Control Center</div>
+        <div class="admin-title">Admin — Shared World</div>
+        <div class="admin-owner-chip">🔐 ${ADMIN_ACCOUNT}</div>
+      </div>
+      <button class="admin-close-x" onclick="closeAdmin()" title="Close">✕</button>
+    </div>
+    <div class="admin-body">
+      <div class="admin-lock" id="admin-lock">
+        <div class="admin-lock-icon">🔒</div>
+        <div class="admin-lock-title">Verification required</div>
+        <div class="admin-lock-sub">Enter your password to open the control center.<br>You're asked every time the panel is opened.</div>
+        <input class="admin-lock-input" id="admin-pass" type="password" placeholder="Owner password" autocomplete="off"
+          onkeydown="if(event.key==='Enter')adminUnlock()">
+        <div class="admin-lock-err" id="admin-lock-err"></div>
+        <button class="admin-lock-btn" onclick="adminUnlock()">🔓 Unlock Control Center</button>
+        <div class="admin-lock-hint">${ADMIN_ACCOUNT} · owner session</div>
+      </div>
+    </div>`;
+}
+
+// Check the owner's password (same DJB2 hash the login form uses against
+// the locally stored account save). Wrong password never reveals the panel.
+window.adminUnlock = function() {
+  const inp = document.getElementById('admin-pass');
+  const err = document.getElementById('admin-lock-err');
+  if (!inp || !err) return;
+  const pwd = inp.value;
+  if (!pwd) { err.textContent = 'Enter your password.'; inp.focus(); return; }
+  const save = getSave(ADMIN_ACCOUNT);
+  if (!save || !save.passwordHash) {
+    err.textContent = 'Owner account data not found on this device.';
+    return;
+  }
+  if (save.passwordHash !== hashPassword(pwd)) {
+    err.textContent = 'Incorrect password.';
+    inp.value = '';
+    inp.focus();
+    const lock = document.getElementById('admin-lock');
+    if (lock) { lock.classList.remove('admin-shake'); void lock.offsetWidth; lock.classList.add('admin-shake'); }
+    return;
+  }
+  // Correct password — swap the lock for the real panel and replay the
+  // card's entrance animation so the unlock feels like an opening.
+  renderAdmin();
+  adminRefresh();
+  const card = document.getElementById('admin-card');
+  card.style.animation = 'none'; void card.offsetHeight; card.style.animation = '';
+  showToast('👑 Welcome back, owner', true);
+};
+
 function renderAdmin() {
   const card = document.getElementById('admin-card');
   card.innerHTML = `
-    <h2>👑 Admin — Shared World</h2>
-    <p class="gamble-sub">Changes sync to every device. Reload after changing your own account to see it live.</p>
-    <div class="admin-topbar">
-      <button class="bet-chip" onclick="adminRefresh()">⟳ Refresh</button>
-      <button class="bet-chip chip-danger" onclick="adminResetAll()">Reset ALL</button>
-      <label class="admin-cb"><input type="checkbox" id="admin-zero-inv"> zero inventories</label>
-      <button class="bet-chip chip-danger" onclick="adminClearClaims()">Clear claims</button>
+    <div class="admin-head">
+      <div class="admin-crown">👑</div>
+      <div class="admin-head-text">
+        <div class="admin-eyebrow">World Owner · Control Center</div>
+        <div class="admin-title">Admin — Shared World</div>
+        <div class="admin-owner-chip">🔐 ${ADMIN_ACCOUNT}</div>
+      </div>
+      <button class="admin-close-x" onclick="closeAdmin()" title="Close">✕</button>
     </div>
-    <table class="admin-table">
-      <thead><tr><th>Account</th><th>Money</th><th>Plots</th><th>Biz</th><th>⚔/⚓/✈</th><th>Actions</th></tr></thead>
-      <tbody id="admin-tbody"></tbody>
-    </table>
-    <div class="admin-log" id="admin-log"></div>
-    <button class="close" onclick="closeAdmin()">CLOSE</button>
+    <div class="admin-body">
+      <div class="admin-stats">
+        <div class="admin-stat"><div class="admin-stat-num" id="admin-stat-accounts">—</div><div class="admin-stat-lbl">Accounts</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" id="admin-stat-treasury">—</div><div class="admin-stat-lbl">Treasury</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" id="admin-stat-plots">—</div><div class="admin-stat-lbl">Plots Owned</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" id="admin-stat-biz">—</div><div class="admin-stat-lbl">Businesses</div></div>
+      </div>
+      <div class="admin-toolbar">
+        <input class="admin-search" id="admin-search" placeholder="🔍  Search accounts..." autocomplete="off" oninput="adminFilter()">
+        <button class="bet-chip" onclick="adminRefresh()" title="Reload from the cloud">⟳ Refresh</button>
+        <div class="admin-danger-wrap">
+          <span class="admin-danger-tag">Danger</span>
+          <button class="bet-chip chip-danger" onclick="adminResetAll()">Reset ALL</button>
+          <label class="admin-cb"><input type="checkbox" id="admin-zero-inv"> zero inventories</label>
+          <button class="bet-chip chip-danger" onclick="adminClearClaims()">Clear claims</button>
+        </div>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Account</th><th>Money</th><th>Plots</th><th>Biz</th><th>Military</th><th>Actions</th></tr></thead>
+          <tbody id="admin-tbody"></tbody>
+        </table>
+      </div>
+      <div class="admin-log" id="admin-log"><span class="admin-log-dot"></span><span id="admin-log-text">Ready.</span></div>
+      <div class="admin-foot">
+        <span class="admin-updated" id="admin-updated"></span>
+        <button class="close" onclick="closeAdmin()">CLOSE</button>
+      </div>
+    </div>
   `;
 }
 
+let adminFilterTerm = '';
+window.adminFilter = function() {
+  const el = document.getElementById('admin-search');
+  adminFilterTerm = (el && el.value ? el.value : '').toLowerCase();
+  adminRenderRows();
+};
+
+function adminAvatarHue(name) {
+  // Reuse the game's DJB2 hash for a stable per-player color
+  return parseInt(hashPassword(name), 16) % 360;
+}
+
 window.adminRefresh = async function() {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   try {
     const rows = await adminFetchRows();
     adminWorld = { profiles: [], saves: {}, claims: {} };
@@ -3874,25 +4924,53 @@ window.adminRefresh = async function() {
       if (!adminWorld.profiles.includes(name)) adminWorld.profiles.push(name);
     }
     adminRenderRows();
+    const up = document.getElementById('admin-updated');
+    if (up) up.textContent = 'SYNCED ' + new Date().toLocaleTimeString();
   } catch (e) { adminLog('Could not load the world: ' + e.message, false); }
 };
 
 function adminRenderRows() {
   const tbody = document.getElementById('admin-tbody');
+  if (!tbody) return;
   const names = Object.keys(adminWorld.saves).sort();
-  if (!names.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:#5d7885">No accounts yet.</td></tr>'; return; }
-  tbody.innerHTML = names.map(name => {
+
+  // World totals (unfiltered — always describe the whole world)
+  let treasury = 0, plots = 0, biz = 0;
+  for (const n of names) {
+    const s = adminWorld.saves[n] || {};
+    treasury += Math.round(s.money || 0);
+    plots += (s.ownedPlotIds || []).length;
+    biz += (s.businesses || []).length;
+  }
+  const setStat = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setStat('admin-stat-accounts', names.length);
+  setStat('admin-stat-treasury', '$' + treasury.toLocaleString());
+  setStat('admin-stat-plots', plots);
+  setStat('admin-stat-biz', biz);
+
+  const shown = adminFilterTerm ? names.filter(n => n.toLowerCase().includes(adminFilterTerm)) : names;
+  if (!shown.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="admin-empty"><span class="big">${names.length ? '🔍' : '🌍'}</span>${names.length ? 'No accounts match “' + adminFilterTerm + '”.' : 'No accounts yet — the world is waiting.'}</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = shown.map(name => {
     const s = adminWorld.saves[name] || {};
     const inv = s.inventory || {};
+    const isOwner = name === ADMIN_ACCOUNT;
+    const hue = adminAvatarHue(name);
+    const mil = (icon, label, v) => `<span class="admin-mil-badge${v > 0 ? ' has' : ''}" title="${label}">${icon} ${Math.floor(v).toLocaleString()}</span>`;
     return `<tr>
-      <td><b>${name}</b></td>
+      <td><div class="admin-who">
+        <div class="admin-avatar" style="background:hsl(${hue},45%,38%)">${name.charAt(0)}</div>
+        <span class="admin-who-name">${name}${isOwner ? '<span class="admin-who-crown" title="World owner">👑</span>' : ''}</span>
+      </div></td>
       <td class="admin-money">$${Math.round(s.money || 0).toLocaleString()}</td>
-      <td>${(s.ownedPlotIds || []).length}</td>
-      <td>${(s.businesses || []).length}</td>
-      <td class="admin-mil">${Math.floor(inv.troops || 0).toLocaleString()} / ${Math.floor(inv.ships || 0).toLocaleString()} / ${Math.floor(inv.planes || 0).toLocaleString()}</td>
+      <td><span class="admin-pill">${(s.ownedPlotIds || []).length}</span></td>
+      <td><span class="admin-pill">${(s.businesses || []).length}</span></td>
+      <td style="white-space:nowrap">${mil('⚔','Troops',inv.troops||0)}${mil('⚓','Ships',inv.ships||0)}${mil('✈','Planes',inv.planes||0)}</td>
       <td><div class="admin-row-actions">
-        <button class="bet-chip" onclick="adminResetOne('${name}')">Reset</button>
-        <button class="bet-chip" onclick="adminZeroInv('${name}')">Zero</button>
+        <button class="bet-chip" onclick="adminResetOne('${name}')" title="Reset to $${STARTING_MONEY.toLocaleString()}, no plots">Reset</button>
+        <button class="bet-chip" onclick="adminZeroInv('${name}')" title="Zero all resources">Zero</button>
         <input type="number" id="adm-money-${name}" placeholder="set $">
         <button class="bet-chip" onclick="adminSetMoney('${name}')">Set $</button>
         <button class="bet-chip chip-danger" onclick="adminDelete('${name}')">Delete</button>
@@ -3902,68 +4980,106 @@ function adminRenderRows() {
 }
 
 window.adminResetOne = async function(name) {
-  if (!confirm('Reset ' + name + ' to $' + STARTING_MONEY.toLocaleString() + ' with no plots and no businesses?')) return;
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
+  if (!confirm('Reset ' + name + ' to $' + STARTING_MONEY.toLocaleString() + ' with no plots and no businesses?' + (name === CURRENT_USER ? ' The page will reload to apply it.' : ''))) return;
   const s = adminWorld.saves[name];
+  if (!s) { adminLog('No save found for ' + name + '.', false); return; }
   s.money = STARTING_MONEY;
   s.ownedPlotIds = [];
   s.businesses = [];
-  s.savedAt = Date.now();
+  adminApplyLocal(name, s);            // stamps + saves + live STATE
   await adminUpsertRow(SAVE_PREFIX + name, s);
+  await adminWriteClaims(Object.fromEntries(Object.entries(adminWorld.claims).filter(([, owner]) => owner !== name)));
+  if (name === CURRENT_USER && gameInitialized) {
+    adminLog('Reset ' + name + ' — reloading to apply...', true);
+    setTimeout(() => location.reload(), 900);
+    return;
+  }
   adminLog('Reset ' + name + '.', true);
   adminRefresh();
 };
 window.adminZeroInv = async function(name) {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   if (!confirm('Zero ALL resources (materials + troops/ships/planes) for ' + name + '?')) return;
-  adminWorld.saves[name].inventory = {};
-  adminWorld.saves[name].savedAt = Date.now();
-  await adminUpsertRow(SAVE_PREFIX + name, adminWorld.saves[name]);
+  const s = adminWorld.saves[name];
+  if (!s) { adminLog('No save found for ' + name + '.', false); return; }
+  s.inventory = {};
+  adminApplyLocal(name, s);
+  await adminUpsertRow(SAVE_PREFIX + name, s);
   adminLog('Inventory zeroed for ' + name + '.', true);
   adminRefresh();
 };
 window.adminSetMoney = async function(name) {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   const input = document.getElementById('adm-money-' + name);
   const v = Math.floor(parseFloat(input.value));
   if (isNaN(v) || v < 0) { adminLog('Enter a valid amount for ' + name + '.', false); return; }
-  adminWorld.saves[name].money = v;
-  adminWorld.saves[name].savedAt = Date.now();
-  await adminUpsertRow(SAVE_PREFIX + name, adminWorld.saves[name]);
+  const s = adminWorld.saves[name];
+  if (!s) { adminLog('No save found for ' + name + '.', false); return; }
+  s.money = v;
+  adminApplyLocal(name, s);
+  await adminUpsertRow(SAVE_PREFIX + name, s);
   adminLog(name + ' set to $' + v.toLocaleString() + '.', true);
   adminRefresh();
 };
 window.adminDelete = async function(name) {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   if (!confirm('DELETE the account "' + name + '" completely? Its plots become unclaimed. This cannot be undone.')) return;
   await adminDeleteRow(SAVE_PREFIX + name);
+  await CloudSync.noteDeletion(name);   // tombstone — no device can resurrect it
+  await adminWriteClaims(Object.fromEntries(Object.entries(adminWorld.claims).filter(([, owner]) => owner !== name)));
   adminWorld.profiles = adminWorld.profiles.filter(p => p !== name);
   delete adminWorld.saves[name];
-  for (const k of Object.keys(adminWorld.claims)) {
-    if (adminWorld.claims[k] === name) delete adminWorld.claims[k];
-  }
   await adminUpsertRow('profiles', adminWorld.profiles);
-  await adminUpsertRow('openworld_claims', adminWorld.claims);
+  // Drop local remnants so this device can't resurrect it either
+  try {
+    localStorage.removeItem(SAVE_PREFIX + name);
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(getProfiles().filter(p => p !== name)));
+  } catch (e) {}
+  rebuildClaims();
+  if (name === CURRENT_USER) {
+    adminLog('Deleted ' + name + ' — reloading...', true);
+    setTimeout(() => location.reload(), 900);
+    return;
+  }
   adminLog('Deleted account ' + name + ' and freed its plots.', true);
   adminRefresh();
 };
 window.adminResetAll = async function() {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   const zeroInv = document.getElementById('admin-zero-inv').checked;
   const names = Object.keys(adminWorld.saves);
   if (!names.length) { adminLog('No accounts to reset.', false); return; }
-  if (!confirm('Reset ALL ' + names.length + ' account(s) to $' + STARTING_MONEY.toLocaleString() + ' with no plots' + (zeroInv ? ' and empty inventories' : '') + '? Every plot becomes unclaimed. This cannot be undone.')) return;
+  if (!confirm('Reset ALL ' + names.length + ' account(s) to $' + STARTING_MONEY.toLocaleString() + ' with no plots' + (zeroInv ? ' and empty inventories' : '') + '? Every plot becomes unclaimed. This cannot be undone.' + (names.includes(CURRENT_USER) && gameInitialized ? ' The page will reload to apply it.' : ''))) return;
   for (const name of names) {
-    adminWorld.saves[name] = Object.assign(adminWorld.saves[name], {
-      money: STARTING_MONEY, ownedPlotIds: [], businesses: [], savedAt: Date.now()
-    });
-    if (zeroInv) adminWorld.saves[name].inventory = {};
-    await adminUpsertRow(SAVE_PREFIX + name, adminWorld.saves[name]);
+    const s = adminWorld.saves[name];
+    s.money = STARTING_MONEY;
+    s.ownedPlotIds = [];
+    s.businesses = [];
+    if (zeroInv) s.inventory = {};
+    adminApplyLocal(name, s);
+    await adminUpsertRow(SAVE_PREFIX + name, s);
   }
-  adminWorld.claims = {};
-  await adminUpsertRow('openworld_claims', adminWorld.claims);
+  await adminWriteClaims({});
   adminLog('Reset ' + names.length + ' account(s): ' + names.join(', '), true);
+  if (names.includes(CURRENT_USER) && gameInitialized) {
+    setTimeout(() => location.reload(), 900);
+    return;
+  }
   adminRefresh();
 };
 window.adminClearClaims = async function() {
-  if (!confirm('Free every claimed plot? Account money/businesses are untouched.')) return;
-  adminWorld.claims = {};
-  await adminUpsertRow('openworld_claims', adminWorld.claims);
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
+  if (!confirm('Free every claimed plot? Money is untouched. Ownership is removed from every save so it cannot come back on its own.')) return;
+  for (const name of Object.keys(adminWorld.saves)) {
+    const s = adminWorld.saves[name];
+    if (s.ownedPlotIds && s.ownedPlotIds.length) {
+      s.ownedPlotIds = [];
+      adminApplyLocal(name, s);
+      await adminUpsertRow(SAVE_PREFIX + name, s);
+    }
+  }
+  await adminWriteClaims({});
   adminLog('All plot claims cleared.', true);
   adminRefresh();
 };
@@ -3981,7 +5097,18 @@ function updateHUD() {
     }
   }
   const armyEl = document.getElementById('army-count');
-  if (armyEl) armyEl.textContent = Math.floor(STATE.inventory.troops || 0).toLocaleString();
+  if (armyEl) {
+    const troops = Math.floor(STATE.inventory.troops || 0);
+    const cap = troopCapacity();
+    armyEl.textContent = troops.toLocaleString() + (cap > 0 ? ' / ' + cap.toLocaleString() : '');
+  }
+  // Clan badge on the HUD button + casino shortcut
+  const clansBtn = document.getElementById('clans-btn');
+  if (clansBtn) {
+    const tag = CURRENT_USER ? clanTagOf(CURRENT_USER) : null;
+    clansBtn.textContent = tag ? '🛡 ' + tag : '🛡 Clans';
+    clansBtn.title = tag ? ('Your clan [' + tag + '] — open Clans & Alliances') : 'Clans & Alliances — team up with other commanders';
+  }
   // Casino shortcut — visible when you own at least one casino
   updateGambleButton();
 }
@@ -4001,18 +5128,22 @@ function tickProduction() {
     for (const entry of businesses) {
       const bt = getBusinessType(entry.type);
       if (!bt) continue;
-      let produced;
-      if (bt.id === 'casino') {
-        // Casino uses gambling roll — volatile production
-        produced = rollCasinoProduction(p, bt, dt);
-      } else {
-        // Steady production with region bonus
-        const regionBonus = getRegionBonus(bt.id, p);
-        produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
-      }
+      // Steady production with region bonus (casinos included — the only
+      // gambling left in the game is the interactive slot machine)
+      const regionBonus = getRegionBonus(bt.id, p);
+      const produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
       if (produced > 0) {
-        STATE.inventory[bt.produces] = (STATE.inventory[bt.produces] || 0) + produced;
-        anyProduced = true;
+        // Troops are capped by barracks housing — training pauses when
+        // every barracks is full (excess troops are never removed)
+        if (bt.produces === 'troops') {
+          const cap = troopCapacity();
+          if (cap > 0) produced = Math.min(produced, Math.max(0, cap - (STATE.inventory.troops || 0)));
+          else produced = 0; // no barracks standing = nowhere to house new troops
+        }
+        if (produced > 0) {
+          STATE.inventory[bt.produces] = (STATE.inventory[bt.produces] || 0) + produced;
+          anyProduced = true;
+        }
       }
     }
   }
@@ -4088,6 +5219,9 @@ function animate() {
     earth.rotation.y += 0.0004;
   }
   controls.update();
+  // Keep the sun glued to the camera: whichever side of the world you are
+  // looking at is always the lit side — no more dark hemisphere.
+  if (sunLight) sunLight.position.copy(camera.position);
   updatePlotVisibility();
   if (now - _lastZoomDom > 100) {
     _lastZoomDom = now;
@@ -4109,6 +5243,8 @@ let gameInitialized = false;
 window.enterGame = function() {
   document.getElementById('menu').classList.add('hidden');
   document.getElementById('game').classList.remove('hidden');
+  // Admin panel lives on the home (menu) screen only — never inside the world.
+  closeAdmin();
   if (!gameInitialized) {
     gameInitialized = true;
     initMarket();  // initialize market prices and inventory to defaults
@@ -4122,6 +5258,10 @@ window.enterGame = function() {
         showToast(`Welcome back, ${CURRENT_USER}!`, true);
       }
     }
+    // Flush admin adoptions that happened at boot (before login) — the
+    // fresh save above already contains them, so the live-sync interval
+    // must not re-apply them as mid-session changes.
+    CloudSync.consumeAdminAdoptions();
     // Apply claim colors AFTER loadGame (so own plots are gold, others' are purple)
     applyClaimColors();
     updateHUD();
@@ -4156,6 +5296,7 @@ window.addEventListener('keydown', (e) => {
     window.closeAdmin();
     window.closeLeaderboard();
     window.closeSettings();
+    window.closeClans();
   }
 });
 </script>
