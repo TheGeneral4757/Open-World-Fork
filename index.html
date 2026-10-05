@@ -912,6 +912,64 @@ const CloudSync = (() => {
     return client ? 'cloud' : 'local';
   }
 
+  // ------------------------------------------------------------------
+  // ADMIN AUTHORITY TRACKING — the world owner (ADMIN_ACCOUNT) edits
+  // accounts/claims straight from the admin panel. Those cloud writes
+  // carry an `adminStamp` (and tombstones for deletions). Devices that
+  // still hold older state must NEVER push over a fresher owner
+  // decision, so every push checks these caches (filled by pullAndMerge).
+  // ------------------------------------------------------------------
+  let adminStamps = {};    // username → newest adminStamp seen in the cloud
+  let claimStamp = 0;      // newest admin claim-stamp seen in the cloud
+  let deletedNames = {};   // username → deletion time (tombstones)
+  const CLAIM_STAMP_KEY = 'openworld_claims_stamp';
+
+  function getLocalClaimStamp() {
+    try { return parseInt(localStorage.getItem(CLAIM_STAMP_KEY) || '0', 10) || 0; }
+    catch (e) { return 0; }
+  }
+  function setLocalClaimStamp(t) {
+    try { localStorage.setItem(CLAIM_STAMP_KEY, String(t)); } catch (e) {}
+  }
+
+  // Can this save be pushed to the cloud, or would it stomp a fresher
+  // owner decision / resurrect a deleted account?
+  function canPushSave(username, save) {
+    if (!save) return false;
+    const t = deletedNames[username] || 0;
+    if (t && t > ((save.created || 0))) return false;                    // deleted (a fresh re-signup is newer than the tombstone)
+    if (((save.adminStamp || 0)) < (adminStamps[username] || 0)) return false; // cloud holds a newer owner edit
+    return true;
+  }
+
+  // Record a stamp written by the admin panel on this device so push
+  // guards stay accurate without waiting for the next pull.
+  function noteAdminStamp(username, stamp) {
+    adminStamps[username] = Math.max(adminStamps[username] || 0, stamp || 0);
+  }
+  function noteClaimStamp(t) {
+    claimStamp = Math.max(claimStamp, t || 0);
+    setLocalClaimStamp(claimStamp);
+  }
+  // Register a deletion (tombstone) in the cloud so other devices drop
+  // the account instead of resurrecting it from local storage.
+  async function noteDeletion(username) {
+    if (!client || !username) return;
+    const t = Date.now();
+    deletedNames[username] = t;
+    try {
+      await uploadRow('openworld_deleted', Object.assign({}, deletedNames));
+    } catch (e) { console.warn('[OpenWorld] Could not write deletion tombstone:', e); }
+  }
+  // Remove a tombstone (used when someone re-signs-up with a deleted name).
+  async function clearTombstone(username) {
+    if (!client || !username || !deletedNames[username]) return;
+    delete deletedNames[username];
+    try {
+      await uploadRow('openworld_deleted', Object.assign({}, deletedNames));
+    } catch (e) { console.warn('[OpenWorld] Could not clear tombstone:', e); }
+  }
+
   async function uploadRow(key, data) {
     const { error } = await client
       .from(TABLE)
@@ -919,11 +977,24 @@ const CloudSync = (() => {
     if (error) throw error;
   }
 
-  // Fire-and-forget: push one player's save to the cloud
-  function pushSave(username) {
+  // Fire-and-forget: push one player's save to the cloud.
+  // Read-before-write: if the cloud currently holds a NEWER owner stamp
+  // that this device hasn't pulled yet (10s autosave vs 30s sync race),
+  // skip the push — the next pull adopts the owner's version instead of
+  // this device clobbering it.
+  async function pushSave(username) {
     if (!client || !username) return;
     const save = getSave(username);
     if (!save) return;
+    if (!canPushSave(username, save)) return;
+    try {
+      const { data } = await client.from(TABLE).select('data').eq('key', SAVE_PREFIX + username).maybeSingle();
+      const cloudStamp = (data && data.data && data.data.adminStamp) || 0;
+      if (cloudStamp > (save.adminStamp || 0)) {
+        adminStamps[username] = Math.max(adminStamps[username] || 0, cloudStamp);
+        return;
+      }
+    } catch (e) { /* cloud unreachable — still attempt the push */ }
     uploadRow(SAVE_PREFIX + username, save)
       .catch(e => console.warn('[OpenWorld] Cloud push failed:', e));
   }
@@ -934,8 +1005,18 @@ const CloudSync = (() => {
       .catch(e => console.warn('[OpenWorld] Cloud push failed:', e));
   }
 
-  function pushClaims() {
+  async function pushClaims() {
     if (!client) return;
+    const localT = getLocalClaimStamp();
+    if (localT < claimStamp) return;   // a fresher admin claims decision is in the cloud
+    try {
+      const { data } = await client.from(TABLE).select('data').eq('key', CLAIM_STAMP_KEY).maybeSingle();
+      const cloudT = parseInt((data && data.data) || 0, 10) || 0;
+      if (cloudT > localT) {
+        claimStamp = Math.max(claimStamp, cloudT);
+        return;   // don't clobber a newer owner claims decision
+      }
+    } catch (e) { /* cloud unreachable — still attempt the push */ }
     uploadRow(CLAIMS_KEY, getClaims())
       .catch(e => console.warn('[OpenWorld] Cloud push failed:', e));
   }
@@ -945,11 +1026,19 @@ const CloudSync = (() => {
     client.from(TABLE).delete().eq('key', SAVE_PREFIX + username)
       .then(({ error }) => { if (error) console.warn('[OpenWorld] Cloud delete failed:', error); })
       .catch(e => console.warn('[OpenWorld] Cloud delete failed:', e));
+    noteDeletion(username);   // tombstone so other devices drop it too
   }
 
-  // One-time merge on boot: pull everything from the cloud into this
-  // browser, and push any local-only / newer accounts back up (so old
-  // accounts migrate to the cloud automatically on first visit).
+  // Saves the pull adopted because the world owner edited them while
+  // this device was running — the sync interval consumes this list to
+  // live-apply money/inventory and tell the player what happened.
+  let _adminAdopted = [];
+  function consumeAdminAdoptions() {
+    const list = _adminAdopted;
+    _adminAdopted = [];
+    return list;
+  }
+
   async function pullAndMerge() {
     if (!client) return false;
     try {
@@ -959,44 +1048,86 @@ const CloudSync = (() => {
       (rows || []).forEach(r => { cloud[r.key] = r.data; });
       let changed = false;
 
-      // 1) Profiles: union of local + cloud
+      // 0) Admin control rows: deletion tombstones + claims stamp
+      deletedNames = (cloud['openworld_deleted'] && typeof cloud['openworld_deleted'] === 'object')
+        ? cloud['openworld_deleted'] : {};
+      const cloudClaimStamp = parseInt(cloud['openworld_claims_stamp'] || 0, 10) || 0;
+      if (cloudClaimStamp > claimStamp) claimStamp = cloudClaimStamp;
+
+      // 1) Profiles: union of local + cloud, minus freshly-deleted accounts
       const cloudProfiles = Array.isArray(cloud['profiles']) ? cloud['profiles'] : [];
       const localProfiles = getProfiles();
-      const mergedProfiles = Array.from(new Set([...localProfiles, ...cloudProfiles]));
-      if (mergedProfiles.some(p => !localProfiles.includes(p))) {
+      const mergedProfiles = Array.from(new Set([...localProfiles, ...cloudProfiles]))
+        .filter(p => {
+          const t = deletedNames[p] || 0;
+          if (!t) return true;
+          const s = getSave(p);
+          // Keep the name only for accounts (re)created after the deletion
+          return s && (s.created || 0) > t;
+        });
+      if (JSON.stringify(mergedProfiles) !== JSON.stringify(localProfiles)) {
         localStorage.setItem(PROFILES_KEY, JSON.stringify(mergedProfiles));
         changed = true;
       }
 
-      // 2) Saves: newest savedAt wins; local-only or newer-local → push up
+      // 1b) Purge local remnants of owner-deleted accounts so they can't
+      //     be logged into (or pushed back up) from a stale device.
+      for (const [delName, delTime] of Object.entries(deletedNames)) {
+        const s = getSave(delName);
+        if (s && !((s.created || 0) > delTime)) {
+          localStorage.removeItem(SAVE_PREFIX + delName);
+          changed = true;
+        }
+      }
+
+      // 2) Saves — merge rule:
+      //    • a cloud save with a NEWER adminStamp always wins (the world
+      //      owner's decision beats any autosave), regardless of savedAt;
+      //    • otherwise the newest savedAt wins (original behavior);
+      //    • tombstoned saves are dropped, never pushed.
       const toPush = [];
       for (const p of mergedProfiles) {
         const local = getSave(p);
         const cloudSave = cloud[SAVE_PREFIX + p] || null;
-        if (cloudSave && (!local || (cloudSave.savedAt || 0) > (local.savedAt || 0))) {
+        const aLocal = (local && local.adminStamp) || 0;
+        const aCloud = (cloudSave && cloudSave.adminStamp) || 0;
+        if (cloudSave && (aCloud > aLocal || (aCloud === aLocal && (!local || (cloudSave.savedAt || 0) > (local.savedAt || 0))))) {
           try {
             localStorage.setItem(SAVE_PREFIX + p, JSON.stringify(cloudSave));
+            adminStamps[p] = Math.max(adminStamps[p] || 0, aCloud);
             changed = true;
+            if (aCloud > aLocal && aCloud > 0) _adminAdopted.push(p);
           } catch (e) { console.warn('[OpenWorld] Failed to store cloud save:', e); }
-        } else if (local && (!cloudSave || (local.savedAt || 0) > (cloudSave.savedAt || 0))) {
-          toPush.push(local);
+        } else if (local && (!cloudSave || (local.savedAt || 0) > (cloudSave.savedAt || 0) || aLocal > aCloud)) {
+          if (canPushSave(p, local)) toPush.push(local);
         }
       }
 
-      // 3) Claims: union, cloud wins conflicts
-      const cloudClaims = cloud[CLAIMS_KEY] || {};
-      const localClaims = getClaims();
-      const mergedClaims = Object.assign({}, localClaims, cloudClaims);
-      if (JSON.stringify(mergedClaims) !== JSON.stringify(localClaims)) {
+      // 3) Claims: if the owner re-stamped claims, adopt them wholesale;
+      //    otherwise union as before, cloud wins conflicts
+      let mergedClaims = null;
+      const localStamp = getLocalClaimStamp();
+      const cloudClaimsRaw = cloud[CLAIMS_KEY] || {};
+      if (claimStamp > localStamp) {
+        // Owner cleared/rewrote claims — their version is authoritative
+        mergedClaims = cloudClaimsRaw;
+        setLocalClaimStamp(claimStamp);
         localStorage.setItem(CLAIMS_KEY, JSON.stringify(mergedClaims));
         changed = true;
+      } else {
+        const localClaims = getClaims();
+        mergedClaims = Object.assign({}, localClaims, cloudClaimsRaw);
+        if (JSON.stringify(mergedClaims) !== JSON.stringify(localClaims)) {
+          localStorage.setItem(CLAIMS_KEY, JSON.stringify(mergedClaims));
+          changed = true;
+        }
       }
 
       // Push merged state back up so every device converges
       if (JSON.stringify(mergedProfiles) !== JSON.stringify(cloudProfiles)) {
         await uploadRow('profiles', mergedProfiles);
       }
-      if (JSON.stringify(mergedClaims) !== JSON.stringify(cloudClaims)) {
+      if (getLocalClaimStamp() >= claimStamp && JSON.stringify(mergedClaims) !== JSON.stringify(cloudClaimsRaw)) {
         await uploadRow(CLAIMS_KEY, mergedClaims);
       }
       for (const s of toPush) {
@@ -1010,12 +1141,19 @@ const CloudSync = (() => {
     }
   }
 
-  return { status, pushSave, pushProfiles, pushClaims, deleteSave, pullAndMerge };
+  return { status, pushSave, pushProfiles, pushClaims, deleteSave, pullAndMerge,
+           noteAdminStamp, noteClaimStamp, noteDeletion, clearTombstone,
+           consumeAdminAdoptions, getLocalClaimStamp };
 })();
 
 // --- Cloud mirror hooks: after every local change, sync to the cloud ---
+// _freezeSaves: set when the world owner edits THIS player's account
+// while the game is running — the adopted admin save in localStorage is
+// authoritative, so local saving pauses until the page reloads.
+let _freezeSaves = false;
 const _saveGame = saveGame;
 saveGame = function() {
+  if (_freezeSaves) return;
   _saveGame();
   if (CURRENT_USER) CloudSync.pushSave(CURRENT_USER);
 };
@@ -1208,6 +1346,12 @@ function saveGame() {
     username: CURRENT_USER,
     savedAt: Date.now(),
     passwordHash: existing ? existing.passwordHash : hashPassword('default'),
+    // `created` = account creation time — preserved across saves so admin
+    // deletion tombstones can tell stale devices from fresh re-signups.
+    created: existing ? existing.created : Date.now(),
+    // `adminStamp` = last world-owner edit applied to this save (see the
+    // ADMIN section). Preserved so every device converges on it.
+    adminStamp: existing ? existing.adminStamp : undefined,
     money: STATE.money,
     ownedPlotIds: Array.from(STATE.owned),
     // Map of plotId → array of business types (plots can hold multiple)
@@ -1455,6 +1599,7 @@ window.loginSubmit = function() {
       version: 1,
       username: name,
       savedAt: Date.now(),
+      created: Date.now(),
       passwordHash: hashPassword(pwd),
       money: 100_000,
       ownedPlotIds: [],
@@ -1472,8 +1617,10 @@ window.loginSubmit = function() {
       return;
     }
     addProfile(name);
-    // Mirror the brand-new account to the cloud immediately (if enabled)
+    // Mirror the brand-new account to the cloud immediately (if enabled).
+    // Also lift any deletion tombstone so the fresh account can sync.
     CloudSync.pushSave(name);
+    CloudSync.clearTombstone(name);
   } else {
     // === LOGIN ===
     const existingSave = getSave(name);
@@ -1724,6 +1871,20 @@ setInterval(async () => {
   try {
     const changed = await CloudSync.pullAndMerge();
     if (changed) applyCloudWorldUpdates();
+    // The world owner edited accounts while we were online — adopt ours
+    const adopted = CloudSync.consumeAdminAdoptions();
+    if (adopted.length && adopted.includes(CURRENT_USER)) {
+      if (!_freezeSaves) {
+        const s = getSave(CURRENT_USER);
+        if (s) {
+          STATE.money = (typeof s.money === 'number') ? s.money : STATE.money;
+          STATE.inventory = s.inventory || STATE.inventory;
+          updateHUD();
+        }
+        _freezeSaves = true;   // adopted save is authoritative until reload
+      }
+      showToast('👑 The world owner adjusted your account — log out and back in to apply everything.', false);
+    }
   } catch (e) { /* already logged inside pullAndMerge */ }
   _cloudPullBusy = false;
 }, 30000);
@@ -3723,9 +3884,12 @@ window.attackPlot = function() {
 };
 
 // ====================================================================
-// ADMIN — shared-world administration, visible only to the owner
-// account (ADMIN_ACCOUNT) from the menu screen. Edits go straight to
-// the cloud with fresh timestamps so every device converges.
+// ADMIN — shared-world administration, usable ONLY by the owner
+// account (ADMIN_ACCOUNT) from the menu screen. Every mutation is
+// stamped with `adminStamp` (a world-owner decision) and written
+// through to this device's localStorage mirror, so no device's 10s
+// autosave can ever stomp it — devices adopt owner decisions via the
+// merge rule in pullAndMerge. Deletions leave tombstones.
 // ====================================================================
 const ADMIN_ACCOUNT = 'kingkanye26';
 const STARTING_MONEY = 100000;
@@ -3756,6 +3920,38 @@ function adminLog(msg, ok) {
   if (el) el.innerHTML = '<span style="color:' + (ok ? '#7fffd4' : '#ff8080') + '">' + msg + '</span>';
 }
 
+// Stamp + persist an admin-edited save to EVERY layer: cloud (caller
+// upserts), this device's localStorage mirror, and the live STATE when
+// the owner edits their own running game.
+function adminApplyLocal(name, s) {
+  s.adminStamp = s.adminStamp || Date.now();
+  s.savedAt = s.adminStamp;
+  try {
+    if (localStorage.getItem(SAVE_PREFIX + name)) {
+      localStorage.setItem(SAVE_PREFIX + name, JSON.stringify(s));
+    }
+  } catch (e) {}
+  CloudSync.noteAdminStamp(name, s.adminStamp);
+  if (name === CURRENT_USER && typeof gameInitialized !== 'undefined' && gameInitialized) {
+    if (typeof s.money === 'number') STATE.money = s.money;
+    if (s.inventory) STATE.inventory = s.inventory;
+    updateHUD();
+  }
+}
+
+// Rewrite the shared claims map as a world-owner decision: cloud row +
+// a fresh claims stamp so every device adopts it wholesale instead of
+// union-merging stale local claims back in.
+async function adminWriteClaims(newClaims) {
+  adminWorld.claims = newClaims;
+  const t = Date.now();
+  await adminUpsertRow('openworld_claims', newClaims);
+  await adminUpsertRow('openworld_claims_stamp', t);
+  CloudSync.noteClaimStamp(t);
+  try { localStorage.setItem(CLAIMS_KEY, JSON.stringify(newClaims)); } catch (e) {}
+  try { localStorage.setItem('openworld_claims_stamp', String(t)); } catch (e) {}
+}
+
 window.openAdmin = function() {
   if (CURRENT_USER !== ADMIN_ACCOUNT) { showToast('Admin only', false); return; }
   if (CloudSync.status() !== 'cloud') { showToast('Online multiplayer is not configured', false); return; }
@@ -3771,7 +3967,7 @@ function renderAdmin() {
   const card = document.getElementById('admin-card');
   card.innerHTML = `
     <h2>👑 Admin — Shared World</h2>
-    <p class="gamble-sub">Changes sync to every device. Reload after changing your own account to see it live.</p>
+    <p class="gamble-sub">Changes are owner-stamped and sync to every device — autosaves can't undo them.</p>
     <div class="admin-topbar">
       <button class="bet-chip" onclick="adminRefresh()">⟳ Refresh</button>
       <button class="bet-chip chip-danger" onclick="adminResetAll()">Reset ALL</button>
@@ -3788,6 +3984,7 @@ function renderAdmin() {
 }
 
 window.adminRefresh = async function() {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   try {
     const rows = await adminFetchRows();
     adminWorld = { profiles: [], saves: {}, claims: {} };
@@ -3828,68 +4025,106 @@ function adminRenderRows() {
 }
 
 window.adminResetOne = async function(name) {
-  if (!confirm('Reset ' + name + ' to $' + STARTING_MONEY.toLocaleString() + ' with no plots and no businesses?')) return;
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
+  if (!confirm('Reset ' + name + ' to $' + STARTING_MONEY.toLocaleString() + ' with no plots and no businesses?' + (name === CURRENT_USER ? ' The page will reload to apply it.' : ''))) return;
   const s = adminWorld.saves[name];
+  if (!s) { adminLog('No save found for ' + name + '.', false); return; }
   s.money = STARTING_MONEY;
   s.ownedPlotIds = [];
   s.businesses = [];
-  s.savedAt = Date.now();
+  adminApplyLocal(name, s);            // stamps + saves + live STATE
   await adminUpsertRow(SAVE_PREFIX + name, s);
+  await adminWriteClaims(Object.fromEntries(Object.entries(adminWorld.claims).filter(([, owner]) => owner !== name)));
+  if (name === CURRENT_USER && gameInitialized) {
+    adminLog('Reset ' + name + ' — reloading to apply...', true);
+    setTimeout(() => location.reload(), 900);
+    return;
+  }
   adminLog('Reset ' + name + '.', true);
   adminRefresh();
 };
 window.adminZeroInv = async function(name) {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   if (!confirm('Zero ALL resources (materials + troops/ships/planes) for ' + name + '?')) return;
-  adminWorld.saves[name].inventory = {};
-  adminWorld.saves[name].savedAt = Date.now();
-  await adminUpsertRow(SAVE_PREFIX + name, adminWorld.saves[name]);
+  const s = adminWorld.saves[name];
+  if (!s) { adminLog('No save found for ' + name + '.', false); return; }
+  s.inventory = {};
+  adminApplyLocal(name, s);
+  await adminUpsertRow(SAVE_PREFIX + name, s);
   adminLog('Inventory zeroed for ' + name + '.', true);
   adminRefresh();
 };
 window.adminSetMoney = async function(name) {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   const input = document.getElementById('adm-money-' + name);
   const v = Math.floor(parseFloat(input.value));
   if (isNaN(v) || v < 0) { adminLog('Enter a valid amount for ' + name + '.', false); return; }
-  adminWorld.saves[name].money = v;
-  adminWorld.saves[name].savedAt = Date.now();
-  await adminUpsertRow(SAVE_PREFIX + name, adminWorld.saves[name]);
+  const s = adminWorld.saves[name];
+  if (!s) { adminLog('No save found for ' + name + '.', false); return; }
+  s.money = v;
+  adminApplyLocal(name, s);
+  await adminUpsertRow(SAVE_PREFIX + name, s);
   adminLog(name + ' set to $' + v.toLocaleString() + '.', true);
   adminRefresh();
 };
 window.adminDelete = async function(name) {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   if (!confirm('DELETE the account "' + name + '" completely? Its plots become unclaimed. This cannot be undone.')) return;
   await adminDeleteRow(SAVE_PREFIX + name);
+  await CloudSync.noteDeletion(name);   // tombstone — no device can resurrect it
+  await adminWriteClaims(Object.fromEntries(Object.entries(adminWorld.claims).filter(([, owner]) => owner !== name)));
   adminWorld.profiles = adminWorld.profiles.filter(p => p !== name);
   delete adminWorld.saves[name];
-  for (const k of Object.keys(adminWorld.claims)) {
-    if (adminWorld.claims[k] === name) delete adminWorld.claims[k];
-  }
   await adminUpsertRow('profiles', adminWorld.profiles);
-  await adminUpsertRow('openworld_claims', adminWorld.claims);
+  // Drop local remnants so this device can't resurrect it either
+  try {
+    localStorage.removeItem(SAVE_PREFIX + name);
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(getProfiles().filter(p => p !== name)));
+  } catch (e) {}
+  rebuildClaims();
+  if (name === CURRENT_USER) {
+    adminLog('Deleted ' + name + ' — reloading...', true);
+    setTimeout(() => location.reload(), 900);
+    return;
+  }
   adminLog('Deleted account ' + name + ' and freed its plots.', true);
   adminRefresh();
 };
 window.adminResetAll = async function() {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   const zeroInv = document.getElementById('admin-zero-inv').checked;
   const names = Object.keys(adminWorld.saves);
   if (!names.length) { adminLog('No accounts to reset.', false); return; }
-  if (!confirm('Reset ALL ' + names.length + ' account(s) to $' + STARTING_MONEY.toLocaleString() + ' with no plots' + (zeroInv ? ' and empty inventories' : '') + '? Every plot becomes unclaimed. This cannot be undone.')) return;
+  if (!confirm('Reset ALL ' + names.length + ' account(s) to $' + STARTING_MONEY.toLocaleString() + ' with no plots' + (zeroInv ? ' and empty inventories' : '') + '? Every plot becomes unclaimed. This cannot be undone.' + (names.includes(CURRENT_USER) && gameInitialized ? ' The page will reload to apply it.' : ''))) return;
   for (const name of names) {
-    adminWorld.saves[name] = Object.assign(adminWorld.saves[name], {
-      money: STARTING_MONEY, ownedPlotIds: [], businesses: [], savedAt: Date.now()
-    });
-    if (zeroInv) adminWorld.saves[name].inventory = {};
-    await adminUpsertRow(SAVE_PREFIX + name, adminWorld.saves[name]);
+    const s = adminWorld.saves[name];
+    s.money = STARTING_MONEY;
+    s.ownedPlotIds = [];
+    s.businesses = [];
+    if (zeroInv) s.inventory = {};
+    adminApplyLocal(name, s);
+    await adminUpsertRow(SAVE_PREFIX + name, s);
   }
-  adminWorld.claims = {};
-  await adminUpsertRow('openworld_claims', adminWorld.claims);
+  await adminWriteClaims({});
   adminLog('Reset ' + names.length + ' account(s): ' + names.join(', '), true);
+  if (names.includes(CURRENT_USER) && gameInitialized) {
+    setTimeout(() => location.reload(), 900);
+    return;
+  }
   adminRefresh();
 };
 window.adminClearClaims = async function() {
-  if (!confirm('Free every claimed plot? Account money/businesses are untouched.')) return;
-  adminWorld.claims = {};
-  await adminUpsertRow('openworld_claims', adminWorld.claims);
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
+  if (!confirm('Free every claimed plot? Money is untouched. Ownership is removed from every save so it cannot come back on its own.')) return;
+  for (const name of Object.keys(adminWorld.saves)) {
+    const s = adminWorld.saves[name];
+    if (s.ownedPlotIds && s.ownedPlotIds.length) {
+      s.ownedPlotIds = [];
+      adminApplyLocal(name, s);
+      await adminUpsertRow(SAVE_PREFIX + name, s);
+    }
+  }
+  await adminWriteClaims({});
   adminLog('All plot claims cleared.', true);
   adminRefresh();
 };
@@ -4048,6 +4283,10 @@ window.enterGame = function() {
         showToast(`Welcome back, ${CURRENT_USER}!`, true);
       }
     }
+    // Flush admin adoptions that happened at boot (before login) — the
+    // fresh save above already contains them, so the live-sync interval
+    // must not re-apply them as mid-session changes.
+    CloudSync.consumeAdminAdoptions();
     // Apply claim colors AFTER loadGame (so own plots are gold, others' are purple)
     applyClaimColors();
     updateHUD();

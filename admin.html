@@ -78,6 +78,8 @@ const HEADERS = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type
 const ADMIN_ACCOUNT = 'kingkanye26';
 const STARTING_MONEY = 100000;
 const SAVE_PREFIX = 'openworld_save_';
+const CLAIMS_KEY = 'openworld_claims';
+const CLAIMS_STAMP_KEY = 'openworld_claims_stamp';
 
 // Same client-side hash the game uses for account passwords
 function hashPassword(pwd) {
@@ -134,14 +136,15 @@ function unlock() {
 }
 
 // ---- World state ----
-let world = { profiles: [], saves: {}, claims: {} };
+let world = { profiles: [], saves: {}, claims: {}, deleted: {} };
 
 async function loadWorld() {
   const rows = await fetchRows();
-  world = { profiles: [], saves: {}, claims: {} };
+  world = { profiles: [], saves: {}, claims: {}, deleted: {} };
   for (const r of rows) {
     if (r.key === 'profiles') world.profiles = Array.isArray(r.data) ? r.data : [];
     else if (r.key === 'openworld_claims') world.claims = r.data || {};
+    else if (r.key === 'openworld_deleted') world.deleted = (r.data && typeof r.data === 'object') ? r.data : {};
     else if (r.key.startsWith(SAVE_PREFIX)) {
       const name = r.key.slice(SAVE_PREFIX.length);
       world.saves[name] = r.data;
@@ -189,17 +192,48 @@ function renderAccounts() {
 }
 
 // ---- Mutations ----
+// Every mutation is stamped with `adminStamp` — a world-owner decision
+// that the game's merge rule applies over any device autosave — and
+// written through to this browser's localStorage (same origin as the
+// game) so stale local copies can't resurrect old values either.
+function stampSave(save) {
+  save.adminStamp = Date.now();
+  save.savedAt = save.adminStamp;
+  return save;
+}
+
+function writeThroughSave(name, save) {
+  try {
+    if (localStorage.getItem(SAVE_PREFIX + name)) {
+      localStorage.setItem(SAVE_PREFIX + name, JSON.stringify(save));
+    }
+  } catch (e) {}
+}
+
+async function persistSave(name) {
+  writeThroughSave(name, world.saves[name]);
+  await upsertRow(SAVE_PREFIX + name, world.saves[name]);
+}
+
+// Rewrite the shared claims map as a world-owner decision + stamp, so
+// game devices adopt it wholesale instead of merging stale claims back.
+async function persistClaims(claims) {
+  const t = Date.now();
+  await upsertRow(CLAIMS_KEY, claims);
+  await upsertRow(CLAIMS_STAMP_KEY, t);
+  try {
+    localStorage.setItem(CLAIMS_KEY, JSON.stringify(claims));
+    localStorage.setItem(CLAIMS_STAMP_KEY, String(t));
+  } catch (e) {}
+}
+
 function applyReset(save, zeroInv) {
   save.money = STARTING_MONEY;
   save.ownedPlotIds = [];
   save.businesses = [];
   if (zeroInv) save.inventory = {};
-  save.savedAt = Date.now();   // fresh: every device pulls this on next sync
+  stampSave(save);   // owner decision + fresh timestamp: every device pulls this on next sync
   return save;
-}
-
-async function persistSave(name) {
-  await upsertRow(SAVE_PREFIX + name, world.saves[name]);
 }
 
 async function resetOne(name) {
@@ -212,8 +246,7 @@ async function resetOne(name) {
 
 async function zeroInv(name) {
   if (!confirm('Zero ALL resources (materials + troops/ships/planes) for ' + name + '?')) return;
-  world.saves[name].inventory = {};
-  world.saves[name].savedAt = Date.now();
+  stampSave(world.saves[name]).inventory = {};
   await persistSave(name);
   log('Inventories zeroed for ' + name + '.', true);
   loadWorld();
@@ -223,8 +256,7 @@ async function setMoney(name) {
   const input = document.getElementById('money-' + name);
   const v = Math.floor(parseFloat(input.value));
   if (isNaN(v) || v < 0) { log('Enter a valid amount for ' + name + '.', false); return; }
-  world.saves[name].money = v;
-  world.saves[name].savedAt = Date.now();
+  stampSave(world.saves[name]).money = v;
   await persistSave(name);
   log('Set ' + name + ' to ' + fmt(v) + '.', true);
   loadWorld();
@@ -239,7 +271,16 @@ async function deleteAccount(name) {
     if (world.claims[k] === name) delete world.claims[k];
   }
   await upsertRow('profiles', world.profiles);
-  await upsertRow('openworld_claims', world.claims);
+  await persistClaims(world.claims);
+  // Tombstone the deletion so no device can resurrect the account
+  const t = Date.now();
+  world.deleted = Object.assign({}, world.deleted, { [name]: t });
+  await upsertRow('openworld_deleted', world.deleted);
+  try {
+    localStorage.removeItem(SAVE_PREFIX + name);
+    const profiles = JSON.parse(localStorage.getItem('openworld_profiles') || '[]').filter(p => p !== name);
+    localStorage.setItem('openworld_profiles', JSON.stringify(profiles));
+  } catch (e) {}
   log('Deleted account ' + name + ' and freed its plots.', true);
   loadWorld();
 }
@@ -253,16 +294,22 @@ async function resetAll() {
     world.saves[name] = applyReset(world.saves[name], zeroInv);
     await persistSave(name);
   }
-  world.claims = {};
-  await upsertRow('openworld_claims', world.claims);
+  await persistClaims({});
   log('Reset ' + names.length + ' account(s): ' + names.join(', '), true);
   loadWorld();
 }
 
 async function clearClaims() {
-  if (!confirm('Free every claimed plot? Account money/businesses are untouched.')) return;
-  world.claims = {};
-  await upsertRow('openworld_claims', world.claims);
+  if (!confirm('Free every claimed plot? Money is untouched. Ownership is removed from every save so it cannot come back on its own.')) return;
+  for (const name of Object.keys(world.saves)) {
+    const s = world.saves[name];
+    if (s.ownedPlotIds && s.ownedPlotIds.length) {
+      s.ownedPlotIds = [];
+      stampSave(s);
+      await persistSave(name);
+    }
+  }
+  await persistClaims({});
   log('All plot claims cleared.', true);
   loadWorld();
 }

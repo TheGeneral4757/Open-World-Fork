@@ -36,6 +36,23 @@ The login screen shows **🌐 Online multiplayer: ON** when configured. What you
 - **Cross-device progression** — log in on any device and continue where you left off; old local accounts migrate to the cloud on first visit
 - **The leaderboard and wars span devices** — attack players who are playing on a different device than you
 
+### 👑 World-owner admin panel (admin account only)
+The shared world has an **admin panel for the world owner** — the account `kingkanye26`. Nobody else can see it, open it, or call its actions.
+
+Two doors, both locked to that one account:
+- **In-game**: log in as the owner → the menu shows a **👑 Admin** button (hidden for everyone else) → manage every account in the world
+- **Standalone**: [`admin.html`](admin.html) — asks for the owner account's password before unlocking
+
+Owner powers:
+- **Set any account's money**, reset accounts (back to $100,000, no plots/businesses), zero inventories (materials + troops/ships/planes)
+- **Delete accounts** completely — a deletion tombstone in the cloud makes sure no device can resurrect them; freed plots become claimable again
+- **Reset ALL accounts** / **clear every plot claim** in one click
+
+How it stays reliable with online multiplayer:
+- Every owner edit carries an **owner stamp** — game devices treat it as authoritative, so the 10-second autosave or 30-second world sync can never overwrite an admin decision (this was the bug that made the first panel version silently revert)
+- Edits are also mirrored into the owner's own browser, so changes apply the moment they re-enter the world
+- A player whose account is edited while online gets a notification and keeps a consistent view until they re-enter
+
 Notes: passwords are lightly hashed client-side and the anon key is public by design — this is a game for friends, not a bank. Supabase's free tier comfortably handles a group of friends playing casually.
 
 ### 🏞️ Plots
@@ -163,6 +180,12 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.6.1 (2026-10-05) — Working admin panel
+- **Fixed**: admin-panel edits were silently reverted within seconds — the panel only wrote to the cloud, while each device's 10s autosave kept pushing stale local state back over it. Owner edits are now **owner-stamped** (`adminStamp`) and win over any autosave; deletes leave **tombstones** so deleted accounts stay deleted; claim resets carry a **claims stamp** so cleared claims stay cleared
+- Admin edits also write through to the owner's own browser — enter the world and the change is already live
+- Players whose account is adjusted while online see a notification instead of silently diverging
+- Every admin action is double-guarded to the `kingkanye26` account (button visibility + per-action check)
 
 ### v1.6 (2026-10-04) — Online multiplayer
 - Live world sync: while playing online, the world refreshes every 30 seconds — new claims from other devices appear on your globe, and enemy army sizes stay current for war
