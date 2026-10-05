@@ -577,6 +577,18 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .myplot-row{display:flex;gap:12px;padding:10px 14px;border:1px solid #1a3340;border-radius:10px;background:rgba(20,50,60,.35);margin-bottom:8px;align-items:center}
 .myplot-row .planet-icon{font-size:22px;width:34px}
 
+/* Multi-Buy floating selection bar */
+.multibuy-bar{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:21;
+  display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:12px;
+  border:1px solid #2c4a55;background:rgba(8,19,29,.92);backdrop-filter:blur(8px);
+  box-shadow:0 6px 24px rgba(0,0,0,.5)}
+.multibuy-bar .mb-tag{font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;color:#f5cc74;text-transform:uppercase;font-weight:bold}
+.multibuy-bar .mb-stats{font-family:Arial,sans-serif;font-size:13px;color:#cbd7dc}
+.multibuy-bar .mb-stats b{color:#7fffd4}
+.multibuy-bar .btn{padding:9px 16px;font-size:12px}
+.multibuy-bar .btn.primary:disabled{opacity:.4;cursor:not-allowed}
+.market-btn.active{border-color:#f5cc74 !important;color:#f5cc74 !important;background:rgba(245,204,116,.14) !important}
+
 @media(max-width:700px){
   .top-bar{padding:10px 12px;gap:8px;flex-wrap:wrap}
   .brand{font-size:14px;order:3;flex-basis:100%;text-align:center;margin-top:4px}
@@ -699,6 +711,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <button class="market-btn" id="clans-btn" onclick="openClans()" title="Clans & Alliances — team up with other commanders">🛡 Clans</button>
         <button class="market-btn" id="planets-btn" onclick="openPlanets()" title="Planets — buy into new worlds and travel between them">🪐</button>
         <button class="market-btn" id="myland-btn" onclick="openMyPlots()" title="My Land — see your plots and sell the ones you don't want">🗺</button>
+        <button class="market-btn" id="multibuy-btn" onclick="toggleMultiBuy()" title="Multi-Buy — click several plots, then buy them all at once (each must border your land)">✚</button>
         <button class="market-btn" id="gamble-btn" onclick="openGambling()" style="display:none" title="Play at your casinos">🎰 Casino</button>
       </div>
     </div>
@@ -719,6 +732,14 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
   </div>
 
   <div class="plot-tip" id="plot-tip"></div>
+
+  <!-- Multi-Buy selection bar — shown while the ✚ mode is active -->
+  <div class="multibuy-bar" id="multibuy-bar" style="display:none">
+    <span class="mb-tag">✚ Multi-Buy</span>
+    <span class="mb-stats"><b id="multibuy-count">0</b> selected · <b id="multibuy-total">$0</b></span>
+    <button class="btn primary" id="multibuy-buy" onclick="multiBuyAll()" disabled>Buy All</button>
+    <button class="btn" onclick="clearMultiSelect()">Clear</button>
+  </div>
 
   <div class="plot-modal" id="plot-modal">
     <div class="plot-card" id="plot-card">
@@ -986,7 +1007,10 @@ const STATE = {
   // Travel swaps the planet at the origin; ownership/businesses persist
   // across all worlds via global plot ids (see PLANETS below).
   planet: 'earth',
-  unlockedPlanets: ['earth']
+  unlockedPlanets: ['earth'],
+  // MULTI-BUY — session-only selection mode (never saved)
+  multiBuy: false,
+  multiSelect: new Set()
 };
 
 const EARTH_RADIUS = STATE.radius;
@@ -2075,6 +2099,7 @@ function applyCloudWorldUpdates() {
       p.userData.ownerName = owner;
       STATE.owned.delete(p.userData.id);
       BUSINESS_REGISTRY.delete(p.userData.id);   // those businesses now belong to the conqueror
+      STATE.multiSelect.delete(p.userData.id);   // and it can't stay in a multi-buy selection
       // Remove my businesses from it (meshes + state)
       for (const entry of p.userData.businesses || []) {
         if (entry.mesh) {
@@ -4011,7 +4036,7 @@ function onPointerMove(e) {
       tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${buyable ? '$' + hitPlot.userData.price.toLocaleString() : '🔒 borders only — $' + hitPlot.userData.price.toLocaleString()}</span>`;
       tip.classList.remove('owned');
     }
-    tip.innerHTML = planetTag + tipText;
+    tip.innerHTML = planetTag + (STATE.multiBuy && STATE.multiSelect.has(hitPlot.userData.id) ? '✓ ' : '') + tipText;
   } else {
     STATE.hoveredPlot = null;
     renderer.domElement.style.cursor = 'grab';
@@ -4027,6 +4052,12 @@ function onPointerClick(e) {
   if (earth) earth.updateMatrixWorld(true);
   raycaster.setFromCamera(pointer, camera);
   const hit = pickPlot();
+  // Multi-buy mode: clicks toggle selection instead of opening the modal
+  if (STATE.multiBuy) {
+    const target = hit || STATE.hoveredPlot;
+    if (target) togglePlotSelection(target);
+    return;
+  }
   if (hit) {
     openPlotModal(hit);
     return;
@@ -4366,6 +4397,8 @@ window.travelTo = function(planetId) {
   closePlanets();
   STATE.hoveredPlot = null;
   STATE.selectedPlot = null;
+  STATE.multiSelect.clear();   // selections belong to the world you're leaving
+  updateMultiBuyBar();
 
   // Tear down the current planet: business meshes + plot pools
   for (const p of STATE.plots) {
@@ -4559,6 +4592,155 @@ window.openPlotById = function(id) {
   const p = STATE.plots.find(p => p.userData.id === id);
   if (p) openPlotModal(p);
   return !!p;
+};
+
+// ====================================================================
+// MULTI-BUY — toggle a selection mode where clicks pick plots instead of
+// opening them. A plot can only be selected if it could be bought right
+// now (bordering your land — or the rest of the selection, so chains
+// grow outward — or the founding plot on a planet you own nothing on).
+// Buy All is all-or-nothing: enough money for every plot or nothing
+// happens. The border chain is re-validated at purchase time.
+// ====================================================================
+const MULTI_SELECT_FILL = 0x53d8ff;     // bright cyan — distinct from owned gold / rival purple
+const MULTI_SELECT_OUTLINE = 0xeaffff;
+
+function plotBaseOutline(p) {
+  return p.userData.isCoastal ? COASTAL_OUTLINE : PLOT_UNOWNED_OUTLINE;
+}
+
+// Could this plot join the current multi-buy selection?
+function multiBuyAllowed(p) {
+  if (p.userData.owned) return { ok: false, reason: 'You already own this plot' };
+  if (p.userData.ownedByOther) return { ok: false, reason: `Claimed by ${p.userData.ownerName}` };
+  const selOnPlanet = [...STATE.multiSelect].filter(id => planetOfPlotId(id).id === p.userData.planet);
+  for (const nid of (p.userData.neighbors || [])) {
+    if (STATE.owned.has(nid) || selOnPlanet.includes(nid)) return { ok: true };
+  }
+  // Founding plot: no land on this planet yet and nothing selected there
+  if (plotsOwnedOnPlanet(p.userData.planet) === 0 && selOnPlanet.length === 0) return { ok: true };
+  return { ok: false, reason: 'Doesn\'t border your land (or the plots you\'ve picked)' };
+}
+
+function togglePlotSelection(p) {
+  if (!p) return;
+  const id = p.userData.id;
+  if (p.userData.owned) { showToast('You already own this plot', false); return; }
+  if (p.userData.ownedByOther) { showToast(`Claimed by ${p.userData.ownerName}`, false); return; }
+  if (STATE.multiSelect.has(id)) {
+    STATE.multiSelect.delete(id);
+    setPlotColors(p, p.userData.baseColor, plotBaseOutline(p));
+    flushPlotPools();
+    updateMultiBuyBar();
+    return;
+  }
+  const chk = multiBuyAllowed(p);
+  if (!chk.ok) { showToast(chk.reason, false); return; }
+  STATE.multiSelect.add(id);
+  setPlotColors(p, MULTI_SELECT_FILL, MULTI_SELECT_OUTLINE);
+  flushPlotPools();
+  updateMultiBuyBar();
+}
+
+window.toggleMultiBuy = function() {
+  STATE.multiBuy = !STATE.multiBuy;
+  if (!STATE.multiBuy) clearMultiSelect();
+  else showToast('Multi-Buy on — click plots to select them, then Buy All', true);
+  const btn = document.getElementById('multibuy-btn');
+  if (btn) btn.classList.toggle('active', STATE.multiBuy);
+  updateMultiBuyBar();
+};
+
+function clearMultiSelect() {
+  for (const id of STATE.multiSelect) {
+    const p = ACTIVE_PLOT_BY_ID.get(id);
+    if (p && !p.userData.owned && !p.userData.ownedByOther) {
+      setPlotColors(p, p.userData.baseColor, plotBaseOutline(p));
+    }
+  }
+  STATE.multiSelect.clear();
+  flushPlotPools();
+  updateMultiBuyBar();
+}
+window.clearMultiSelect = clearMultiSelect;
+
+window.selectPlotById = function(id) {
+  // QA/script helper: toggle a plot's selection without a canvas click
+  if (!gameInitialized) return false;
+  const p = ACTIVE_PLOT_BY_ID.get(id);
+  if (!p) return false;
+  togglePlotSelection(p);
+  return true;
+};
+
+function updateMultiBuyBar() {
+  const bar = document.getElementById('multibuy-bar');
+  if (!bar) return;
+  bar.style.display = STATE.multiBuy ? 'flex' : 'none';
+  let count = 0, total = 0;
+  for (const id of STATE.multiSelect) {
+    const p = ACTIVE_PLOT_BY_ID.get(id);
+    if (p) { count++; total += p.userData.price; }
+  }
+  document.getElementById('multibuy-count').textContent = count;
+  document.getElementById('multibuy-total').textContent = '$' + total.toLocaleString();
+  document.getElementById('multibuy-buy').disabled = count === 0;
+}
+
+window.multiBuyAll = function() {
+  if (!STATE.multiSelect.size) return;
+  // Everything selected must still be available (someone may have claimed
+  // a plot since it was picked)
+  const ids = [...STATE.multiSelect];
+  for (const id of ids) {
+    const p = ACTIVE_PLOT_BY_ID.get(id);
+    if (!p || p.userData.owned || p.userData.ownedByOther) {
+      showToast('⚠️ Your selection changed — a plot is no longer available. Review and try again.', false);
+      return;
+    }
+  }
+  const total = ids.reduce((s, id) => s + ACTIVE_PLOT_BY_ID.get(id).userData.price, 0);
+  if (STATE.money < total) {
+    showToast(`Need $${total.toLocaleString()} for all ${ids.length} plots — you have $${Math.floor(STATE.money).toLocaleString()}`, false);
+    return;
+  }
+  // Re-validate the border chain in selection order (mirrors buying them
+  // one after another: each plot must touch your land or an earlier pick)
+  const bought = [];
+  for (const id of ids) {
+    const p = ACTIVE_PLOT_BY_ID.get(id);
+    let ok = false;
+    if (plotsOwnedOnPlanet(p.userData.planet) === 0 && bought.length === 0) ok = true;
+    else {
+      for (const nid of (p.userData.neighbors || [])) {
+        if (STATE.owned.has(nid) || bought.includes(nid)) { ok = true; break; }
+      }
+    }
+    if (!ok) {
+      showToast(`⚠️ ${p.userData.name} no longer borders your land — nothing was bought`, false);
+      return;
+    }
+    bought.push(id);
+  }
+  // All checks passed — one transaction
+  STATE.money -= total;
+  const claims = getClaims();
+  for (const id of bought) {
+    const p = ACTIVE_PLOT_BY_ID.get(id);
+    p.userData.owned = true;
+    p.userData.ownedByOther = false;
+    STATE.owned.add(id);
+    claims[id] = CURRENT_USER;
+    registerClaimedPlot(p);
+    setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+    STATE.multiSelect.delete(id);
+  }
+  saveClaims(claims);
+  flushPlotPools();
+  updateHUD();
+  saveGame();
+  updateMultiBuyBar();
+  showToast(`✅ Bought ${bought.length} plot${bought.length > 1 ? 's' : ''} for $${total.toLocaleString()}`, true);
 };
 
 window.buySelectedPlot = function() {
@@ -5968,6 +6150,7 @@ window.addEventListener('keydown', (e) => {
     window.closeClans();
     window.closePlanets();
     window.closeMyPlots();
+    if (STATE.multiBuy) window.toggleMultiBuy();
   }
 });
 </script>
