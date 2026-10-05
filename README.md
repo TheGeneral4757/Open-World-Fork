@@ -90,17 +90,12 @@ Notes: passwords are lightly hashed client-side and the anon key is public by de
 - **Coastal land plots show a bluer outline** — that's where Naval Yards can be built (ocean plots work too)
 - **Military buildings are clearly distinct** from businesses: a separate red ⚔️ Military section in the build menu, MILITARY badges on army buildings, and a red base ring on the globe
 
-### 🎰 Casino Gambling
-- Casinos don't produce steadily — each tick rolls a slot machine:
-  - 🎰 **JACKPOT** (10×) — 2% chance, triggers gold toast notification
-  - ✨ **Big Win** (3×) — 10% chance
-  - 🎲 **Normal** (1×) — 45% chance
-  - 💀 **Bust** (0×) — 43% chance, no production
-- Gambling stats panel shows roll history, jackpots, big wins, busts
-- **Interactive slots minigame** — with a casino you can gamble your own money:
+### 🎰 Casino
+- Casinos produce 🎰 Entertainment at a **steady rate** like every other business (region bonuses apply)
+- **Interactive slots minigame** — with a casino you can gamble your own money (the only gambling in the game):
   - Open it from the HUD **🎰 Casino** button or the **Play Slots Here** button on any casino plot
   - Place a bet (from $100 up to your whole budget), spin the reels, watch them stop one by one
-  - Same paytable as passive rolls: 💎💎💎 pays 10× your bet, a triple 7️⃣/🔔/⭐ pays 3×, a 🍒 pair pushes, mixed reels lose
+  - Paytable: 💎💎💎 pays 10× your bet, a triple 7️⃣/🔔/⭐ pays 3×, a 🍒 pair pushes, mixed reels lose
   - **Every casino beyond your first reduces the bust chance** (up to −18%) — casino empires gamble with better odds
   - Session stats (spins, wagered, won, net, best) and a recent-spins history strip
 
@@ -147,7 +142,7 @@ Notes: passwords are lightly hashed client-side and the anon key is public by de
 - ⛰️ **Mountains** → build Mines (+100% bonus)
 - 🌊 **Deep ocean** → build Oil Rigs (+80% bonus)
 - 🌳 **Temperate land** → build Farms (+50%) or Tech Hubs (+40%)
-- 🎰 **Casinos** are volatile but can hit 10× jackpots
+- 🎰 **Play the slots** at any casino you own — steady Entertainment income, and the reels are yours to spin
 - 📈 **Watch the market** — hold materials when prices are low, sell when they spike
 - 🏆 **Bigger plots** (estate/province/territory) hold multiple businesses
 - 📱 **On a Chromebook or older laptop?** Set Graphics to Balanced or Low in Settings (Auto usually picks the right one for you)
@@ -183,6 +178,11 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.10 (2026-10-06) — No more passive gambling
+- **Casinos now produce Entertainment at a steady rate** like every other business — the automatic jackpot/big-win/bust production rolls are gone (no more random 0× dry spells or surprise 10× stock spikes)
+- The **interactive slots minigame is untouched**: visit any casino you own, bet your own money, spin the reels (jackpot 10×, big win 3×, push, bust; extra casinos still trim the bust chance)
+- Plot tooltips and casino cards now show the normal `+X/s` production line instead of roll results; the roll-history panel is replaced by a simple Play Slots shortcut
 
 ### v1.9 (2026-10-06) — Choose how much to sell
 - **Partial material sales**: the Global Market's sell button no longer dumps a material's entire storage — each row now has an amount picker (− / + steppers, a type-anything number field, and 25% / 50% / Max quick-fills)

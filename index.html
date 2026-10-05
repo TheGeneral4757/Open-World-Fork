@@ -453,19 +453,6 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .btn.demolish{background:rgba(90,36,36,.4);border-color:#5a2424;color:#ff8080;width:100%;margin-top:4px}
 .btn.demolish:hover{background:rgba(120,48,48,.6)}
 
-/* Casino gambling panel */
-.gambling-panel{margin:14px 0;padding:14px;border:1px solid #5a2424;border-radius:10px;background:rgba(90,36,36,.2)}
-.gamble-title{font-family:Georgia,serif;color:#f5cc74;font-size:15px;margin-bottom:10px}
-.gamble-stats{display:flex;flex-wrap:wrap;gap:10px;font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;margin-bottom:10px}
-.gamble-stats span{white-space:nowrap}
-.gamble-stats b{font-weight:600}
-.gamble-history{display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto}
-.gamble-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border:1px solid #1a3340;border-radius:5px;background:rgba(20,50,60,.4);font-family:Arial,sans-serif;font-size:11px;gap:8px}
-.gamble-row span:first-child{flex:1}
-.gamble-row span:nth-child(2){color:#9bb4bd;font-weight:600}
-.gamble-empty{font-family:Arial,sans-serif;font-size:11px;color:#5e7d87;padding:8px;text-align:center;font-style:italic}
-.gamble-total{font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd;margin-top:8px;padding-top:8px;border-top:1px solid #1a3340;text-align:right}
-
 /* Loading overlay */
 .loader{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:#08141d;transition:opacity .8s}
@@ -903,78 +890,6 @@ const STATE = {
 const EARTH_RADIUS = STATE.radius;
 
 // ====================================================================
-// CASINO GAMBLING SYSTEM
-// ====================================================================
-// Casinos don't produce at a steady rate. Instead, each production tick
-// rolls a slot-machine outcome that multiplies the base rate:
-//   🎰 JACKPOT (3 cherries): 10× — rare, big win
-//   ✨ BIG WIN  (2 cherries): 3× — occasional
-//   🎲 NORMAL   (mixed):      1× — most common
-//   💀 BUST     (no cherries): 0× — frequent dry spell
-// Average over time ≈ 1.0× (slightly higher due to jackpot skew),
-// but variance is huge — you can go minutes with nothing, then hit
-// a 10× jackpot that fills your stock.
-const CASINO_OUTCOMES = [
-  { id: 'jackpot', label: '🎰 JACKPOT!',  multiplier: 10,  weight: 2,  color: '#f5cc74' },
-  { id: 'bigwin',  label: '✨ Big Win',   multiplier: 3,   weight: 10, color: '#7fffd4' },
-  { id: 'normal',  label: '🎲 Normal',    multiplier: 1,   weight: 45, color: '#cbd7dc' },
-  { id: 'bust',    label: '💀 Bust',      multiplier: 0,   weight: 43, color: '#ff8080' },
-];
-
-// Per-casino gambling state stored in plot.userData.gambling
-//   { lastRoll: outcomeId, lastRollAt: timestamp, rollHistory: [{outcome, amount, time}] }
-// Global recent jackpots for toast notifications (max 1 toast per 5s to avoid spam)
-let _lastJackpotToast = 0;
-
-function rollCasino() {
-  const totalWeight = CASINO_OUTCOMES.reduce((s, o) => s + o.weight, 0);
-  let r = Math.random() * totalWeight;
-  for (const o of CASINO_OUTCOMES) {
-    r -= o.weight;
-    if (r <= 0) return o;
-  }
-  return CASINO_OUTCOMES[CASINO_OUTCOMES.length - 1];
-}
-
-// Roll for a casino plot and return the production amount for this tick
-function rollCasinoProduction(plot, bt, dt) {
-  const outcome = rollCasino();
-  const baseRate = bt.rate * plot.userData.areaMultiplier;
-  const regionBonus = getRegionBonus(bt.id, plot);
-  const amount = baseRate * regionBonus * outcome.multiplier * dt;
-
-  // Store roll state on the plot
-  if (!plot.userData.gambling) plot.userData.gambling = {};
-  plot.userData.gambling.lastRoll = outcome.id;
-  plot.userData.gambling.lastRollAt = Date.now();
-  plot.userData.gambling.lastMultiplier = outcome.multiplier;
-
-  // Track history (last 10 rolls)
-  if (!plot.userData.gambling.rollHistory) plot.userData.gambling.rollHistory = [];
-  plot.userData.gambling.rollHistory.unshift({
-    outcome: outcome.id,
-    label: outcome.label,
-    multiplier: outcome.multiplier,
-    amount: amount,
-    time: Date.now()
-  });
-  if (plot.userData.gambling.rollHistory.length > 10) {
-    plot.userData.gambling.rollHistory.length = 10;
-  }
-
-  // Jackpot toast (throttled to 1 per 5 seconds globally)
-  if (outcome.id === 'jackpot') {
-    const now = Date.now();
-    if (now - _lastJackpotToast > 5000) {
-      _lastJackpotToast = now;
-      showToast(`🎰 JACKPOT! Casino hit 10× — +${amount.toFixed(1)} 🎰 Entertainment`, true);
-    }
-  }
-
-  return amount;
-}
-
-// ====================================================================
 // PERSISTENCE — save/load to localStorage
 // ====================================================================
 // Save key: 'openworld_save_<username>'. Profile list: 'openworld_profiles'.
@@ -1372,7 +1287,6 @@ function applyCloudWorldUpdates() {
         }
       }
       p.userData.businesses = [];
-      p.userData.gambling = {};
       setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
       registerClaimedPlot(p);
       changed = true;
@@ -1982,7 +1896,7 @@ const BUSINESS_TYPES = [
     id: 'casino', name: 'Casino', icon: '🎰',
     buildCost: 360000, produces: 'fun', rate: 0.7,
     color: 0xd32f2f, shape: 'sphere',
-    desc: 'Volatile gambling den. Each roll can hit jackpots (10×) or bust (0×). High risk, high reward.'
+    desc: 'Runs slot machines that produce Entertainment at a steady rate — and you can step up and spin them yourself. Every extra casino trims the bust chance at the tables.'
   },
   {
     id: 'bank', name: 'Bank', icon: '🏦',
@@ -3012,15 +2926,7 @@ function onPointerMove(e) {
       const bonusPct = Math.round((regionBonus - 1) * 100);
       const bonusTag = bonusPct !== 0 ? ` (${bonusPct > 0 ? '+' : ''}${bonusPct}%)` : '';
       const countTag = businesses.length > 1 ? ` ×${businesses.length}` : '';
-      if (bt.id === 'casino') {
-        // Casino shows last roll result instead of steady rate
-        const gambling = hitPlot.userData.gambling || {};
-        const lastOutcome = CASINO_OUTCOMES.find(o => o.id === gambling.lastRoll);
-        const rollTag = lastOutcome ? ` · ${lastOutcome.label}` : ' · 🎲 rolling...';
-        tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name}${countTag} 🎲 volatile${bonusTag}${rollTag}</span>`;
-      } else {
-        tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name}${countTag} +${effectiveRate.toFixed(1)} ${mat.icon}/s${bonusTag}</span>`;
-      }
+      tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${bt.icon} ${bt.name}${countTag} +${effectiveRate.toFixed(1)} ${mat.icon}/s${bonusTag}</span>`;
       tip.classList.add('owned');
     } else if (owned) {
       tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">OWNED — build ready</span>`;
@@ -3100,35 +3006,12 @@ function openPlotModal(plot) {
       const bonusLabel = bonusPct > 0 ? `+${bonusPct}%` : `${bonusPct}%`;
       const bonusColor = bonusPct > 0 ? '#7fffd4' : (bonusPct < 0 ? '#ff8080' : '#9bb4bd');
 
-      // Casino gambling panel (only for casino businesses)
-      let gamblingPanel = '';
-      if (bt.id === 'casino') {
-        const gambling = plot.userData.gambling || {};
-        const lastOutcome = CASINO_OUTCOMES.find(o => o.id === gambling.lastRoll);
-        const history = gambling.rollHistory || [];
-        const rollCount = history.length;
-        const jackpots = history.filter(r => r.outcome === 'jackpot').length;
-        const bigwins = history.filter(r => r.outcome === 'bigwin').length;
-        const busts = history.filter(r => r.outcome === 'bust').length;
-        const totalWon = history.reduce((s, r) => s + r.amount, 0);
-        const historyRows = history.slice(0, 4).map(r => {
-          const oc = CASINO_OUTCOMES.find(o => o.id === r.outcome);
-          return `<div class="gamble-row"><span style="color:${oc.color}">${oc.label}</span><span>×${r.multiplier}</span><span style="color:#7fffd4">+${r.amount.toFixed(2)} 🎰</span></div>`;
-        }).join('');
-        gamblingPanel = `
-          <div class="gambling-panel" style="margin:8px 0">
-            <div class="gamble-stats" style="font-size:10px">
-              <span>Last: <b style="color:${lastOutcome ? lastOutcome.color : '#9bb4bd'}">${lastOutcome ? lastOutcome.label : '—'}</b></span>
-              <span>Rolls: <b>${rollCount}</b></span>
-              <span>🎰: <b style="color:#f5cc74">${jackpots}</b></span>
-              <span>✨: <b style="color:#7fffd4">${bigwins}</b></span>
-              <span>💀: <b style="color:#ff8080">${busts}</b></span>
-            </div>
-            ${historyRows ? `<div class="gamble-history" style="max-height:100px">${historyRows}</div>` : ''}
-            <button class="gamble-play-btn" onclick="playAtSelectedCasino()">🎰 Play Slots Here</button>
-          </div>
-        `;
-      }
+      // Casino: shortcut into the interactive slot machine (no passive
+      // rolls — Entertainment is produced at the steady rate like every
+      // other business; the slots are a game you choose to play)
+      const casinoPlayBtn = bt.id === 'casino'
+        ? `<button class="gamble-play-btn" onclick="playAtSelectedCasino()">🎰 Play Slots Here</button>`
+        : '';
 
       const isMil = !!bt.military;
       return `
@@ -3137,19 +3020,17 @@ function openPlotModal(plot) {
             <div class="biz-icon">${bt.icon}</div>
             <div class="biz-info">
               <div class="biz-name">${isMil ? '<span class="mil-badge">MILITARY</span>' : ''}${bt.name} <span style="color:#9bb4bd;font-size:11px">→ ${mat.icon} ${mat.name}</span></div>
-              <div class="biz-income" style="font-size:11px">${bt.id === 'casino'
-                ? `🎲 Volatile base ${baseRate.toFixed(1)}/s × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b>`
-                : (mat.military
-                  ? (mat.id === 'troops'
+              <div class="biz-income" style="font-size:11px">${mat.military
+                ? (mat.id === 'troops'
                     ? `+${effectiveRate.toFixed(1)} ${mat.icon}/s to your army · ${troopCapacity() > 0
                       ? `housing ${Math.floor(STATE.inventory.troops || 0).toLocaleString()} / ${troopCapacity().toLocaleString()}`
                       : 'no housing — build a Barracks to train troops'}`
                     : `+${effectiveRate.toFixed(1)} ${mat.icon}/s to your army`)
-                  : `+${effectiveRate.toFixed(1)} ${mat.icon}/s · $${Math.round(effectiveRate * price).toLocaleString()}/s`)
+                : `+${effectiveRate.toFixed(1)} ${mat.icon}/s · $${Math.round(effectiveRate * price).toLocaleString()}/s`
               }</div>
             </div>
           </div>
-          ${gamblingPanel}
+          ${casinoPlayBtn}
           <button class="btn demolish" style="margin-top:6px;padding:7px;font-size:11px" onclick="demolishBusiness(${idx})">Demolish ${bt.name}</button>
         </div>
       `;
@@ -3619,13 +3500,20 @@ window.sellAllMaterials = function() {
 // ====================================================================
 // INTERACTIVE CASINO — slot machine minigame for owned casinos
 // ====================================================================
-// Visit any casino you own, place a bet, and spin the reels. Uses the
-// same paytable as the passive casino rolls (jackpot 10×, big win 3×,
-// push 1×, bust 0×). Every casino you own beyond the first trims the
-// bust chance (up to −18%), rewarding casino empires without breaking
-// the economy — expected return stays near break-even.
+// Visit any casino you own, place a bet, and spin the reels. Paytable:
+// jackpot 10×, big win 3×, push 1× (bet returned), bust 0×. Every
+// casino you own beyond the first trims the bust chance (up to −18%),
+// rewarding casino empires without breaking the economy — expected
+// return stays near break-even. This is the ONLY gambling in the game:
+// casino buildings themselves produce Entertainment at a steady rate.
 const SLOT_SYMBOLS = ['🍒','🍋','⭐','🔔','7️⃣','💎'];
 const SLOT_BIG_TRIPLE = ['7️⃣','🔔','⭐'];
+const SLOT_OUTCOMES = [
+  { id: 'jackpot', label: '🎰 JACKPOT!',  multiplier: 10,  color: '#f5cc74' },
+  { id: 'bigwin',  label: '✨ Big Win',   multiplier: 3,   color: '#7fffd4' },
+  { id: 'normal',  label: '🎲 Push',      multiplier: 1,   color: '#cbd7dc' },
+  { id: 'bust',    label: '💀 Bust',      multiplier: 0,   color: '#ff8080' },
+];
 let gamblePlot = null;          // currently selected casino plot
 let gambleBet = 5000;
 let gambleSpinning = false;
@@ -3798,7 +3686,7 @@ window.spinSlots = function() {
 
   const outcomeId = pickSlotOutcome();
   const finalSyms = symbolsForOutcome(outcomeId);
-  const outcome = CASINO_OUTCOMES.find(o => o.id === outcomeId);
+  const outcome = SLOT_OUTCOMES.find(o => o.id === outcomeId);
   const reels = [0, 1, 2].map(i => document.getElementById('slot-reel-' + i));
   const spinBtn = document.getElementById('slot-spin-btn');
   const resultEl = document.getElementById('slot-result');
@@ -4422,15 +4310,10 @@ function tickProduction() {
     for (const entry of businesses) {
       const bt = getBusinessType(entry.type);
       if (!bt) continue;
-      let produced;
-      if (bt.id === 'casino') {
-        // Casino uses gambling roll — volatile production
-        produced = rollCasinoProduction(p, bt, dt);
-      } else {
-        // Steady production with region bonus
-        const regionBonus = getRegionBonus(bt.id, p);
-        produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
-      }
+      // Steady production with region bonus (casinos included — the only
+      // gambling left in the game is the interactive slot machine)
+      const regionBonus = getRegionBonus(bt.id, p);
+      const produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
       if (produced > 0) {
         // Troops are capped by barracks housing — training pauses when
         // every barracks is full (excess troops are never removed)
