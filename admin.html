@@ -61,11 +61,20 @@
       <div class="muted">“Reset” = back to $100,000, no plots, no businesses. Fresh timestamps are written so every device pulls the reset state on its next sync.</div>
       <table id="accounts" style="margin-top:14px">
         <thead><tr>
-          <th>Account</th><th>Money</th><th>Plots</th><th>Biz</th><th>⚔ / ⚓ / ✈</th><th>Last save</th><th>Actions</th>
+          <th>Account</th><th>Money</th><th>Plots</th><th>Biz</th><th>Clan</th><th>⚔ / ⚓ / ✈</th><th>Last save</th><th>Actions</th>
         </tr></thead>
         <tbody></tbody>
       </table>
       <div class="log" id="log"></div>
+    </div>
+    <div class="card">
+      <div class="sub" style="margin-bottom:10px">🛡 Clans — disbanding releases every member and ends their alliances. Members are stripped from clans automatically when you delete their account.</div>
+      <table id="clans">
+        <thead><tr>
+          <th>Tag</th><th>Clan</th><th>Owner</th><th>Members</th><th>Allies</th><th>Founded</th><th>Actions</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
     <div class="muted" style="text-align:center">Open World admin · <a href="./index.html" style="color:#2c4a55">back to the game</a></div>
   </div>
@@ -80,6 +89,8 @@ const STARTING_MONEY = 100000;
 const SAVE_PREFIX = 'openworld_save_';
 const CLAIMS_KEY = 'openworld_claims';
 const CLAIMS_STAMP_KEY = 'openworld_claims_stamp';
+const CLAN_PREFIX = 'openworld_clan_';
+const PACT_PREFIX = 'openworld_alliance_';
 
 // Same client-side hash the game uses for account passwords
 function hashPassword(pwd) {
@@ -136,15 +147,23 @@ function unlock() {
 }
 
 // ---- World state ----
-let world = { profiles: [], saves: {}, claims: {}, deleted: {} };
+let world = { profiles: [], saves: {}, claims: {}, deleted: {}, clans: {}, pacts: {} };
 
 async function loadWorld() {
   const rows = await fetchRows();
-  world = { profiles: [], saves: {}, claims: {}, deleted: {} };
+  world = { profiles: [], saves: {}, claims: {}, deleted: {}, clans: {}, pacts: {} };
   for (const r of rows) {
     if (r.key === 'profiles') world.profiles = Array.isArray(r.data) ? r.data : [];
     else if (r.key === 'openworld_claims') world.claims = r.data || {};
     else if (r.key === 'openworld_deleted') world.deleted = (r.data && typeof r.data === 'object') ? r.data : {};
+    else if (r.key.startsWith(CLAN_PREFIX)) {
+      const id = r.key.slice(CLAN_PREFIX.length);
+      if (r.data && r.data.id) world.clans[id] = r.data;
+    }
+    else if (r.key.startsWith(PACT_PREFIX)) {
+      const pk = r.key.slice(PACT_PREFIX.length);
+      if (r.data && r.data.a) world.pacts[pk] = r.data;
+    }
     else if (r.key.startsWith(SAVE_PREFIX)) {
       const name = r.key.slice(SAVE_PREFIX.length);
       world.saves[name] = r.data;
@@ -155,6 +174,21 @@ async function loadWorld() {
     if (!world.profiles.includes(name)) world.profiles.push(name);
   }
   renderAccounts();
+  renderClans();
+}
+
+function clanOfMember(name) {
+  for (const c of Object.values(world.clans)) {
+    if (c.members && c.members[name]) return c;
+  }
+  return null;
+}
+function pactCount(id) {
+  let n = 0;
+  for (const p of Object.values(world.pacts)) {
+    if (p.status === 'active' && (p.a === id || p.b === id)) n++;
+  }
+  return n;
 }
 
 function fmt(n) { return '$' + Math.round(n || 0).toLocaleString(); }
@@ -167,17 +201,19 @@ function fmtTime(ms) {
 function renderAccounts() {
   const tbody = document.querySelector('#accounts tbody');
   const names = Object.keys(world.saves).sort();
-  if (!names.length) { tbody.innerHTML = '<tr><td colspan="7" class="muted">No accounts yet.</td></tr>'; return; }
+  if (!names.length) { tbody.innerHTML = '<tr><td colspan="8" class="muted">No accounts yet.</td></tr>'; return; }
   tbody.innerHTML = names.map(name => {
     const s = world.saves[name] || {};
     const inv = s.inventory || {};
     const biz = (s.businesses || []).length;
     const plots = (s.ownedPlotIds || []).length;
+    const clan = clanOfMember(name);
     return `<tr>
       <td><b>${name}</b></td>
       <td class="money">${fmt(s.money)}</td>
       <td>${plots}</td>
       <td>${biz}</td>
+      <td>${clan ? '<span class="ok" style="margin:0">[' + clan.tag + ']</span>' : '<span class="muted">—</span>'}</td>
       <td class="mil">${Math.floor(inv.troops || 0).toLocaleString()} / ${Math.floor(inv.ships || 0).toLocaleString()} / ${Math.floor(inv.planes || 0).toLocaleString()}</td>
       <td class="muted">${fmtTime(s.savedAt)}</td>
       <td><div class="row-actions">
@@ -186,6 +222,27 @@ function renderAccounts() {
         <input type="number" id="money-${name}" placeholder="set $">
         <button class="small ghost" onclick="setMoney('${name}')">Set $</button>
         <button class="small danger" onclick="deleteAccount('${name}')">Delete</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderClans() {
+  const tbody = document.querySelector('#clans tbody');
+  const ids = Object.keys(world.clans).sort();
+  if (!ids.length) { tbody.innerHTML = '<tr><td colspan="7" class="muted">No clans founded yet.</td></tr>'; return; }
+  tbody.innerHTML = ids.map(id => {
+    const c = world.clans[id];
+    const members = Object.keys(c.members || {});
+    return `<tr>
+      <td class="ok" style="margin:0">[${c.tag}]</td>
+      <td><b>${c.name}</b></td>
+      <td>${c.owner}</td>
+      <td>${members.length}${members.length ? ' <span class="muted">(' + members.join(', ') + ')</span>' : ''}</td>
+      <td>${pactCount(id)}</td>
+      <td class="muted">${fmtTime(c.created)}</td>
+      <td><div class="row-actions">
+        <button class="small danger" onclick="disbandClan('${id}')">Disband</button>
       </div></td>
     </tr>`;
   }).join('');
@@ -278,12 +335,49 @@ async function deleteAccount(name) {
   const t = Date.now();
   world.deleted = Object.assign({}, world.deleted, { [name]: t });
   await upsertRow('openworld_deleted', world.deleted);
+  // Strip the deleted player from every clan; if they led one, the crown
+  // passes to the longest-standing member (or the clan + pacts dissolve)
+  for (const [cid, c] of Object.entries(world.clans)) {
+    if (!(c.members && c.members[name])) continue;
+    delete c.members[name];
+    if (c.owner === name) {
+      const rest = Object.keys(c.members).sort((a, b) => (c.members[a] || 0) - (c.members[b] || 0));
+      if (rest.length) {
+        c.owner = rest[0];
+        c.log = [{ at: t, txt: '👑 ' + rest[0] + ' now leads the clan (' + name + ' removed by the world owner)' }].concat(c.log || []).slice(0, 30);
+        await upsertRow(CLAN_PREFIX + cid, c);
+      } else {
+        await deleteRow(CLAN_PREFIX + cid);
+        delete world.clans[cid];
+        for (const [pk, p] of Object.entries(world.pacts)) {
+          if (p.a === cid || p.b === cid) {
+            await deleteRow(PACT_PREFIX + pk);
+            delete world.pacts[pk];
+          }
+        }
+      }
+    } else {
+      await upsertRow(CLAN_PREFIX + cid, c);
+    }
+  }
   try {
     localStorage.removeItem(SAVE_PREFIX + name);
     const profiles = JSON.parse(localStorage.getItem('openworld_profiles') || '[]').filter(p => p !== name);
     localStorage.setItem('openworld_profiles', JSON.stringify(profiles));
   } catch (e) {}
   log('Deleted account ' + name + ' and freed its plots.', true);
+  loadWorld();
+}
+
+async function disbandClan(id) {
+  const c = world.clans[id];
+  if (!c) return;
+  if (!confirm('Disband [' + c.tag + '] ' + c.name + '? All ' + Object.keys(c.members || {}).length + ' member(s) are released and its alliances end. This cannot be undone.')) return;
+  await deleteRow(CLAN_PREFIX + id);
+  for (const [pk, p] of Object.entries(world.pacts)) {
+    if (p.a === id || p.b === id) await deleteRow(PACT_PREFIX + pk);
+  }
+  log('Disbanded [' + c.tag + '] ' + c.name + '.', true);
   loadWorld();
 }
 

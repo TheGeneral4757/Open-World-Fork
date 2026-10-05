@@ -396,6 +396,51 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .plot-tip.owned .price{color:#7fffd4}
 
 /* Plot modal (buy dialog) */
+/* ---- Clans & Alliances overlay (body-level: opens over menu AND world) ---- */
+.clans-overlay{position:fixed;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;background:rgba(2,6,10,.74);backdrop-filter:blur(5px)}
+.clans-overlay.show{display:flex}
+.clans-card{width:min(620px,94vw);max-height:86vh;overflow-y:auto;padding:24px 26px;border:1px solid #2c4a55;border-radius:14px;background:linear-gradient(165deg,#0b1d29 0%,#0a1420 100%);color:#e8f4ff;font-family:Arial,sans-serif;box-shadow:0 24px 80px rgba(0,0,0,.65)}
+.cl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cl-head h2{font-size:20px;color:#f5cc74;letter-spacing:1px;margin:0}
+.cl-close{background:transparent;border:1px solid #2c4a55;color:#9bb4bd;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;font-family:Arial,sans-serif}
+.cl-close:hover{color:#ff8080;border-color:#ff8080}
+.cl-note{color:#9bb4bd;font-size:14px;padding:18px 0;text-align:center}
+.cl-sub{color:#7fa0ab;font-size:12px;letter-spacing:.5px;margin:12px 0 6px}
+.cl-tag{color:#7fffd4;font-weight:bold;font-size:12px;white-space:nowrap}
+.cl-clan-title{font-size:18px;font-weight:bold;color:#e8f4ff}
+.cl-crown{color:#f5cc74;font-size:12px;font-weight:normal;margin-left:8px}
+.cl-desc{color:#cbd7dc;font-size:13px;font-style:italic;margin:6px 0 2px}
+.cl-myclan,.cl-create{background:rgba(15,40,55,.45);border:1px solid #1a3340;border-radius:10px;padding:14px}
+.cl-roster{margin-top:4px}
+.cl-member-row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #10222e;font-size:13px}
+.cl-member-row:last-child{border-bottom:none}
+.cl-member-name{flex:1}
+.cl-joined{color:#5d7885;font-size:11px}
+.cl-form{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.cl-input{background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:8px;padding:9px 12px;font-size:14px;font-family:Arial,sans-serif;width:100%}
+.cl-tag-input{max-width:140px;text-transform:uppercase}
+.cl-btn{background:linear-gradient(180deg,#f7d98d,#e0b455);color:#221a05;border:none;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:bold;cursor:pointer;font-family:Arial,sans-serif}
+.cl-btn:hover{filter:brightness(1.08)}
+.cl-btn.ghost{background:transparent;border:1px solid #2c4a55;color:#9bb4bd}
+.cl-btn.danger{background:linear-gradient(180deg,#d9534f,#a83232);color:#fff}
+.cl-actions{display:flex;gap:8px;margin-top:12px}
+.cl-list{display:flex;flex-direction:column;gap:6px}
+.cl-row{display:flex;align-items:center;gap:8px;background:rgba(15,40,55,.45);border:1px solid #1a3340;border-radius:8px;padding:8px 10px;font-size:13px;flex-wrap:wrap}
+.cl-name{font-weight:bold;color:#e8f4ff}
+.cl-owner{color:#5d7885;font-size:11px}
+.cl-count{color:#7fa0ab;font-size:11px;margin-left:auto;white-space:nowrap}
+.cl-rel{font-size:10px;letter-spacing:1px;padding:2px 7px;border-radius:10px}
+.cl-rel.you{background:#1b4a3a;color:#7fffd4}
+.cl-rel.ally{background:#1b3a4a;color:#4dd0e1}
+.cl-mini{background:transparent;border:1px solid #2c4a55;color:#f5cc74;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Arial,sans-serif;white-space:nowrap}
+.cl-mini:hover{border-color:#f5cc74}
+.cl-mini.danger{color:#ff9d9d}
+.cl-mini.danger:hover{border-color:#ff8080}
+.cl-ally-row{display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:13px}
+.cl-log{background:rgba(5,12,18,.5);border-radius:8px;padding:8px 10px;font-size:12px;color:#cbd7dc;max-height:130px;overflow-y:auto}
+.cl-log-row{padding:2px 0;border-bottom:1px solid #0d1c26}
+.cl-log-row:last-child{border-bottom:none}
+.cl-log-time{color:#5d7885;font-size:10px;margin-right:8px}
 .plot-modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;
   background:rgba(0,0,0,.75);backdrop-filter:blur(10px)}
 .plot-modal.show{display:flex}
@@ -558,6 +603,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
       <div class="menu-buttons">
         <button class="menu-btn-play" onclick="enterGame()">Enter World</button>
         <div class="menu-btn-row">
+          <button class="menu-btn-secondary" id="clans-menu-btn" onclick="openClans()">🛡 Clans</button>
           <button class="menu-btn-secondary" onclick="openLeaderboard()">🏆 Leaderboard</button>
           <button class="menu-btn-secondary" onclick="openSettings()">Settings</button>
           <button class="menu-btn-secondary" id="admin-btn" onclick="openAdmin()" style="display:none" title="World-owner administration (kingkanye26 only)">👑 Admin</button>
@@ -630,6 +676,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <div class="stat-chip"><span class="icon">🌍</span><span>Owned</span><b id="owned-count">0</b></div>
         <div class="stat-chip" title="Your army — each Barracks houses 500 troops. Deploy troops to other commanders' plots to take them."><span class="icon">⚔️</span><span>Army</span><b id="army-count">0</b></div>
         <button class="market-btn" onclick="openMarketModal()">📈 Market</button>
+        <button class="market-btn" id="clans-btn" onclick="openClans()" title="Clans & Alliances — team up with other commanders">🛡 Clans</button>
         <button class="market-btn" id="gamble-btn" onclick="openGambling()" style="display:none" title="Play at your casinos">🎰 Casino</button>
       </div>
     </div>
@@ -684,6 +731,19 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 <div class="plot-modal" id="admin-modal">
   <div class="plot-card gamble-card" id="admin-card">
     <!-- filled dynamically -->
+  </div>
+</div>
+
+<!-- Clans & Alliances lives OUTSIDE #game so it opens over the menu
+     screen AND the world — team management should never cost you the
+     view of your plots, and founding a clan works before you deploy. -->
+<div class="clans-overlay" id="clans-overlay">
+  <div class="clans-card">
+    <div class="cl-head">
+      <h2>🛡 Clans & Alliances</h2>
+      <button class="cl-close" onclick="closeClans()">✕</button>
+    </div>
+    <div id="clans-body"><div class="cl-note">Loading clans…</div></div>
   </div>
 </div>
 
@@ -1057,6 +1117,20 @@ const CloudSync = (() => {
       if (error) throw error;
       const cloud = {};
       (rows || []).forEach(r => { cloud[r.key] = r.data; });
+
+      // 0b) Social layer: clan + pact rows ride along with this pull —
+      //     rosters, alliances, kicks and disbands stay live on every
+      //     device with zero extra traffic. ingestClanRows is declared
+      //     later in this module (function declarations are hoisted).
+      try {
+        const clanPairs = [];
+        for (const k in cloud) {
+          if (k.lastIndexOf('openworld_clan_', 0) === 0 || k.lastIndexOf('openworld_alliance_', 0) === 0) {
+            clanPairs.push([k, cloud[k]]);
+          }
+        }
+        ingestClanRows(clanPairs);
+      } catch (e) { /* clans are optional — never break the save sync */ }
       let changed = false;
 
       // 0) Admin control rows: deletion tombstones + claims stamp
@@ -1184,6 +1258,634 @@ saveClaims = function(c) {
   _saveClaims(c);
   CloudSync.pushClaims();
 };
+
+// ====================================================================
+// CLANS & ALLIANCES — team up with other commanders
+// ====================================================================
+//   • Clan  = a roster (max 20) under one tag, founded for $50,000.
+//     Anyone may join; the owner can kick, and leaving hands the crown
+//     to the longest-standing member (last one out disbands).
+//   • Pact  = an alliance between two clans. One owner proposes, the
+//     other accepts/declines (max 3 pacts per clan). Clan-mates and
+//     allies CANNOT attack each other's plots.
+// Storage: one row per clan ('openworld_clan_<id>') + one row per
+// relationship ('openworld_alliance_<a>__<b>') in the SAME openworld_data
+// table — they ride along with every CloudSync pull, so no extra sync
+// traffic and no schema change. Membership lives ONLY here (never inside
+// a player save), so kicks and disbands propagate everywhere instantly
+// and can never be clobbered by an autosave.
+const Clans = (() => {
+  const OW_TABLE = 'openworld_data';   // same table CloudSync uses
+  const CPREFIX = 'openworld_clan_';
+  const APREFIX = 'openworld_alliance_';
+  const CLAN_COST = 50000;
+  const MAX_MEMBERS = 20;
+  const MAX_ALLIES = 3;
+  const MAX_LOG = 30;
+
+  let client = null;
+  if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
+    try { client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
+  }
+
+  const cache = {};        // clanId -> clan row (last seen cloud state)
+  const pacts = {};        // 'a__b' -> pact row
+  const memberIndex = {};  // username -> clanId
+
+  function status() { return client ? 'cloud' : 'local'; }
+  function slugify(name) {
+    return (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 20);
+  }
+
+  // ---------- derived views ----------
+  function rebuildIndex() {
+    for (const k of Object.keys(memberIndex)) delete memberIndex[k];
+    for (const [id, c] of Object.entries(cache)) {
+      for (const m of Object.keys(c.members || {})) memberIndex[m] = id;
+    }
+  }
+  function clanOf(username) {
+    const id = memberIndex[username];
+    return id ? (cache[id] || null) : null;
+  }
+  function tagOf(username) {
+    const c = clanOf(username);
+    return c ? c.tag : null;
+  }
+  function alliesOf(id) {
+    const out = [];
+    for (const p of Object.values(pacts)) {
+      if (p.status !== 'active') continue;
+      // dead-clan guard: a pact row is removed on disband, but a stale
+      // row that raced a disband must not render a ghost ally
+      if (p.a === id && cache[p.b]) out.push(p.b);
+      else if (p.b === id && cache[p.a]) out.push(p.a);
+    }
+    return out;
+  }
+  function incomingPacts(id) {
+    return Object.values(pacts).filter(p => p.status === 'pending' && (p.a === id || p.b === id) && p.requestedBy !== id);
+  }
+  function outgoingPacts(id) {
+    return Object.values(pacts).filter(p => p.status === 'pending' && p.requestedBy === id);
+  }
+  // Relation of ANOTHER player to the signed-in commander:
+  // 'clan' (same clan) | 'ally' (pact between our clans) | null
+  function relationTo(username) {
+    if (!CURRENT_USER || !username || username === CURRENT_USER) return null;
+    const mine = clanOf(CURRENT_USER), theirs = clanOf(username);
+    if (!mine || !theirs) return null;
+    if (mine.id === theirs.id) return 'clan';
+    if (alliesOf(mine.id).includes(theirs.id)) return 'ally';
+    return null;
+  }
+
+  // ---------- cloud plumbing ----------
+  async function fetchWorld() {
+    const { data: rows, error } = await client.from(OW_TABLE).select('key,data');
+    if (error) throw error;
+    const clans = {}, pactRows = {};
+    (rows || []).forEach(r => {
+      if (r.key.indexOf(CPREFIX) === 0 && r.data && r.data.id) clans[r.key.slice(CPREFIX.length)] = r.data;
+      else if (r.key.indexOf(APREFIX) === 0 && r.data && r.data.a) pactRows[r.key.slice(APREFIX.length)] = r.data;
+    });
+    return { clans, pactRows };
+  }
+  async function putRow(key, data) {
+    const { error } = await client.from(OW_TABLE).upsert({ key, data, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (error) throw error;
+  }
+  async function delRow(key) {
+    const { error } = await client.from(OW_TABLE).delete().eq('key', key);
+    if (error) throw error;
+  }
+  async function getClanRow(id) {
+    const { data, error } = await client.from(OW_TABLE).select('data').eq('key', CPREFIX + id).maybeSingle();
+    if (error) throw error;
+    return (data && data.data) || null;
+  }
+  function bump(row) {
+    row.stamp = Math.max(Date.now(), (parseInt(row.stamp, 10) || 0) + 1);
+    return row;
+  }
+  function logAdd(row, txt) {
+    row.log = [{ at: Date.now(), txt }].concat(row.log || []).slice(0, MAX_LOG);
+  }
+  function pactKey(a, b) { return a < b ? a + '__' + b : b + '__' + a; }
+
+  // Deduct money from the CURRENT session no matter which screen we're
+  // on. In-game it flows through STATE + saveGame() as usual; from the
+  // menu (before enterGame) it edits the stored save directly — safe,
+  // because the 10s autosave only runs once gameInitialized is true.
+  function spendMoney(amount) {
+    if (gameInitialized) {
+      if (STATE.money < amount) return false;
+      STATE.money -= amount;
+      saveGame();
+      updateHUD();
+      return true;
+    }
+    const s = CURRENT_USER && getSave(CURRENT_USER);
+    if (!s || (s.money || 0) < amount) return false;
+    s.money -= amount;
+    s.savedAt = Date.now();
+    try { localStorage.setItem(SAVE_PREFIX + CURRENT_USER, JSON.stringify(s)); } catch (e) { return false; }
+    CloudSync.pushSave(CURRENT_USER);
+    return true;
+  }
+
+  // ---------- state application (+ live toasts) ----------
+  function applyWorld(clans, pactRows, withToasts) {
+    for (const k of Object.keys(cache)) if (!clans[k]) delete cache[k];
+    Object.assign(cache, clans);
+    for (const k of Object.keys(pacts)) if (!pactRows[k]) delete pacts[k];
+    Object.assign(pacts, pactRows);
+    rebuildIndex();
+
+    if (withToasts && CURRENT_USER) {
+      const mine = clanOf(CURRENT_USER);
+      const myId = mine ? mine.id : null;
+      if (prevMyClan && !myId) {
+        const old = cache[prevMyClan];
+        showToast(old ? '🛡 You are no longer in [' + old.tag + '] ' + old.name : '🛡 Your clan has been disbanded.', false);
+      }
+      prevMyClan = myId;
+      if (mine) {
+        const members = Object.keys(mine.members || {}).sort();
+        if (prevMyMembers && members.length > prevMyMembers.length && mine.owner === CURRENT_USER) {
+          const joined = members.filter(m => !prevMyMembers.includes(m));
+          if (joined.length) showToast('🛡 ' + joined.join(', ') + ' joined [' + mine.tag + ']', true);
+        }
+        prevMyMembers = members;
+        const allies = alliesOf(mine.id).sort();
+        const added = allies.filter(a => !prevMyAllies.includes(a));
+        const removed = prevMyAllies.filter(a => !allies.includes(a));
+        if (added.length && cache[added[0]]) showToast('🤝 Pact with [' + cache[added[0]].tag + '] is now active!', true);
+        if (removed.length && cache[removed[0]]) showToast('🤝 Pact with [' + cache[removed[0]].tag + '] has ended.', false);
+        prevMyAllies = allies;
+        const inc = incomingPacts(mine.id).length;
+        if (inc > prevMyIncoming && mine.owner === CURRENT_USER) showToast('🤝 New alliance request — open 🛡 Clans.', true);
+        prevMyIncoming = inc;
+      } else {
+        prevMyMembers = null; prevMyAllies = []; prevMyIncoming = 0;
+      }
+    }
+    refreshOpenPanel();
+    if (typeof updateHUD === 'function') { try { updateHUD(); } catch (e) {} }
+  }
+  let prevMyClan = null, prevMyMembers = null, prevMyAllies = [], prevMyIncoming = 0;
+
+  // Full-table ingest — called by CloudSync.pullAndMerge with every
+  // clan/pact row it already pulled (absent keys = deleted rows).
+  function ingest(pairs) {
+    if (!client) return;
+    const clans = {}, pactRows = {};
+    (pairs || []).forEach(([k, v]) => {
+      if (k.indexOf(CPREFIX) === 0 && v && v.id) clans[k.slice(CPREFIX.length)] = v;
+      else if (k.indexOf(APREFIX) === 0 && v && v.a) pactRows[k.slice(APREFIX.length)] = v;
+    });
+    applyWorld(clans, pactRows, true);
+  }
+
+  async function refresh(withToasts) {
+    if (!client) return;
+    const { clans, pactRows } = await fetchWorld();
+    applyWorld(clans, pactRows, withToasts !== false);
+  }
+
+  // ---------- operations (each: fresh read → validate → write) ----------
+  async function createClan(name, tag, desc) {
+    if (!client) throw new Error('Clans live in the online world — cloud saving is not configured.');
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    name = (name || '').trim();
+    tag = (tag || '').trim().toUpperCase();
+    if (name.length < 3 || name.length > 24) throw new Error('Clan name must be 3-24 characters.');
+    if (!/^[A-Z0-9]{2,5}$/.test(tag)) throw new Error('Tag must be 2-5 letters/numbers (A-Z, 0-9).');
+    if (clanOf(CURRENT_USER)) throw new Error('You are already in a clan — leave it first.');
+    const id = slugify(name);
+    if (!id) throw new Error('Clan name needs at least one letter or number.');
+    const fresh = await fetchWorld();
+    if (fresh.clans[id]) throw new Error('A clan with that name already exists.');
+    for (const c of Object.values(fresh.clans)) {
+      if (c.tag === tag) throw new Error('Tag [' + tag + '] is already taken.');
+    }
+    if (!spendMoney(CLAN_COST)) throw new Error('Founding a clan costs $' + CLAN_COST.toLocaleString() + ' — not enough money.');
+    const row = bump({
+      id, name, tag,
+      desc: (desc || '').trim().slice(0, 140),
+      owner: CURRENT_USER,
+      created: Date.now(),
+      members: { [CURRENT_USER]: Date.now() },
+      log: [{ at: Date.now(), txt: 'Clan founded by ' + CURRENT_USER }]
+    });
+    await putRow(CPREFIX + id, row);
+    await refresh(false);
+    return row;
+  }
+
+  async function joinClan(id) {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    if (clanOf(CURRENT_USER)) throw new Error('You are already in a clan — leave it first.');
+    const row = await getClanRow(id);
+    if (!row) throw new Error('That clan no longer exists.');
+    const members = row.members || {};
+    if (members[CURRENT_USER]) throw new Error('You are already in this clan.');
+    if (Object.keys(members).length >= MAX_MEMBERS) throw new Error('This clan is full (' + MAX_MEMBERS + ' members).');
+    members[CURRENT_USER] = Date.now();
+    row.members = members;
+    logAdd(row, CURRENT_USER + ' joined');
+    bump(row);
+    await putRow(CPREFIX + id, row);
+    await refresh(false);
+    return row;
+  }
+
+  async function leaveClan() {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (mine.owner === CURRENT_USER && !window.confirm('Leave [' + mine.tag + '] ' + mine.name + '? The crown passes to the longest-standing member (or the clan disbands if you are alone).')) return false;
+    if (mine.owner !== CURRENT_USER && !window.confirm('Leave [' + mine.tag + '] ' + mine.name + '?')) return false;
+    const row = await getClanRow(mine.id);
+    if (!row) { await refresh(false); return true; }
+    const members = row.members || {};
+    delete members[CURRENT_USER];
+    row.members = members;
+    if (row.owner === CURRENT_USER) {
+      const rest = Object.keys(members).sort((a, b) => (members[a] || 0) - (members[b] || 0));
+      if (rest.length) {
+        row.owner = rest[0];
+        logAdd(row, '👑 ' + rest[0] + ' now leads the clan (' + CURRENT_USER + ' left)');
+      } else {
+        // last one out lights the candle — clan and its pacts dissolve
+        await delRow(CPREFIX + mine.id);
+        for (const k of Object.keys(pacts)) {
+          const p = pacts[k];
+          if (p && (p.a === mine.id || p.b === mine.id)) await delRow(APREFIX + k);
+        }
+        await refresh(false);
+        return true;
+      }
+    } else {
+      logAdd(row, CURRENT_USER + ' left');
+    }
+    bump(row);
+    await putRow(CPREFIX + mine.id, row);
+    await refresh(false);
+    return true;
+  }
+
+  async function kick(name) {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (name === CURRENT_USER) throw new Error('Use Leave instead.');
+    if (!window.confirm('Kick ' + name + ' from [' + mine.tag + ']?')) return false;
+    // validate against the FRESH cloud row — a stale local view must not
+    // let a non-owner kick (e.g. right after an ownership hand-off)
+    const row = await getClanRow(mine.id);
+    if (!row) throw new Error('Clan not found.');
+    if (row.owner !== CURRENT_USER) throw new Error('Only the clan owner can kick members.');
+    if (!(row.members || {})[name]) throw new Error(name + ' is not in your clan.');
+    delete row.members[name];
+    logAdd(row, name + ' was kicked');
+    bump(row);
+    await putRow(CPREFIX + mine.id, row);
+    await refresh(false);
+    return true;
+  }
+
+  async function disband() {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (!window.confirm('Disband [' + mine.tag + '] ' + mine.name + '? Members are released and pacts end. This cannot be undone.')) return false;
+    // fresh cloud row decides ownership — a stale cache view must not
+    // let a non-owner disband a clan they were just handed or removed from
+    const row = await getClanRow(mine.id);
+    if (!row) throw new Error('Clan not found.');
+    if (row.owner !== CURRENT_USER) throw new Error('Only the clan owner can disband.');
+    await delRow(CPREFIX + mine.id);
+    for (const k of Object.keys(pacts)) {
+      const p = pacts[k];
+      if (p && (p.a === mine.id || p.b === mine.id)) await delRow(APREFIX + k);
+    }
+    await refresh(false);
+    return true;
+  }
+
+  async function proposePact(otherId) {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (mine.owner !== CURRENT_USER) throw new Error('Only the clan owner can propose alliances.');
+    if (otherId === mine.id) throw new Error('That is your own clan.');
+    const target = await getClanRow(otherId);
+    if (!target) throw new Error('That clan no longer exists.');
+    const k = pactKey(mine.id, otherId);
+    const { data } = await client.from(OW_TABLE).select('data').eq('key', APREFIX + k).maybeSingle();
+    const existing = data && data.data;
+    if (existing && existing.status === 'active') throw new Error('You are already allied with [' + target.tag + '].');
+    if (existing && existing.status === 'pending') throw new Error('A proposal with [' + target.tag + '] is already pending.');
+    if (alliesOf(mine.id).length >= MAX_ALLIES) throw new Error('Your clan already has the maximum ' + MAX_ALLIES + ' allies.');
+    if (alliesOf(otherId).length >= MAX_ALLIES) throw new Error('[' + target.tag + '] already has the maximum ' + MAX_ALLIES + ' allies.');
+    await putRow(APREFIX + k, bump({
+      a: mine.id < otherId ? mine.id : otherId,
+      b: mine.id < otherId ? otherId : mine.id,
+      status: 'pending',
+      requestedBy: mine.id,
+      requestedAt: Date.now()
+    }));
+    await refresh(false);
+    return target;
+  }
+
+  async function answerPact(otherId, accept) {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (mine.owner !== CURRENT_USER) throw new Error('Only the clan owner can answer alliance requests.');
+    const k = pactKey(mine.id, otherId);
+    const { data } = await client.from(OW_TABLE).select('data').eq('key', APREFIX + k).maybeSingle();
+    const p = data && data.data;
+    if (!p || p.status !== 'pending' || p.requestedBy === mine.id) throw new Error('No pending request from that clan.');
+    const other = await getClanRow(otherId);
+    if (accept) {
+      if (alliesOf(mine.id).length >= MAX_ALLIES || alliesOf(otherId).length >= MAX_ALLIES) {
+        throw new Error('An alliance cap (' + MAX_ALLIES + ') would be exceeded.');
+      }
+      p.status = 'active';
+      await putRow(APREFIX + k, bump(p));
+      if (other) { logAdd(other, '🤝 Alliance with [' + mine.tag + '] formed'); bump(other); await putRow(CPREFIX + otherId, other); }
+      const mineRow = await getClanRow(mine.id);
+      if (mineRow) { logAdd(mineRow, '🤝 Alliance with [' + (other ? other.tag : otherId) + '] formed'); bump(mineRow); await putRow(CPREFIX + mine.id, mineRow); }
+    } else {
+      await delRow(APREFIX + k);
+      if (other) { logAdd(other, 'Alliance request to [' + mine.tag + '] declined'); bump(other); await putRow(CPREFIX + otherId, other); }
+    }
+    await refresh(false);
+    return true;
+  }
+
+  async function breakPact(otherId) {
+    if (!CURRENT_USER) throw new Error('Sign in first.');
+    const mine = clanOf(CURRENT_USER);
+    if (!mine) throw new Error('You are not in a clan.');
+    if (mine.owner !== CURRENT_USER) throw new Error('Only the clan owner can break alliances.');
+    const other = cache[otherId];
+    if (!window.confirm('Break the pact with [' + (other ? other.tag : otherId) + ']? Their plots become attackable again.')) return false;
+    await delRow(APREFIX + pactKey(mine.id, otherId));
+    const otherRow = await getClanRow(otherId);
+    if (otherRow) { logAdd(otherRow, 'Pact with [' + mine.tag + '] broken by ' + CURRENT_USER); bump(otherRow); await putRow(CPREFIX + otherId, otherRow); }
+    await refresh(false);
+    return true;
+  }
+
+  return { status, ingest, refresh, createClan, joinClan, leaveClan, kick, disband,
+           proposePact, answerPact, breakPact, clanOf, tagOf, relationTo, alliesOf,
+           incomingPacts, outgoingPacts, CLAN_COST, MAX_MEMBERS, MAX_ALLIES, get cache() { return cache; } };
+})();
+
+// Bridge for CloudSync.pullAndMerge (declared before this block — function
+// declarations are hoisted module-wide, so the sync loop can call it).
+function ingestClanRows(rows) {
+  try { Clans.ingest(rows); } catch (e) { console.warn('[OpenWorld] clan sync failed:', e); }
+}
+
+function clanRelationTo(username) {
+  try { return Clans.relationTo(username); } catch (e) { return null; }
+}
+function clanTagOf(username) {
+  try { return Clans.tagOf(username); } catch (e) { return null; }
+}
+// Small colored [TAG] chip for names rendered anywhere in the game
+function clanTagHtml(username) {
+  const tag = clanTagOf(username);
+  return tag ? ' <span style="color:#7fffd4;font-size:12px;font-weight:bold">[' + clEsc(tag) + ']</span>' : '';
+}
+function clEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+// Window-exposed for debugging/QA (the peace rule can be probed from the console)
+window.clanRelationTo = clanRelationTo;
+window.clanTagOf = clanTagOf;
+
+// ====================================================================
+// CLANS PANEL UI
+// ====================================================================
+function renderClansPanel() {
+  const body = document.getElementById('clans-body');
+  if (!body) return;
+  // Preserve in-progress form values across re-renders — a background
+  // sync landing while the player types must never eat their input.
+  const prevForm = {};
+  ['cl-name', 'cl-tag', 'cl-desc'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) prevForm[id] = el.value;
+  });
+  if (!CURRENT_USER) { body.innerHTML = '<div class="cl-note">Sign in to found or join a clan.</div>'; return; }
+  if (Clans.status() !== 'cloud') { body.innerHTML = '<div class="cl-note">Clans live in the shared online world — cloud saving must be configured.</div>'; return; }
+
+  const mine = Clans.clanOf(CURRENT_USER);
+  let html = '';
+
+  if (mine) {
+    const isOwner = mine.owner === CURRENT_USER;
+    const allies = Clans.alliesOf(mine.id);
+    const members = Object.keys(mine.members || {})
+      .sort((a, b) => (mine.members[a] || 0) - (mine.members[b] || 0));
+    html += `
+      <div class="cl-myclan">
+        <div class="cl-clan-title"><span class="cl-tag">[${clEsc(mine.tag)}]</span> ${clEsc(mine.name)}${isOwner ? '<span class="cl-crown">👑 You lead this clan</span>' : ''}</div>
+        ${mine.desc ? `<div class="cl-desc">“${clEsc(mine.desc)}”</div>` : ''}
+        <div class="cl-sub">Founded ${new Date(mine.created).toLocaleDateString()} · ${members.length}/${Clans.MAX_MEMBERS} members · ${allies.length}/${Clans.MAX_ALLIES} pacts</div>
+        <div class="cl-sub" style="margin-top:8px">👥 Roster</div>
+        <div class="cl-roster">
+          ${members.map(m => `
+            <div class="cl-member-row">
+              <span class="cl-member-name">${m === mine.owner ? '👑 ' : '• '}${clEsc(m)}${m === CURRENT_USER ? ' <span class="cl-owner">(you)</span>' : ''}</span>
+              <span class="cl-joined">joined ${new Date(mine.members[m] || 0).toLocaleDateString()}</span>
+              ${isOwner && m !== CURRENT_USER ? `<button class="cl-mini danger" onclick="clKick('${clEsc(m)}')">Kick</button>` : ''}
+            </div>`).join('')}
+        </div>
+        ${allies.length ? `
+          <div class="cl-sub">🤝 Allied clans</div>
+          ${allies.map(a => { const c = Clans.cache[a]; return c ? `
+            <div class="cl-ally-row"><span class="cl-tag">[${clEsc(c.tag)}]</span> ${clEsc(c.name)} <span class="cl-owner">@${clEsc(c.owner)}</span>
+            ${isOwner ? `<button class="cl-mini danger" onclick="clBreakPact('${clEsc(a)}')">Break</button>` : ''}</div>` : ''; }).join('')}` : ''}
+        ${isOwner && Clans.incomingPacts(mine.id).length ? `
+          <div class="cl-sub">🤝 Incoming alliance requests</div>
+          ${Clans.incomingPacts(mine.id).map(p => { const c = Clans.cache[p.a === mine.id ? p.b : p.a]; return c ? `
+            <div class="cl-ally-row"><span class="cl-tag">[${clEsc(c.tag)}]</span> ${clEsc(c.name)}
+              <button class="cl-mini" onclick="clAnswerPact('${clEsc(c.id)}',true)">Accept</button>
+              <button class="cl-mini danger" onclick="clAnswerPact('${clEsc(c.id)}',false)">Decline</button></div>` : ''; }).join('')}` : ''}
+        ${isOwner && Clans.outgoingPacts(mine.id).length ? `
+          <div class="cl-sub">⏳ Pending proposals</div>
+          ${Clans.outgoingPacts(mine.id).map(p => { const c = Clans.cache[p.a === mine.id ? p.b : p.a]; return c ? `
+            <div class="cl-ally-row"><span class="cl-tag">[${clEsc(c.tag)}]</span> ${clEsc(c.name)} <span class="cl-owner">awaiting their answer</span>
+              <button class="cl-mini danger" onclick="clBreakPact('${clEsc(c.id)}')">Cancel</button></div>` : ''; }).join('')}` : ''}
+        <div class="cl-actions">
+          <button class="cl-btn ghost" onclick="clLeave()">Leave clan</button>
+          ${isOwner ? '<button class="cl-btn danger" onclick="clDisband()">Disband</button>' : ''}
+        </div>
+        ${(mine.log || []).length ? `
+          <div class="cl-sub">📜 Recent events</div>
+          <div class="cl-log">${mine.log.slice(0, 8).map(l => `<div class="cl-log-row"><span class="cl-log-time">${new Date(l.at).toLocaleTimeString()}</span>${clEsc(l.txt)}</div>`).join('')}</div>` : ''}
+      </div>`;
+  } else {
+    html += `
+      <div class="cl-create">
+        <div class="cl-sub" style="margin-top:0">Found a new clan — one-time fee <b style="color:#f5cc74">$${Clans.CLAN_COST.toLocaleString()}</b></div>
+        <div class="cl-form">
+          <input id="cl-name" class="cl-input" maxlength="24" placeholder="Clan name (3-24 characters)" autocomplete="off">
+          <input id="cl-tag" class="cl-input cl-tag-input" maxlength="5" placeholder="TAG (2-5)" autocomplete="off">
+          <input id="cl-desc" class="cl-input" maxlength="140" placeholder="Motto / description (optional)" autocomplete="off">
+          <button class="cl-btn" onclick="clCreate()">🛡 Found clan — $${Clans.CLAN_COST.toLocaleString()}</button>
+        </div>
+      </div>`;
+  }
+
+  // Browse every clan in the world
+  const list = Object.values(Clans.cache).sort((a, b) =>
+    Object.keys(b.members || {}).length - Object.keys(a.members || {}).length || (a.name < b.name ? -1 : 1));
+  const amOwner = mine && mine.owner === CURRENT_USER;
+  html += `<div class="cl-sub">🌍 Clans in the world (${list.length})</div>`;
+  if (list.length) {
+    html += '<div class="cl-list">' + list.map(c => {
+      const members = Object.keys(c.members || {});
+      const isMine = mine && c.id === mine.id;
+      const isAlly = mine && Clans.alliesOf(mine.id).includes(c.id);
+      const rel = isMine ? '<span class="cl-rel you">YOUR CLAN</span>'
+        : (isAlly ? '<span class="cl-rel ally">ALLY</span>' : '');
+      let act = '';
+      if (!mine) {
+        act = `<button class="cl-mini" onclick="clJoin('${clEsc(c.id)}')">Join</button>`;
+      } else if (amOwner && !isMine) {
+        if (isAlly) act = `<button class="cl-mini danger" onclick="clBreakPact('${clEsc(c.id)}')">Break pact</button>`;
+        else if (Clans.incomingPacts(mine.id).some(p => p.a === c.id || p.b === c.id)) act = `<button class="cl-mini" onclick="clAnswerPact('${clEsc(c.id)}',true)">Accept</button>`;
+        else if (Clans.outgoingPacts(mine.id).some(p => p.a === c.id || p.b === c.id)) act = `<span class="cl-owner">⏳ pending</span>`;
+        else act = `<button class="cl-mini" onclick="clProposePact('${clEsc(c.id)}')">🤝 Propose</button>`;
+      }
+      return `
+        <div class="cl-row">
+          <span class="cl-tag">[${clEsc(c.tag)}]</span>
+          <span class="cl-name">${clEsc(c.name)}</span>
+          <span class="cl-owner">@${clEsc(c.owner)}</span>
+          <span class="cl-count">${members.length}/${Clans.MAX_MEMBERS} 👥 · ${Clans.alliesOf(c.id).length} 🤝</span>
+          ${rel}${act}
+        </div>`;
+    }).join('') + '</div>';
+  } else {
+    html += '<div class="cl-note">No clans yet — found the first one!</div>';
+  }
+  body.innerHTML = html;
+  // restore the create-form values the player had typed
+  if (!mine) {
+    ['cl-name', 'cl-tag', 'cl-desc'].forEach(id => {
+      if (prevForm[id] !== undefined) {
+        const el = document.getElementById(id);
+        if (el && !el.value) el.value = prevForm[id];
+      }
+    });
+  }
+}
+
+// Panel dirty-flag lives at module level (refreshOpenPanel + openClans
+// + the 10s refresh interval all live outside the Clans IIFE).
+let clansPanelDirty = false;
+
+function refreshOpenPanel() {
+  const ov = document.getElementById('clans-overlay');
+  if (!ov || !ov.classList.contains('show')) return;
+  // don't rebuild under someone who's typing — mark dirty instead
+  const ae = document.activeElement;
+  if (ae && ov.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) { clansPanelDirty = true; return; }
+  clansPanelDirty = false;
+  try { renderClansPanel(); } catch (e) {}
+}
+
+window.openClans = async function() {
+  const ov = document.getElementById('clans-overlay');
+  if (!ov) return;
+  ov.classList.add('show');
+  try { renderClansPanel(); } catch (e) {}
+  if (Clans.status() === 'cloud' && CURRENT_USER) {
+    try { await Clans.refresh(false); } catch (e) { console.warn('[OpenWorld] clan refresh failed:', e); }
+  }
+  clansPanelDirty = false;
+  try { renderClansPanel(); } catch (e) {}
+};
+window.closeClans = function() {
+  const ov = document.getElementById('clans-overlay');
+  if (ov) ov.classList.remove('show');
+};
+// click on the dark backdrop (not the card) closes the panel
+(() => {
+  const attach = () => {
+    const ov = document.getElementById('clans-overlay');
+    if (ov) ov.addEventListener('mousedown', (e) => { if (e.target === ov) window.closeClans(); });
+  };
+  if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', attach);
+  else attach();
+})();
+
+// ---------- panel action handlers ----------
+window.clCreate = async function() {
+  const name = (document.getElementById('cl-name') || {}).value || '';
+  const tag = (document.getElementById('cl-tag') || {}).value || '';
+  const desc = (document.getElementById('cl-desc') || {}).value || '';
+  try {
+    const c = await Clans.createClan(name, tag, desc);
+    showToast(`🛡 Clan [${c.tag}] ${c.name} founded! Recruit commanders to your banner.`, true);
+  } catch (e) { showToast(e.message || String(e), false); }
+};
+window.clJoin = async function(id) {
+  try {
+    const c = await Clans.joinClan(id);
+    showToast(`🛡 Joined [${c.tag}] ${c.name}!`, true);
+  } catch (e) { showToast(e.message || String(e), false); }
+};
+window.clLeave = async function() {
+  try { if (await Clans.leaveClan()) showToast('You left the clan.', true); }
+  catch (e) { showToast(e.message || String(e), false); }
+};
+window.clKick = async function(name) {
+  try { if (await Clans.kick(name)) showToast(name + ' was kicked.', true); }
+  catch (e) { showToast(e.message || String(e), false); }
+};
+window.clDisband = async function() {
+  try { if (await Clans.disband()) showToast('Clan disbanded.', true); }
+  catch (e) { showToast(e.message || String(e), false); }
+};
+window.clProposePact = async function(id) {
+  try {
+    const c = await Clans.proposePact(id);
+    showToast(`🤝 Alliance proposed to [${c.tag}] ${c.name} — their owner must accept.`, true);
+  } catch (e) { showToast(e.message || String(e), false); }
+};
+window.clAnswerPact = async function(id, accept) {
+  try {
+    if (accept) showToast('🤝 Alliance formed!', true);
+    else showToast('Alliance request declined.', true);
+    await Clans.answerPact(id, accept);
+  } catch (e) { showToast(e.message || String(e), false); }
+};
+window.clBreakPact = async function(id) {
+  try { if (await Clans.breakPact(id)) showToast('Pact broken.', true); }
+  catch (e) { showToast(e.message || String(e), false); }
+};
+
+// Live social refresh while the panel is open (rosters/pacts change
+// without waiting for the 30s world sync)
+setInterval(() => {
+  const ov = document.getElementById('clans-overlay');
+  if (ov && ov.classList.contains('show') && CURRENT_USER && Clans.status() === 'cloud') {
+    Clans.refresh(true).catch(() => {});
+  } else if (clansPanelDirty && ov && ov.classList.contains('show')) {
+    clansPanelDirty = false;
+    try { renderClansPanel(); } catch (e) {}
+  }
+}, 10000);
 
 // ====================================================================
 // GLOBAL CLAIMS — shared plot ownership across accounts
@@ -1772,7 +2474,7 @@ function renderLeaderboard() {
         <div class="lb-rank ${rankClass}">${rankDisplay}</div>
         <div class="lb-avatar">${entry.name.charAt(0).toUpperCase()}</div>
         <div class="lb-info">
-          <div class="lb-name">${entry.name}${isMe ? ' (You)' : ''}</div>
+          <div class="lb-name">${entry.name}${clanTagHtml(entry.name)}${isMe ? ' (You)' : ''}</div>
           <div class="lb-meta">${formatMeta(entry)}</div>
         </div>
         <div class="lb-value">${formatVal(entry)}</div>
@@ -3089,9 +3791,19 @@ function openPlotModal(plot) {
     `;
   }
 
-  // War panel — plots held by another commander can be taken by force
+  // War panel — plots held by another commander can be taken by force.
+  // Peace rule: clan-mates and allies are UNTOUCHABLE — their card shows
+  // a protection banner instead of an invasion panel.
+  const protectedRel = (ownedByOther && CURRENT_USER) ? clanRelationTo(ownerName) : null;
   let warPanel = '';
-  if (ownedByOther) {
+  if (ownedByOther && protectedRel) {
+    warPanel = `
+      <div class="war-panel">
+        <div class="war-title">🛡 Protected by your ${protectedRel === 'clan' ? 'clan' : 'alliance'}</div>
+        <div class="war-hint">${clEsc(ownerName)} fights on your side — the pact forbids attacking clan-mates and allies.</div>
+      </div>
+    `;
+  } else if (ownedByOther) {
     const kind = warKind(plot);
     const kIcon = warKindIcon(kind);
     const defender = getDefenderForce(ownerName, kind);
@@ -3136,12 +3848,14 @@ function openPlotModal(plot) {
       <span class="meta-chip">Capacity <b>${plot.userData.maxBusinesses || 1}</b></span>
     </div>
     <div class="desc">${ownedByOther
-      ? `This parcel is <b>claimed by ${ownerName}</b> and cannot be purchased. But where money fails, <b>force</b> prevails — train an army and take it.`
+      ? (protectedRel
+        ? `This parcel is <b>claimed by ${ownerName}${clanTagHtml(ownerName)}</b> — a sworn ${protectedRel === 'clan' ? 'clan-mate' : 'ally'} who fights on your side.`
+        : `This parcel is <b>claimed by ${ownerName}${clanTagHtml(ownerName)}</b> and cannot be purchased. But where money fails, <b>force</b> prevails — train an army and take it.`)
       : `An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Build a business to produce materials for sale at the Market.' : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'}`
     }</div>
     <div class="price-row">
       <span class="price-label">${ownedByOther ? 'Owner' : (owned ? ((plot.userData.businesses && plot.userData.businesses.length > 0) ? `Producing (${plot.userData.businesses.length})` : 'Owned — Build Ready') : 'Asking Price')}</span>
-      <span class="price-value" style="${ownedByOther ? 'font-size:20px;color:#9a6aaa' : ''}">${ownedByOther ? ownerName : (owned ? ((plot.userData.businesses && plot.userData.businesses.length > 0) ? 'Active Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString())}<small>${ownedByOther || owned ? '' : ' USD'}</small></span>
+      <span class="price-value" style="${ownedByOther ? 'font-size:20px;color:#9a6aaa' : ''}">${ownedByOther ? ownerName + clanTagHtml(ownerName) : (owned ? ((plot.userData.businesses && plot.userData.businesses.length > 0) ? 'Active Plot' : 'Build Ready') : '$' + plot.userData.price.toLocaleString())}<small>${ownedByOther || owned ? '' : ' USD'}</small></span>
     </div>
     ${businessPanel}
     ${warPanel}
@@ -3157,6 +3871,14 @@ function openPlotModal(plot) {
 window.closePlotModal = function() {
   document.getElementById('plot-modal').classList.remove('show');
   STATE.selectedPlot = null;
+};
+
+// Debug/QA helper: open a plot card straight from its plot id (used by
+// automated tests; harmless in normal play — same as clicking the plot)
+window.openPlotById = function(id) {
+  const p = STATE.plots.find(p => p.userData.id === id);
+  if (p) openPlotModal(p);
+  return !!p;
 };
 
 window.buySelectedPlot = function() {
@@ -3817,6 +4539,17 @@ window.setWarCommit = function(frac) {
 window.attackPlot = function() {
   const p = STATE.selectedPlot;
   if (!p || !p.userData.ownedByOther) return;
+  // Peace rule — clan-mates and allies are untouchable. Checked before
+  // any force is committed so a pact can never be betrayed in the heat
+  // of battle (the UI hides the war panel too, but never trust the UI).
+  const relNow = p.userData.ownerName ? clanRelationTo(p.userData.ownerName) : null;
+  if (relNow) {
+    const tag = clanTagOf(p.userData.ownerName);
+    showToast(relNow === 'clan'
+      ? `🛡 ${p.userData.ownerName} is in your clan — you fight together, not each other.`
+      : `🤝 [${tag}] is bound by your alliance — you cannot attack them.`, false);
+    return;
+  }
   // Sea plots are invaded with ships, land plots with troops
   const kind = warKind(p);
   const kIcon = warKindIcon(kind);
@@ -4297,6 +5030,13 @@ function updateHUD() {
     const cap = troopCapacity();
     armyEl.textContent = troops.toLocaleString() + (cap > 0 ? ' / ' + cap.toLocaleString() : '');
   }
+  // Clan badge on the HUD button + casino shortcut
+  const clansBtn = document.getElementById('clans-btn');
+  if (clansBtn) {
+    const tag = CURRENT_USER ? clanTagOf(CURRENT_USER) : null;
+    clansBtn.textContent = tag ? '🛡 ' + tag : '🛡 Clans';
+    clansBtn.title = tag ? ('Your clan [' + tag + '] — open Clans & Alliances') : 'Clans & Alliances — team up with other commanders';
+  }
   // Casino shortcut — visible when you own at least one casino
   updateGambleButton();
 }
@@ -4484,6 +5224,7 @@ window.addEventListener('keydown', (e) => {
     window.closeAdmin();
     window.closeLeaderboard();
     window.closeSettings();
+    window.closeClans();
   }
 });
 </script>

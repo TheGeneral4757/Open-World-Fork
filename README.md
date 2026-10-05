@@ -179,6 +179,15 @@ python3 -m http.server 8000
 
 ## Changelog
 
+### v1.12 (2026-10-06) — Clans & alliances
+- **Team up: found a clan for $50,000** (🛡 Clans button on the menu and in the world HUD) — name, 2-5 char tag, motto; up to 20 commanders per clan with an open-join policy
+- **Clan life**: the owner 👑 can kick members; leaving hands the crown to the longest-standing member; the last one out (or Disband) dissolves the clan and its pacts; every roster change lands in a clan event log
+- **Alliances (pacts)**: a clan owner proposes to another clan (max 3 per clan); the other owner accepts or declines from their Clans panel — pending proposals and incoming requests are listed on both sides
+- **Peace rule**: clan-mates and allies **cannot attack each other's plots** — the war panel is replaced with a 🛡 Protected banner and `attackPlot` refuses the order even if triggered programmatically
+- Clan tags show next to owners on the **leaderboard, plot cards and the HUD button**; join/leave/kick/pact events arrive as live toasts
+- **No schema change**: clans (`openworld_clan_<id>`) and pacts (`openworld_alliance_<a>__<b>`) are ordinary rows in the existing `openworld_data` table and ride along with the normal 30-second sync; the Clans panel additionally refreshes every 10 seconds while open
+- **Admin panel**: new Clans table (disband any clan), clan column on accounts, and deleted accounts are stripped from their clans automatically (crown passes or clan dissolves)
+
 ### v1.11 (2026-10-06) — Admin resets stick
 - **Fixed: admin resets/set-money/zero-inventory no longer revert.** The in-game admin panel reused the previous edit's ownership stamp, so an online player's newer autosave pushed their pre-reset state right back over the reset within seconds
 - Every admin mutation now writes a **fresh, strictly-increasing stamp**, which all devices treat as authoritative: autosaves refuse to overwrite it and the next 30-second sync adopts the reset live (with an on-screen notice)
