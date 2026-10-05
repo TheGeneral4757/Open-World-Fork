@@ -197,7 +197,9 @@ function renderAccounts() {
 // written through to this browser's localStorage (same origin as the
 // game) so stale local copies can't resurrect old values either.
 function stampSave(save) {
-  save.adminStamp = Date.now();
+  // ALWAYS bump — monotonic even for repeat edits in the same ms (a
+  // reused stamp would let devices keep their pre-edit state)
+  save.adminStamp = Math.max(Date.now(), (parseInt(save.adminStamp, 10) || 0) + 1);
   save.savedAt = save.adminStamp;
   return save;
 }

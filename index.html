@@ -3943,7 +3943,13 @@ function adminLog(msg, ok) {
 // upserts), this device's localStorage mirror, and the live STATE when
 // the owner edits their own running game.
 function adminApplyLocal(name, s) {
-  s.adminStamp = s.adminStamp || Date.now();
+  // ALWAYS bump the stamp. The save this panel edits is the cloud
+  // snapshot, which already carries the PREVIOUS admin edit's stamp —
+  // reusing it (`|| Date.now()`) made devices think they already had
+  // this decision, so their newer-savedAt autosaves pushed the old
+  // values right back (admin resets "reverting"). Monotonic even for
+  // repeat edits landing in the same millisecond.
+  s.adminStamp = Math.max(Date.now(), (parseInt(s.adminStamp, 10) || 0) + 1);
   s.savedAt = s.adminStamp;
   try {
     if (localStorage.getItem(SAVE_PREFIX + name)) {

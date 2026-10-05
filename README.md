@@ -179,6 +179,11 @@ python3 -m http.server 8000
 
 ## Changelog
 
+### v1.11 (2026-10-06) — Admin resets stick
+- **Fixed: admin resets/set-money/zero-inventory no longer revert.** The in-game admin panel reused the previous edit's ownership stamp, so an online player's newer autosave pushed their pre-reset state right back over the reset within seconds
+- Every admin mutation now writes a **fresh, strictly-increasing stamp**, which all devices treat as authoritative: autosaves refuse to overwrite it and the next 30-second sync adopts the reset live (with an on-screen notice)
+- Same hardening applied to the standalone `admin.html` panel (monotonic stamps even for rapid repeat edits)
+
 ### v1.10 (2026-10-06) — No more passive gambling
 - **Casinos now produce Entertainment at a steady rate** like every other business — the automatic jackpot/big-win/bust production rolls are gone (no more random 0× dry spells or surprise 10× stock spikes)
 - The **interactive slots minigame is untouched**: visit any casino you own, bet your own money, spin the reels (jackpot 10×, big win 3×, push, bust; extra casinos still trim the bust chance)
