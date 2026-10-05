@@ -568,6 +568,10 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .planet-action{flex-shrink:0}
 .planet-badge{display:inline-block;padding:5px 12px;border-radius:12px;font-size:10px;font-family:Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
 
+/* My Land panel rows (reuse planet-row layout at a tighter size) */
+.myplot-row{display:flex;gap:12px;padding:10px 14px;border:1px solid #1a3340;border-radius:10px;background:rgba(20,50,60,.35);margin-bottom:8px;align-items:center}
+.myplot-row .planet-icon{font-size:22px;width:34px}
+
 @media(max-width:700px){
   .top-bar{padding:10px 12px;gap:8px;flex-wrap:wrap}
   .brand{font-size:14px;order:3;flex-basis:100%;text-align:center;margin-top:4px}
@@ -689,6 +693,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <button class="market-btn" onclick="openMarketModal()">📈 Market</button>
         <button class="market-btn" id="clans-btn" onclick="openClans()" title="Clans & Alliances — team up with other commanders">🛡 Clans</button>
         <button class="market-btn" id="planets-btn" onclick="openPlanets()" title="Planets — buy into new worlds and travel between them">🪐</button>
+        <button class="market-btn" id="myland-btn" onclick="openMyPlots()" title="My Land — see your plots and sell the ones you don't want">🗺</button>
         <button class="market-btn" id="gamble-btn" onclick="openGambling()" style="display:none" title="Play at your casinos">🎰 Casino</button>
       </div>
     </div>
@@ -764,6 +769,13 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 <div class="plot-modal" id="planets-modal">
   <div class="plot-card" id="planets-card">
     <!-- filled dynamically by renderPlanetsPanel() -->
+  </div>
+</div>
+
+<!-- My Land — view and sell owned plots across all planets. -->
+<div class="plot-modal" id="myplots-modal">
+  <div class="plot-card" id="myplots-card">
+    <!-- filled dynamically by renderMyPlotsPanel() -->
   </div>
 </div>
 
@@ -4227,6 +4239,9 @@ function openPlotModal(plot) {
     ${warPanel}
     <div class="actions">
       <button class="btn" onclick="closePlotModal()">Cancel</button>
+      ${owned && !ownedByOther ? (owned && (plot.userData.businesses || []).length === 0
+        ? `<button class="btn demolish" onclick="sellSelectedPlot()">Sell Plot — +$${Math.round(plot.userData.price * 0.5).toLocaleString()}</button>`
+        : `<button class="btn demolish" disabled title="Demolish all businesses on this plot first">Sell — demolish first</button>`) : ''}
       ${actionBtn}
     </div>
   `;
@@ -4404,6 +4419,134 @@ window.travelTo = function(planetId) {
   saveGame();
   showToast(`${planet.icon} Arrived at ${planet.name}${stripped ? ` — ⚔️ ${stripped} of your plots here were conquered while you were away` : ''}`, true);
 };
+
+// ====================================================================
+// MY LAND — see every plot you own (across all planets) and sell the
+// ones you no longer want. Selling refunds 50% of the plot's value and
+// frees the claim: the parcel becomes unclaimed land anyone can buy.
+// Plots with businesses on them must be demolished first, so you can
+// never accidentally sell a producing business.
+// ====================================================================
+const SELL_REFUND_RATE = 0.5;
+
+function plotSaleInfo(plotId) {
+  const planet = planetOfPlotId(plotId);
+  const active = ACTIVE_PLOT_BY_ID.get(plotId);
+  const meta = (PLANET_META[planet.id] || new Map()).get(plotId);
+  const price = active ? active.userData.price : (meta ? meta.price : 0);
+  const name = active ? active.userData.name : (meta ? meta.name : ('Plot #' + plotId));
+  return { planet, active, meta, price, name, refund: Math.round(price * SELL_REFUND_RATE) };
+}
+
+function sellPlotCore(plotId) {
+  if (!CURRENT_USER || !gameInitialized) { showToast('Enter the world first', false); return false; }
+  if (!STATE.owned.has(plotId)) { showToast("You don't own this plot", false); return false; }
+  const types = BUSINESS_REGISTRY.get(plotId) || [];
+  if (types.length) {
+    showToast('Demolish all businesses on this plot first', false);
+    return false;
+  }
+  const info = plotSaleInfo(plotId);
+  STATE.money += info.refund;
+  STATE.owned.delete(plotId);
+  // Free the global claim — the plot is open land again, buyable by anyone
+  const claims = getClaims();
+  delete claims[plotId];
+  saveClaims(claims);
+  if (info.active) {
+    const p = info.active;
+    p.userData.owned = false;
+    p.userData.ownedByOther = false;
+    p.userData.ownerName = null;
+    p.userData.businesses = [];
+    // Restore the original terrain tint (the gold ownership fill is gone)
+    setPlotColors(p, p.userData.baseColor, PLOT_UNOWNED_OUTLINE);
+    const ci = STATE.claimedPlots.indexOf(p);
+    if (ci >= 0) STATE.claimedPlots.splice(ci, 1);
+    flushPlotPools();
+  }
+  updateHUD();
+  saveGame();
+  showToast(`Sold ${info.name} for $${info.refund.toLocaleString()} — it's unclaimed now`, true);
+  return true;
+}
+
+window.sellSelectedPlot = function() {
+  const p = STATE.selectedPlot;
+  if (!p || !p.userData.owned) return;
+  const refund = Math.round(p.userData.price * SELL_REFUND_RATE);
+  if (!confirm(`Sell ${p.userData.name} for $${refund.toLocaleString()}? It becomes unclaimed land anyone can buy.`)) return;
+  sellPlotCore(p.userData.id);
+};
+
+window.sellPlotById = function(plotId) {
+  const info = plotSaleInfo(plotId);
+  if (!confirm(`Sell ${info.name} (${info.planet.icon} ${info.planet.name}) for $${info.refund.toLocaleString()}? It becomes unclaimed land anyone can buy.`)) return;
+  if (sellPlotCore(plotId)) renderMyPlotsPanel();
+};
+
+window.openMyPlots = function() {
+  renderMyPlotsPanel();
+  document.getElementById('myplots-modal').classList.add('show');
+};
+window.closeMyPlots = function() {
+  document.getElementById('myplots-modal').classList.remove('show');
+};
+
+function renderMyPlotsPanel() {
+  const card = document.getElementById('myplots-card');
+  const inGame = !document.getElementById('game').classList.contains('hidden');
+  if (!STATE.owned.size) {
+    card.innerHTML = `
+      <span class="badge available">🗺 my land</span>
+      <h2>Your Holdings</h2>
+      <div class="desc">You don't own any plots yet. Click any unclaimed parcel in the world to buy it — your first plot on each planet can go anywhere.</div>
+      <div class="actions"><button class="btn" onclick="closeMyPlots()">Close</button></div>
+    `;
+    return;
+  }
+  const ids = [...STATE.owned].sort((a, b) => a - b);
+  const rows = ids.map(id => {
+    const info = plotSaleInfo(id);
+    const types = BUSINESS_REGISTRY.get(id) || [];
+    let income = 0;
+    for (const t of types) {
+      const bt = getBusinessType(t);
+      if (!bt) continue;
+      const prod = plotProductionInfo(id);
+      if (prod) income += bt.rate * prod.areaMultiplier * regionBonusById(bt.id, prod.region);
+    }
+    const bizLabel = types.length
+      ? `${types.length} business${types.length > 1 ? 'es' : ''} · +${income.toFixed(1)}/s`
+      : 'no businesses — build ready';
+    const canSell = types.length === 0;
+    const action = canSell
+      ? `<button class="btn demolish" style="padding:9px 14px" onclick="sellPlotById(${id})">Sell +$${info.refund.toLocaleString()}</button>`
+      : `<button class="btn demolish" style="padding:9px 14px" disabled title="Demolish all businesses on this plot first">Sell</button>`;
+    return `
+      <div class="myplot-row">
+        <div class="planet-icon">${info.planet.icon}</div>
+        <div class="planet-info">
+          <div class="planet-name" style="font-size:14px">${info.name}</div>
+          <div class="planet-desc">${bizLabel}</div>
+        </div>
+        <div class="planet-action">${action}</div>
+      </div>
+    `;
+  }).join('');
+  const totalRefund = ids.reduce((s, id) => {
+    const types = BUSINESS_REGISTRY.get(id) || [];
+    return s + (types.length ? 0 : Math.round(plotSaleInfo(id).price * SELL_REFUND_RATE));
+  }, 0);
+  card.innerHTML = `
+    <span class="badge available">🗺 my land</span>
+    <h2>Your Holdings</h2>
+    <div class="coords">${ids.length} PLOT${ids.length > 1 ? 'S' : ''} ACROSS ${[...new Set(ids.map(id => planetOfPlotId(id).id))].length} PLANET${[...new Set(ids.map(id => planetOfPlotId(id).id))].length > 1 ? 'S' : ''}</div>
+    <div class="desc" style="margin-bottom:14px">Selling refunds <b>${Math.round(SELL_REFUND_RATE * 100)}% of the plot's value</b> and frees the land for anyone to claim. Demolish a plot's businesses before selling it.</div>
+    ${rows}
+    <div class="actions"><button class="btn" onclick="closeMyPlots()">Close</button></div>
+  `;
+}
 
 // Debug/QA helper: open a plot card straight from its plot id (used by
 // automated tests; harmless in normal play — same as clicking the plot)
@@ -5819,6 +5962,7 @@ window.addEventListener('keydown', (e) => {
     window.closeSettings();
     window.closeClans();
     window.closePlanets();
+    window.closeMyPlots();
   }
 });
 </script>
