@@ -304,6 +304,26 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .admin-foot .close{margin:0}
 .chip-danger{border-color:#7a3535 !important;color:#ff8080 !important}
 .chip-danger:hover{border-color:#ff8080 !important;color:#fff !important}
+/* Owner password lock — shown EVERY time the admin panel is opened */
+.admin-lock{display:flex;flex-direction:column;align-items:center;text-align:center;padding:18px 8px 6px}
+.admin-lock-icon{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:30px;
+  background:rgba(245,204,116,.08);border:1px solid rgba(245,204,116,.35);
+  box-shadow:0 0 24px rgba(245,204,116,.15),inset 0 1px 0 rgba(255,255,255,.08);margin-bottom:14px}
+.admin-lock-title{font-family:Georgia,serif;font-size:19px;color:#fff}
+.admin-lock-sub{font-family:Arial,sans-serif;font-size:11.5px;color:#7fa0ab;margin-top:6px;line-height:1.55}
+.admin-lock-input{width:min(300px,80%);margin-top:14px;background:#0a1420;border:1px solid #2c4a55;color:#e8f4ff;border-radius:10px;
+  padding:10px 14px;font-size:15px;font-family:Arial,sans-serif;letter-spacing:3px;text-align:center;outline:none}
+.admin-lock-input:focus{border-color:#f5cc74;box-shadow:0 0 0 3px rgba(245,204,116,.12)}
+.admin-lock-input::placeholder{color:#5d7885;letter-spacing:1px;font-size:12px}
+.admin-lock-err{min-height:16px;margin-top:9px;font-family:Arial,sans-serif;font-size:11.5px;color:#ff9d9d}
+.admin-lock-btn{margin-top:4px;border:none;border-radius:10px;padding:10px 22px;cursor:pointer;
+  font-family:Arial,sans-serif;font-size:12.5px;font-weight:bold;letter-spacing:.5px;color:#241a05;
+  background:linear-gradient(145deg,#f5cc74,#c9962e);box-shadow:0 4px 16px rgba(245,204,116,.3),inset 0 1px 0 rgba(255,255,255,.5)}
+.admin-lock-btn:hover{filter:brightness(1.08)}
+.admin-lock-btn:active{transform:translateY(1px)}
+.admin-lock-hint{margin-top:13px;font-family:Arial,sans-serif;font-size:9.5px;letter-spacing:1.5px;color:#5d7885;text-transform:uppercase}
+@keyframes adminShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+.admin-shake{animation:adminShake .4s ease}
 .mat-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #1a3340;border-radius:8px;
   background:rgba(20,50,60,.4);margin-bottom:8px}
 .mat-row .mat-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center}
@@ -4031,12 +4051,73 @@ async function adminWriteClaims(newClaims) {
 window.openAdmin = function() {
   if (CURRENT_USER !== ADMIN_ACCOUNT) { showToast('Admin only', false); return; }
   if (CloudSync.status() !== 'cloud') { showToast('Online multiplayer is not configured', false); return; }
-  renderAdmin();
+  // Every single open starts at the password lock — even mid-session,
+  // even right after unlocking. Closing the panel re-arms it.
+  renderAdminLock();
   document.getElementById('admin-modal').classList.add('show');
-  adminRefresh();
+  const inp = document.getElementById('admin-pass');
+  if (inp) setTimeout(() => inp.focus(), 60);
 };
 window.closeAdmin = function() {
   document.getElementById('admin-modal').classList.remove('show');
+};
+
+// The "Verification required" screen shown inside the admin card before
+// the control center itself is revealed.
+function renderAdminLock() {
+  const card = document.getElementById('admin-card');
+  card.innerHTML = `
+    <div class="admin-head">
+      <div class="admin-crown">👑</div>
+      <div class="admin-head-text">
+        <div class="admin-eyebrow">World Owner · Control Center</div>
+        <div class="admin-title">Admin — Shared World</div>
+        <div class="admin-owner-chip">🔐 ${ADMIN_ACCOUNT}</div>
+      </div>
+      <button class="admin-close-x" onclick="closeAdmin()" title="Close">✕</button>
+    </div>
+    <div class="admin-body">
+      <div class="admin-lock" id="admin-lock">
+        <div class="admin-lock-icon">🔒</div>
+        <div class="admin-lock-title">Verification required</div>
+        <div class="admin-lock-sub">Enter your password to open the control center.<br>You're asked every time the panel is opened.</div>
+        <input class="admin-lock-input" id="admin-pass" type="password" placeholder="Owner password" autocomplete="off"
+          onkeydown="if(event.key==='Enter')adminUnlock()">
+        <div class="admin-lock-err" id="admin-lock-err"></div>
+        <button class="admin-lock-btn" onclick="adminUnlock()">🔓 Unlock Control Center</button>
+        <div class="admin-lock-hint">${ADMIN_ACCOUNT} · owner session</div>
+      </div>
+    </div>`;
+}
+
+// Check the owner's password (same DJB2 hash the login form uses against
+// the locally stored account save). Wrong password never reveals the panel.
+window.adminUnlock = function() {
+  const inp = document.getElementById('admin-pass');
+  const err = document.getElementById('admin-lock-err');
+  if (!inp || !err) return;
+  const pwd = inp.value;
+  if (!pwd) { err.textContent = 'Enter your password.'; inp.focus(); return; }
+  const save = getSave(ADMIN_ACCOUNT);
+  if (!save || !save.passwordHash) {
+    err.textContent = 'Owner account data not found on this device.';
+    return;
+  }
+  if (save.passwordHash !== hashPassword(pwd)) {
+    err.textContent = 'Incorrect password.';
+    inp.value = '';
+    inp.focus();
+    const lock = document.getElementById('admin-lock');
+    if (lock) { lock.classList.remove('admin-shake'); void lock.offsetWidth; lock.classList.add('admin-shake'); }
+    return;
+  }
+  // Correct password — swap the lock for the real panel and replay the
+  // card's entrance animation so the unlock feels like an opening.
+  renderAdmin();
+  adminRefresh();
+  const card = document.getElementById('admin-card');
+  card.style.animation = 'none'; void card.offsetHeight; card.style.animation = '';
+  showToast('👑 Welcome back, owner', true);
 };
 
 function renderAdmin() {

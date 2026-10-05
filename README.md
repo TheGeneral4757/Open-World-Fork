@@ -40,7 +40,7 @@ The login screen shows **🌐 Online multiplayer: ON** when configured. What you
 The shared world has an **admin panel for the world owner** — the account `kingkanye26`. Nobody else can see it, open it, or call its actions.
 
 One door, right after logging in:
-- Log in as the owner → the **home (menu) screen** shows a **👑 Admin** button (hidden for everyone else) → click it and the panel opens instantly right there. No admin UI exists on the login screen or inside the world — entering the world always starts clean.
+- Log in as the owner → the **home (menu) screen** shows a **👑 Admin** button (hidden for everyone else) → clicking it opens a **verification lock**: the owner's password is required **every single time** the panel is opened (closing and reopening always re-asks). Wrong passwords are rejected with a shake — the control center never renders until the password matches. No admin UI exists on the login screen or inside the world — entering the world always starts clean.
 - **Standalone**: [`admin.html`](admin.html) — asks for the owner account's password before unlocking
 
 Owner powers:
@@ -180,6 +180,9 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.6.3 (2026-10-05) — Owner verification lock
+- **Security**: opening the admin panel now requires the owner's password **every time** — the 👑 Admin button opens a gold "Verification required" lock screen inside the panel, and only the correct password swaps it for the control center (Enter key works, wrong attempts shake and clear)
 
 ### v1.6.1 (2026-10-05) — Working admin panel
 - **Fixed**: admin-panel edits were silently reverted within seconds — the panel only wrote to the cloud, while each device's 10s autosave kept pushing stale local state back over it. Owner edits are now **owner-stamped** (`adminStamp`) and win over any autosave; deletes leave **tombstones** so deleted accounts stay deleted; claim resets carry a **claims stamp** so cleared claims stay cleared
