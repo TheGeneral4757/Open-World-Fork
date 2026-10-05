@@ -2620,7 +2620,7 @@ function rebuildPlotPools() {
   for (let i = 0; i < plots.length; i++) {
     const ud = plots[i].userData;
     const owned = ud.owned || ud.ownedByOther;
-    const scale = ud.owned ? 1.05 : 1.0;   // your plots sit slightly proud of the surface
+    const scale = 1.0;   // owned plots hug the surface exactly like every other plot — no floating islands
     const t = ud._tris, n = t.length;
     const dPos = owned ? owPos : unPos, dCol = owned ? owCol : unCol;
     const base = owned ? vo : vu;

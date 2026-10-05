@@ -181,6 +181,9 @@ python3 -m http.server 8000
 
 ## Changelog
 
+### v1.6.5 (2026-10-05) — Owned plots hug the surface
+- **Fixed**: owned plots used to hover visibly above the planet (they were radially inflated ~5% as a "proud of the surface" effect). They now sit flush on the earth exactly like every other cell — still shining gold, just no longer floating islands
+
 ### v1.6.4 (2026-10-05) — Even world lighting
 - **Fixed**: half the globe used to sit in darkness — the sun was fixed in space while the world spun under it. The sun is now locked to the camera and the ambient light is much stronger, so the entire world is evenly lit from every angle
 
