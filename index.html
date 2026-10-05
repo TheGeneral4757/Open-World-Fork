@@ -623,7 +623,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <div class="stat-chip"><span class="icon">💰</span><span>Budget</span><b id="money">$100,000</b></div>
         <div class="stat-chip stock-chip" onclick="openMarketModal()" title="Open Market"><span class="icon">📦</span><span>Stock</span><b id="stock-value">$0</b></div>
         <div class="stat-chip"><span class="icon">🌍</span><span>Owned</span><b id="owned-count">0</b></div>
-        <div class="stat-chip" title="Your army — trained by Barracks. Used to conquer other commanders' plots."><span class="icon">⚔️</span><span>Army</span><b id="army-count">0</b></div>
+        <div class="stat-chip" title="Your army — each Barracks houses 500 troops. Deploy troops to other commanders' plots to take them."><span class="icon">⚔️</span><span>Army</span><b id="army-count">0</b></div>
         <button class="market-btn" onclick="openMarketModal()">📈 Market</button>
         <button class="market-btn" id="gamble-btn" onclick="openGambling()" style="display:none" title="Play at your casinos">🎰 Casino</button>
       </div>
@@ -1925,6 +1925,10 @@ const MATERIALS = [
 // arcade pacing while build costs are doubled — a Farm now pays for itself in
 // ~8 minutes instead of ~90 seconds, and the whole tech tree takes hours of
 // casual play instead of minutes.
+// Military pricing (v1.7): Barracks / Naval Yard / Airfield deliberately sit
+// at the Factory / Resort / Oil-Rig tiers so conquest is reachable mid-game.
+// The brake on armies is housing, not cost — each Barracks houses 500 troops
+// (see TROOPS_PER_BARRACKS below).
 const BUSINESS_TYPES = [
   {
     id: 'farm', name: 'Farm', icon: '🌾',
@@ -1976,19 +1980,19 @@ const BUSINESS_TYPES = [
   },
   {
     id: 'barracks', name: 'Barracks', icon: '⚔️',
-    buildCost: 500000, produces: 'troops', rate: 0.4,
+    buildCost: 120000, produces: 'troops', rate: 0.4,
     color: 0x9c3428, shape: 'barracks', military: true,
-    desc: 'Trains troops. Your army defends your plots and conquers other commanders\' plots.'
+    desc: 'Trains troops. Each Barracks houses 500 troops — build more to raise your army cap. Deploy troops to conquer other commanders\' plots.'
   },
   {
     id: 'navalyard', name: 'Naval Yard', icon: '⚓',
-    buildCost: 650000, produces: 'ships', rate: 0.35,
+    buildCost: 180000, produces: 'ships', rate: 0.35,
     color: 0x2b5f75, shape: 'navalyard', military: true,
     desc: 'Builds warships on coasts and oceans. Ships fight naval invasions and defend sea plots.'
   },
   {
     id: 'airfield', name: 'Airfield', icon: '✈️',
-    buildCost: 900000, produces: 'planes', rate: 0.25,
+    buildCost: 280000, produces: 'planes', rate: 0.25,
     color: 0x78909c, shape: 'airfield', military: true,
     desc: 'Operates an airstrip. Planes provide air support to every battle you fight.'
   },
@@ -2002,6 +2006,21 @@ function getMaterial(id) {
 // Helper: get business type by id
 function getBusinessType(id) {
   return BUSINESS_TYPES.find(b => b.id === id);
+}
+
+// ARMY HOUSING — the limit on troop counts. Every Barracks you own
+// (including ones captured from other commanders) houses 500 troops, so
+// your army cap is 500 × barracks. Barracks stop training when full;
+// troops above the cap (e.g. granted by the world owner) are never removed.
+const TROOPS_PER_BARRACKS = 500;
+function troopCapacity() {
+  let barracks = 0;
+  for (const p of STATE.plots) {
+    for (const b of (p.userData.businesses || [])) {
+      if (b.type === 'barracks') barracks++;
+    }
+  }
+  return barracks * TROOPS_PER_BARRACKS;
 }
 
 // Where each building may be built: oil rigs at sea, naval yards on
@@ -3103,7 +3122,11 @@ function openPlotModal(plot) {
               <div class="biz-income" style="font-size:11px">${bt.id === 'casino'
                 ? `🎲 Volatile base ${baseRate.toFixed(1)}/s × ${regionInfo.icon} <b style="color:${bonusColor}">${bonusLabel}</b>`
                 : (mat.military
-                  ? `+${effectiveRate.toFixed(1)} ${mat.icon}/s to your army`
+                  ? (mat.id === 'troops'
+                    ? `+${effectiveRate.toFixed(1)} ${mat.icon}/s to your army · ${troopCapacity() > 0
+                      ? `housing ${Math.floor(STATE.inventory.troops || 0).toLocaleString()} / ${troopCapacity().toLocaleString()}`
+                      : 'no housing — build a Barracks to train troops'}`
+                    : `+${effectiveRate.toFixed(1)} ${mat.icon}/s to your army`)
                   : `+${effectiveRate.toFixed(1)} ${mat.icon}/s · $${Math.round(effectiveRate * price).toLocaleString()}/s`)
               }</div>
             </div>
@@ -3186,17 +3209,17 @@ function openPlotModal(plot) {
         <div class="war-row">Your forces: <b>⚔️ ${myTroops.toLocaleString()}</b> · <b>⚓ ${myShips.toLocaleString()}</b> · <b>✈️ ${myPlanes.toLocaleString()}</b>${myPlanes > 0 ? ` <span style="color:#7fffd4">(air support +${Math.round(airBonus(myPlanes) * 100)}%)</span>` : ''}</div>
         ${myForce > 0 ? `
           <div class="war-commit">
-            <span>Commit ${kind === 'ships' ? 'ships' : 'troops'}</span>
+            <span>Deploy ${kind === 'ships' ? 'ships' : 'troops'}</span>
             <input type="number" id="war-commit-input" min="1" max="${myForce}" value="${Math.max(1, Math.floor(myForce / 2))}" oninput="updateWarEstimate()">
             <button class="war-chip" onclick="setWarCommit(0.25)">25%</button>
             <button class="war-chip" onclick="setWarCommit(0.5)">½</button>
             <button class="war-chip" onclick="setWarCommit(1)">ALL</button>
           </div>
           <div class="war-estimate" id="war-estimate"></div>
-          <button class="war-attack" id="war-attack-btn" onclick="attackPlot()">${kIcon} ATTACK</button>
+          <button class="war-attack" id="war-attack-btn" onclick="attackPlot()">${kIcon} DEPLOY</button>
         ` : `<div class="war-hint">${kind === 'ships'
-          ? 'Build a Naval Yard on a coast or ocean plot to train ⚓ ships for sea invasions.'
-          : 'Build Barracks, train ⚔️ troops, and come back to take this plot by force.'}</div>`}
+          ? 'Build a Naval Yard ($180,000) on a coast or ocean plot to train ⚓ ships for sea invasions.'
+          : 'Build Barracks ($120,000) on one of your plots — each houses 500 ⚔️ troops you can deploy here to take this land.'}</div>`}
         <div id="war-result"></div>
       </div>
     `;
@@ -4285,7 +4308,11 @@ function updateHUD() {
     }
   }
   const armyEl = document.getElementById('army-count');
-  if (armyEl) armyEl.textContent = Math.floor(STATE.inventory.troops || 0).toLocaleString();
+  if (armyEl) {
+    const troops = Math.floor(STATE.inventory.troops || 0);
+    const cap = troopCapacity();
+    armyEl.textContent = troops.toLocaleString() + (cap > 0 ? ' / ' + cap.toLocaleString() : '');
+  }
   // Casino shortcut — visible when you own at least one casino
   updateGambleButton();
 }
@@ -4315,8 +4342,17 @@ function tickProduction() {
         produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
       }
       if (produced > 0) {
-        STATE.inventory[bt.produces] = (STATE.inventory[bt.produces] || 0) + produced;
-        anyProduced = true;
+        // Troops are capped by barracks housing — training pauses when
+        // every barracks is full (excess troops are never removed)
+        if (bt.produces === 'troops') {
+          const cap = troopCapacity();
+          if (cap > 0) produced = Math.min(produced, Math.max(0, cap - (STATE.inventory.troops || 0)));
+          else produced = 0; // no barracks standing = nowhere to house new troops
+        }
+        if (produced > 0) {
+          STATE.inventory[bt.produces] = (STATE.inventory[bt.produces] || 0) + produced;
+          anyProduced = true;
+        }
       }
     }
   }

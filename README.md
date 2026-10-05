@@ -76,15 +76,17 @@ Notes: passwords are lightly hashed client-side and the anon key is public by de
 
 ### ⚔️ Military & Conquest
 - **Barracks** (land) train ⚔️ troops, **Naval Yards** (coasts & oceans) train ⚓ ships, and **Airfields** (land) train ✈️ planes — military resources that can't be sold on the market
+- **Affordable military**: Barracks $120k, Naval Yard $180k, Airfield $280k — priced with the mid-game economy tier so building an army is always within reach
+- **Army housing cap**: each Barracks houses **500 troops** — your army cap is 500 × Barracks (captured ones count). Training pauses when the barracks are full; the HUD shows `troops / cap`
 - Your forces defend your plots automatically; enemies see your strength before attacking
-- **Conquer other commanders' plots**: click a claimed plot, commit forces, and attack
+- **Conquer other commanders' plots**: click a claimed plot, deploy forces, and attack
   - Land plots are fought with ⚔️ troops (⚔️ Conquest); sea plots are fought with ⚓ ships (⚓ Naval Invasion)
   - ✈️ planes from your Airfields give air support to every battle: +0.05% strength per plane, up to +50%
   - Defenders get terrain bonuses: mountains ×1.5, highlands ×1.35, ocean ×1.3, other land ×1.2
-  - Battles roll strength with ±15% luck — the modal shows your estimated win chance before you commit
+  - Battles roll strength with ±15% luck — the modal shows your estimated win chance before you deploy
   - **Win**: the plot becomes yours — captured businesses keep producing for you — and both sides take casualties
-  - **Lose**: the entire committed force is lost; the defender takes light losses
-- The 📊 **Army** chip in the HUD shows your current troop strength
+  - **Lose**: the entire deployed force is lost; the defender takes light losses
+- The 📊 **Army** chip in the HUD shows your troop strength and housing cap (e.g. `348 / 500`)
 - **Coastal land plots show a bluer outline** — that's where Naval Yards can be built (ocean plots work too)
 - **Military buildings are clearly distinct** from businesses: a separate red ⚔️ Military section in the build menu, MILITARY badges on army buildings, and a red base ring on the globe
 
@@ -180,6 +182,13 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.8 (2026-10-05) — Affordable army, troop housing cap, deploy language
+- **Military buildings are now mid-game affordable**: Barracks $500k → **$120k**, Naval Yard $650k → **$180k**, Airfield $900k → **$280k**
+- **Troop cap**: each Barracks houses 500 troops — cap = 500 × Barracks owned (captured barracks count). Training pauses when full; excess troops are never removed
+- HUD Army chip now shows `troops / cap` (e.g. `0 / 500`), and Barracks cards show live housing numbers
+- War panel wording changed from "Commit" to **"Deploy"** — deploy troops/ships to other commanders' plots and take them
+- War hints show current build costs so new commanders know the path to their first army
 
 ### v1.6.5 (2026-10-05) — Owned plots hug the surface
 - **Fixed**: owned plots used to hover visibly above the planet (they were radially inflated ~5% as a "proud of the surface" effect). They now sit flush on the earth exactly like every other cell — still shining gold, just no longer floating islands
