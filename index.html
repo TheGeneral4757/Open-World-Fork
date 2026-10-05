@@ -231,6 +231,9 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .biz-option.mil-option{border-color:#5a2424;background:rgba(80,20,20,.25)}
 .biz-option.mil-option:hover{background:rgba(80,20,20,.45)}
 /* In-game admin panel */
+/* Admin modals must stack ABOVE the login screen (z-index:50) — the
+   panel + its password gate open over the home page */
+#admin-modal,#admin-gate{z-index:60}
 .admin-topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
 .admin-cb{display:flex;align-items:center;gap:5px;color:#9bb4bd;font-size:12px;font-family:Arial,sans-serif}
 .admin-log{font-size:12px;color:#cbd7dc;margin-top:10px;min-height:16px;font-family:Arial,sans-serif}
@@ -480,7 +483,6 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <div class="menu-btn-row">
           <button class="menu-btn-secondary" onclick="openLeaderboard()">🏆 Leaderboard</button>
           <button class="menu-btn-secondary" onclick="openSettings()">Settings</button>
-          <button class="menu-btn-secondary" id="admin-btn" onclick="openAdmin()" style="display:none">👑 Admin</button>
           <button class="menu-btn-secondary" onclick="logout()">Logout</button>
         </div>
       </div>
@@ -589,18 +591,37 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
     </div>
   </div>
 
-  <div class="plot-modal" id="admin-modal">
-    <div class="plot-card gamble-card" id="admin-card">
-      <!-- filled dynamically -->
-    </div>
-  </div>
-
   <div class="toast" id="toast"></div>
 
   <div class="loader" id="loader">
     <div class="ring"></div>
     <div class="text">Loading Earth</div>
     <div class="sub">Generating world plots</div>
+  </div>
+</div>
+
+<!-- Admin modals live OUTSIDE #game so they can open over ANY screen —
+     the owner reaches them from the 👑 Admin button on the home page
+     (login screen), never from inside the world. -->
+<div class="plot-modal" id="admin-modal">
+  <div class="plot-card gamble-card" id="admin-card">
+    <!-- filled dynamically -->
+  </div>
+</div>
+
+<!-- Admin access gate (home page) — unlocks the panel only with the
+     world-owner account's password -->
+<div class="plot-modal" id="admin-gate">
+  <div class="plot-card gamble-card" style="max-width:380px">
+    <h2>👑 Admin Access</h2>
+    <p class="gamble-sub">This panel is restricted to the world owner<br><b style="color:#f5cc74">kingkanye26</b>. Enter that account's password to continue.</p>
+    <label class="login-label" for="admin-gate-pwd" style="display:block;text-align:left">Password</label>
+    <input type="password" id="admin-gate-pwd" class="login-input" placeholder="Enter password..." maxlength="40" autocomplete="off" style="width:100%" onkeydown="if(event.key==='Enter')adminGateSubmit()">
+    <div class="login-error" id="admin-gate-error"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="login-btn" onclick="adminGateSubmit()" style="flex:1">Unlock Panel</button>
+      <button class="login-tool-btn" onclick="closeAdminGate()" style="flex:0 0 auto">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -1523,6 +1544,7 @@ function renderLogin() {
     <div class="login-tools">
       <button class="login-tool-btn" onclick="exportAccounts()" title="Download a backup file of every account on this device">⬇ Export accounts</button>
       <button class="login-tool-btn" onclick="document.getElementById('import-file').click()" title="Restore accounts from a backup file">⬆ Import</button>
+      <button class="login-tool-btn" onclick="openAdminGate()" title="World-owner administration (kingkanye26 only)">👑 Admin</button>
       <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importAccounts(this)">
     </div>
   `;
@@ -1728,10 +1750,6 @@ function updateMenuWelcome() {
   if (!nameEl || !statsEl) return;
 
   nameEl.textContent = CURRENT_USER;
-
-  // Admin button — only the shared-world owner sees it
-  const adminBtn = document.getElementById('admin-btn');
-  if (adminBtn) adminBtn.style.display = CURRENT_USER === ADMIN_ACCOUNT ? '' : 'none';
 
   const save = getSave(CURRENT_USER);
   if (save) {
@@ -3885,11 +3903,16 @@ window.attackPlot = function() {
 
 // ====================================================================
 // ADMIN — shared-world administration, usable ONLY by the owner
-// account (ADMIN_ACCOUNT) from the menu screen. Every mutation is
-// stamped with `adminStamp` (a world-owner decision) and written
-// through to this device's localStorage mirror, so no device's 10s
-// autosave can ever stomp it — devices adopt owner decisions via the
-// merge rule in pullAndMerge. Deletions leave tombstones.
+// account (ADMIN_ACCOUNT) from the 👑 Admin button on the HOME PAGE
+// (login screen). The button is never shown on the menu / inside the
+// world: entering the world force-closes any admin UI. On the home
+// page the panel opens only after the owner's password is verified
+// (openAdminGate → adminGateSubmit), which signs this session in as
+// the owner. Every mutation is stamped with `adminStamp` (a
+// world-owner decision) and written through to this device's
+// localStorage mirror, so no device's 10s autosave can ever stomp it
+// — devices adopt owner decisions via the merge rule in pullAndMerge.
+// Deletions leave tombstones.
 // ====================================================================
 const ADMIN_ACCOUNT = 'kingkanye26';
 const STARTING_MONEY = 100000;
@@ -3961,6 +3984,41 @@ window.openAdmin = function() {
 };
 window.closeAdmin = function() {
   document.getElementById('admin-modal').classList.remove('show');
+};
+
+// --- Home-page admin gate -------------------------------------------
+// The 👑 Admin button on the login (home) screen goes through here.
+// Already signed in as the owner → open straight away. Otherwise ask
+// for the owner account's password; a correct answer signs this
+// session in as the owner (CURRENT_USER = ADMIN_ACCOUNT) so every
+// existing mutation guard keeps working unchanged, then opens the
+// panel over the home page. Nothing here is reachable from inside the
+// world — enterGame() force-closes admin UI.
+window.openAdminGate = function() {
+  if (CURRENT_USER === ADMIN_ACCOUNT) { openAdmin(); return; }
+  document.getElementById('admin-gate-error').textContent = '';
+  document.getElementById('admin-gate-pwd').value = '';
+  document.getElementById('admin-gate').classList.add('show');
+  setTimeout(() => { const i = document.getElementById('admin-gate-pwd'); if (i) i.focus(); }, 80);
+};
+window.closeAdminGate = function() {
+  document.getElementById('admin-gate').classList.remove('show');
+};
+window.adminGateSubmit = function() {
+  const err = document.getElementById('admin-gate-error');
+  const pwd = (document.getElementById('admin-gate-pwd').value || '');
+  if (!pwd) { err.textContent = 'Please enter a password'; return; }
+  const save = getSave(ADMIN_ACCOUNT);
+  if (!save || !save.passwordHash) {
+    err.textContent = 'Owner account "' + ADMIN_ACCOUNT + '" not found on this device. Turn on online multiplayer (or export/import the accounts here first), then try again.';
+    return;
+  }
+  if (save.passwordHash !== hashPassword(pwd)) { err.textContent = 'Incorrect password'; return; }
+  // Password verified — sign this session in as the world owner.
+  CURRENT_USER = ADMIN_ACCOUNT;
+  closeAdminGate();
+  showToast('👑 Welcome, ' + ADMIN_ACCOUNT + ' — admin access granted', true);
+  openAdmin();
 };
 
 function renderAdmin() {
@@ -4270,6 +4328,9 @@ let gameInitialized = false;
 window.enterGame = function() {
   document.getElementById('menu').classList.add('hidden');
   document.getElementById('game').classList.remove('hidden');
+  // Admin panel lives on the home page only — never inside the world.
+  closeAdminGate();
+  closeAdmin();
   if (!gameInitialized) {
     gameInitialized = true;
     initMarket();  // initialize market prices and inventory to defaults
@@ -4319,6 +4380,7 @@ window.addEventListener('keydown', (e) => {
     window.closeMarketModal();
     window.closeGambling();
     window.closeAdmin();
+    window.closeAdminGate();
     window.closeLeaderboard();
     window.closeSettings();
   }

@@ -39,8 +39,8 @@ The login screen shows **🌐 Online multiplayer: ON** when configured. What you
 ### 👑 World-owner admin panel (admin account only)
 The shared world has an **admin panel for the world owner** — the account `kingkanye26`. Nobody else can see it, open it, or call its actions.
 
-Two doors, both locked to that one account:
-- **In-game**: log in as the owner → the menu shows a **👑 Admin** button (hidden for everyone else) → manage every account in the world
+One door, on the **home page** (login screen) only:
+- Click the **👑 Admin** button at the bottom of the home page → enter the owner account's password → the panel opens. Nothing admin-related appears on the menu screen or inside the world — entering the world always starts clean.
 - **Standalone**: [`admin.html`](admin.html) — asks for the owner account's password before unlocking
 
 Owner powers:
