@@ -2148,6 +2148,7 @@ let scene, camera, renderer, controls;
 let earth, atmosphere, starField;
 let raycaster, pointer;
 let canvasContainer;
+let sunLight; // camera-locked sun — keeps the whole world lit from every angle
 
 function initScene() {
   canvasContainer = document.getElementById('canvas-container');
@@ -2166,15 +2167,18 @@ function initScene() {
   renderer.toneMappingExposure = 1.0;
   canvasContainer.appendChild(renderer.domElement);
 
-  // Lighting — sun + soft ambient
-  const sun = new THREE.DirectionalLight(0xfff6e0, 2.2);
+  // Lighting — the sun is locked to the camera and ambient is strong, so the
+  // ENTIRE world stays evenly lit no matter where you orbit or how the globe
+  // spins. (A fixed low sun used to leave one whole hemisphere dark.)
+  const sun = new THREE.DirectionalLight(0xfff6e0, 2.0);
   sun.position.set(5, 2, 4);
   scene.add(sun);
+  sunLight = sun;
 
-  const ambient = new THREE.AmbientLight(0x4a6a85, 0.55);
+  const ambient = new THREE.AmbientLight(0x8fb4cc, 0.95);
   scene.add(ambient);
-  // Subtle fill light from opposite side so the night side is never fully black
-  const fill = new THREE.DirectionalLight(0x5577aa, 0.35);
+  // Gentle back-fill for soft edge shading around the globe's limb
+  const fill = new THREE.DirectionalLight(0x5577aa, 0.45);
   fill.position.set(-5, -2, -4);
   scene.add(fill);
 
@@ -4470,6 +4474,9 @@ function animate() {
     earth.rotation.y += 0.0004;
   }
   controls.update();
+  // Keep the sun glued to the camera: whichever side of the world you are
+  // looking at is always the lit side — no more dark hemisphere.
+  if (sunLight) sunLight.position.copy(camera.position);
   updatePlotVisibility();
   if (now - _lastZoomDom > 100) {
     _lastZoomDom = now;

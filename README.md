@@ -181,6 +181,9 @@ python3 -m http.server 8000
 
 ## Changelog
 
+### v1.6.4 (2026-10-05) — Even world lighting
+- **Fixed**: half the globe used to sit in darkness — the sun was fixed in space while the world spun under it. The sun is now locked to the camera and the ambient light is much stronger, so the entire world is evenly lit from every angle
+
 ### v1.6.3 (2026-10-05) — Owner verification lock
 - **Security**: opening the admin panel now requires the owner's password **every time** — the 👑 Admin button opens a gold "Verification required" lock screen inside the panel, and only the correct password swaps it for the control center (Enter key works, wrong attempts shake and clear)
 
