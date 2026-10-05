@@ -558,6 +558,16 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
   text-transform:uppercase;cursor:pointer;transition:all .15s;white-space:nowrap}
 .logout-btn:hover{background:rgba(120,48,48,.6);color:#ffaaaa}
 
+/* Planets panel rows */
+.planet-row{display:flex;gap:14px;padding:14px;border:1px solid #1a3340;border-radius:10px;background:rgba(20,50,60,.35);margin-bottom:10px;align-items:center}
+.planet-icon{font-size:30px;width:44px;text-align:center;flex-shrink:0}
+.planet-info{flex:1;min-width:0}
+.planet-name{font-family:Georgia,serif;color:#f5cc74;font-size:17px}
+.planet-desc{font-family:Arial,sans-serif;font-size:11px;color:#9bb4bd;margin-top:3px;line-height:1.5}
+.planet-cost{font-family:Georgia,serif;color:#7fffd4;font-size:13px;margin-top:4px}
+.planet-action{flex-shrink:0}
+.planet-badge{display:inline-block;padding:5px 12px;border-radius:12px;font-size:10px;font-family:Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+
 @media(max-width:700px){
   .top-bar{padding:10px 12px;gap:8px;flex-wrap:wrap}
   .brand{font-size:14px;order:3;flex-basis:100%;text-align:center;margin-top:4px}
@@ -604,6 +614,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <button class="menu-btn-play" onclick="enterGame()">Enter World</button>
         <div class="menu-btn-row">
           <button class="menu-btn-secondary" id="clans-menu-btn" onclick="openClans()">🛡 Clans</button>
+          <button class="menu-btn-secondary" onclick="openPlanets()">🪐 Planets</button>
           <button class="menu-btn-secondary" onclick="openLeaderboard()">🏆 Leaderboard</button>
           <button class="menu-btn-secondary" onclick="openSettings()">Settings</button>
           <button class="menu-btn-secondary" id="admin-btn" onclick="openAdmin()" style="display:none" title="World-owner administration (kingkanye26 only)">👑 Admin</button>
@@ -677,6 +688,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <div class="stat-chip" title="Your army — each Barracks houses 500 troops. Deploy troops to other commanders' plots to take them."><span class="icon">⚔️</span><span>Army</span><b id="army-count">0</b></div>
         <button class="market-btn" onclick="openMarketModal()">📈 Market</button>
         <button class="market-btn" id="clans-btn" onclick="openClans()" title="Clans & Alliances — team up with other commanders">🛡 Clans</button>
+        <button class="market-btn" id="planets-btn" onclick="openPlanets()" title="Planets — buy into new worlds and travel between them">🪐</button>
         <button class="market-btn" id="gamble-btn" onclick="openGambling()" style="display:none" title="Play at your casinos">🎰 Casino</button>
       </div>
     </div>
@@ -720,7 +732,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 
   <div class="loader" id="loader">
     <div class="ring"></div>
-    <div class="text">Loading Earth</div>
+    <div class="text">Loading planet</div>
     <div class="sub">Generating world plots</div>
   </div>
 </div>
@@ -744,6 +756,14 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
       <button class="cl-close" onclick="closeClans()">✕</button>
     </div>
     <div id="clans-body"><div class="cl-note">Loading clans…</div></div>
+  </div>
+</div>
+
+<!-- Planets — buy into new worlds and travel between them. Lives outside
+     #game so it opens over both the menu and the world. -->
+<div class="plot-modal" id="planets-modal">
+  <div class="plot-card" id="planets-card">
+    <!-- filled dynamically by renderPlanetsPanel() -->
   </div>
 </div>
 
@@ -944,10 +964,67 @@ const STATE = {
   plotRevealDist: 3.2,        // camera distance at which plots begin to appear
   plotFullDist: 1.8,          // camera distance at which plots are fully visible
   // Convert scene units to km for display. Earth radius ≈ 6371 km.
-  unitToKm: 6371
+  unitToKm: 6371,
+  // PLANETS — the active world and the ones this account has bought into.
+  // Travel swaps the planet at the origin; ownership/businesses persist
+  // across all worlds via global plot ids (see PLANETS below).
+  planet: 'earth',
+  unlockedPlanets: ['earth']
 };
 
 const EARTH_RADIUS = STATE.radius;
+
+// ====================================================================
+// PLANETS — worlds you can buy into. Every planet has its own
+// deterministic plot grid (same Voronoi system as Earth) with ids
+// offset by idBase so saves/claims never collide:
+//   Earth 0–2199 · Luna 10 000–12 199 · Mars 20 000–22 199 · Oceanus 30 000–32 199
+// `water` controls terrain: 'mask' samples the Earth water map, 'none'
+// makes an all-land world, 'all' a world-ocean. priceMult scales the
+// latitude price bands — farther worlds hold pricier land.
+// ====================================================================
+const PLOTS_PER_PLANET = 2200;
+const PLANETS = [
+  { id: 'earth',   name: 'Earth',   icon: '🌍', cost: 0,         seed: 1337,  idBase: 0,      water: 'mask', priceMult: 1,   atmo: 0x6cc8ff,
+    desc: 'Home. Every empire starts here — oceans, coasts and every climate.' },
+  { id: 'luna',    name: 'Luna',    icon: '🌙', cost: 2_000_000,  seed: 42424, idBase: 10_000, water: 'none', priceMult: 2.5, atmo: null,
+    desc: 'An airless gray frontier. No oceans — but dry, cratered ground where Mines and Barracks thrive.' },
+  { id: 'mars',    name: 'Mars',    icon: '🔴', cost: 8_000_000,  seed: 90210, idBase: 20_000, water: 'none', priceMult: 5,   atmo: 0xd8956a,
+    desc: 'The rust-red frontier. Vast dusty highlands, rich in ore — a miner\'s dream.' },
+  { id: 'oceanus', name: 'Oceanus', icon: '🌊', cost: 20_000_000, seed: 73502, idBase: 30_000, water: 'all',  priceMult: 8,   atmo: 0x54e0c8,
+    desc: 'A world-ocean. Every plot is open water — Oil Rigs, Resorts and Naval Yards as far as the eye can see.' }
+];
+const PLANET_BY_ID = {};
+for (const pl of PLANETS) PLANET_BY_ID[pl.id] = pl;
+// Which planet a global plot id belongs to (ids are contiguous per planet)
+function planetOfPlotId(id) {
+  for (const pl of PLANETS) {
+    if (id >= pl.idBase && id < pl.idBase + PLOTS_PER_PLANET) return pl;
+  }
+  return PLANET_BY_ID.earth;
+}
+// How many plots the current account owns on a given planet
+function plotsOwnedOnPlanet(planetId) {
+  const pl = PLANET_BY_ID[planetId];
+  let n = 0;
+  for (const id of STATE.owned) {
+    if (id >= pl.idBase && id < pl.idBase + PLOTS_PER_PLANET) n++;
+  }
+  return n;
+}
+
+// PLANET_META — production-relevant stats for every generated plot,
+// keyed planetId → Map(plotId → meta). Lets businesses on OTHER planets
+// keep producing (and troops keep training) while you're traveling:
+// the active planet's live meshes and the off-planet meta agree because
+// both come from the same deterministic generation.
+const PLANET_META = {};   // planetId → Map(plotId → { areaMultiplier, region, isWater, ... })
+// BUSINESS_REGISTRY — plotId → [businessType ids] across ALL planets.
+// The authoritative record for saves/production; meshes are just the
+// active planet's view of it.
+const BUSINESS_REGISTRY = new Map();
+// Active planet's plotId → plot mesh lookup (O(1) instead of .find scans)
+const ACTIVE_PLOT_BY_ID = new Map();
 
 // ====================================================================
 // PERSISTENCE — save/load to localStorage
@@ -1980,6 +2057,7 @@ function applyCloudWorldUpdates() {
       p.userData.ownedByOther = true;
       p.userData.ownerName = owner;
       STATE.owned.delete(p.userData.id);
+      BUSINESS_REGISTRY.delete(p.userData.id);   // those businesses now belong to the conqueror
       // Remove my businesses from it (meshes + state)
       for (const entry of p.userData.businesses || []) {
         if (entry.mesh) {
@@ -2066,10 +2144,19 @@ function saveGame() {
     adminStamp: existing ? existing.adminStamp : undefined,
     money: STATE.money,
     ownedPlotIds: Array.from(STATE.owned),
-    // Map of plotId → array of business types (plots can hold multiple)
-    businesses: STATE.plots
-      .filter(p => p.userData.businesses && p.userData.businesses.length > 0)
-      .flatMap(p => p.userData.businesses.map(b => ({ plotId: p.userData.id, type: b.type }))),
+    // Planets: which world you're on and which ones you've bought into
+    planet: STATE.planet,
+    unlockedPlanets: [...STATE.unlockedPlanets],
+    // Map of plotId → array of business types (plots can hold multiple).
+    // Written from BUSINESS_REGISTRY so businesses on planets you're NOT
+    // visiting survive the save (meshes only exist for the active planet).
+    businesses: (() => {
+      const out = [];
+      for (const [plotId, types] of BUSINESS_REGISTRY) {
+        for (const t of types) out.push({ plotId, type: t });
+      }
+      return out;
+    })(),
     inventory: { ...STATE.inventory },
     marketPrices: { ...STATE.marketPrices },
     marketTrend: { ...STATE.marketTrend },
@@ -2094,6 +2181,23 @@ function loadGame(username) {
   STATE.marketTrend = save.marketTrend || {};
   STATE.lastMarketUpdate = save.lastMarketUpdate || Date.now();
   STATE.lastProductionTime = 0;
+  // Planets: restore unlocks (default Earth-only for older saves) and make
+  // the OWNED set global — it may contain plots on planets whose meshes
+  // aren't loaded right now (you're only looking at one world at a time)
+  STATE.unlockedPlanets = (Array.isArray(save.unlockedPlanets) && save.unlockedPlanets.length)
+    ? save.unlockedPlanets.filter(pid => PLANET_BY_ID[pid])
+    : ['earth'];
+  if (!STATE.unlockedPlanets.includes('earth')) STATE.unlockedPlanets.unshift('earth');
+  STATE.owned = new Set(save.ownedPlotIds || []);
+
+  // Rebuild the all-planet business registry from the save, then mirror
+  // the active planet's businesses into meshes below
+  BUSINESS_REGISTRY.clear();
+  for (const b of (save.businesses || [])) {
+    if (!BUSINESS_REGISTRY.has(b.plotId)) BUSINESS_REGISTRY.set(b.plotId, []);
+    const arr = BUSINESS_REGISTRY.get(b.plotId);
+    if (!arr.includes(b.type)) arr.push(b.type);
+  }
 
   // Ensure all materials have entries
   for (const m of MATERIALS) {
@@ -2102,27 +2206,27 @@ function loadGame(username) {
     if (STATE.marketTrend[m.id] === undefined) STATE.marketTrend[m.id] = 'stable';
   }
 
-  // Restore owned plots
-  const ownedIds = new Set(save.ownedPlotIds || []);
+  // Restore owned plots (active planet meshes — gold fill)
+  const ownedIds = STATE.owned;
   for (const p of STATE.plots) {
     if (ownedIds.has(p.userData.id)) {
       p.userData.owned = true;
-      STATE.owned.add(p.userData.id);
       setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
       registerClaimedPlot(p);
     }
   }
 
-  // Restore businesses (group by plotId — plots can hold multiple)
-  const businesses = save.businesses || [];
+  // Restore businesses for the ACTIVE planet (group by plotId — plots can
+  // hold multiple). Off-planet businesses stay in BUSINESS_REGISTRY and
+  // materialize when you travel there.
   const byPlot = {};
-  for (const b of businesses) {
+  for (const b of (save.businesses || [])) {
     if (!byPlot[b.plotId]) byPlot[b.plotId] = [];
     byPlot[b.plotId].push(b.type);
   }
   for (const [plotIdStr, types] of Object.entries(byPlot)) {
     const plotId = parseInt(plotIdStr);
-    const plot = STATE.plots.find(p => p.userData.id === plotId);
+    const plot = ACTIVE_PLOT_BY_ID.get(plotId);
     if (!plot) continue;
     plot.userData.businesses = [];
     types.forEach((type, idx) => {
@@ -2648,10 +2752,12 @@ function getBusinessType(id) {
 // troops above the cap (e.g. granted by the world owner) are never removed.
 const TROOPS_PER_BARRACKS = 500;
 function troopCapacity() {
+  // Count barracks across ALL planets — troops train in every barracks
+  // you own, wherever it stands
   let barracks = 0;
-  for (const p of STATE.plots) {
-    for (const b of (p.userData.businesses || [])) {
-      if (b.type === 'barracks') barracks++;
+  for (const types of BUSINESS_REGISTRY.values()) {
+    for (const t of types) {
+      if (t === 'barracks') barracks++;
     }
   }
   return barracks * TROOPS_PER_BARRACKS;
@@ -2771,8 +2877,12 @@ function initScene() {
 
   buildStarField();
   buildEarth();
-  buildAtmosphere();
-  generatePlots();
+  // Boot directly onto the saved planet — swap the sphere material before
+  // the first frame (Earth keeps its NASA textures, others are procedural)
+  const _bootPlanet = PLANET_BY_ID[STATE.planet] || PLANET_BY_ID.earth;
+  if (_bootPlanet.id !== 'earth') earth.material = planetMaterial(_bootPlanet);
+  setAtmosphere(_bootPlanet);
+  generatePlots(_bootPlanet);
 
   window.addEventListener('resize', onResize);
   renderer.domElement.addEventListener('pointermove', onPointerMove);
@@ -3042,8 +3152,10 @@ function isCoastalPlot(plot) {
 }
 
 // Classify all plots as water or land based on the water mask,
-// and assign region for bonus purposes
+// and assign region for bonus purposes. Only meaningful on Earth —
+// the masks are Earth maps; other planets classify at generation.
 function classifyPlotsByTerrain() {
+  if (STATE.planet !== 'earth') return;
   for (const p of STATE.plots) {
     p.userData.isWater = isWaterAt(p.userData.lat, p.userData.lon);
     p.userData.region = classifyRegion(p);
@@ -3052,6 +3164,14 @@ function classifyPlotsByTerrain() {
     // visible at a glance (unowned only — owned colors are set later)
     if (p.userData.isCoastal && !p.userData.owned && !p.userData.ownedByOther) {
       setPlotColors(p, p.userData._fillHex, COASTAL_OUTLINE);
+    }
+    // Keep the off-planet production meta in sync (businesses on Earth
+    // keep producing at the right rate while you're on another world)
+    const m = PLANET_META.earth && PLANET_META.earth.get(p.userData.id);
+    if (m) {
+      m.isWater = p.userData.isWater;
+      m.region = p.userData.region;
+      m.isCoastal = p.userData.isCoastal;
     }
   }
   flushPlotPools();
@@ -3063,6 +3183,143 @@ function buildAtmosphere() {
   const geo = new THREE.SphereGeometry(EARTH_RADIUS * 1.025, q.atmoSegments, q.atmoSegments);
   const mat = new THREE.ShaderMaterial({
     uniforms: { glowColor: { value: new THREE.Color(0x6cc8ff) } },
+    vertexShader: `
+      varying vec3 vNormal;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 glowColor;
+      varying vec3 vNormal;
+      void main() {
+        float intensity = pow(0.72 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.5);
+        gl_FragColor = vec4(glowColor, 1.0) * intensity;
+      }`,
+    side: THREE.BackSide,
+    blending: THREE.AdditiveBlending,
+    transparent: true
+  });
+  atmosphere = new THREE.Mesh(geo, mat);
+  atmosphere.frustumCulled = false;
+  scene.add(atmosphere);
+}
+
+// ====================================================================
+// PLANET VISUALS — every world shares the origin position (travel swaps
+// what's rendered there). Earth keeps its NASA-texture material; the
+// other planets get small procedural canvas textures, built once and
+// cached. The camera-locked sun lights any world evenly.
+// ====================================================================
+const _planetMats = {};   // planetId → cached MeshPhongMaterial
+
+function makePlanetTexture(planet) {
+  const W = 512, H = 256;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  const rng = mulberry32(planet.seed + 7);
+
+  if (planet.id === 'luna') {
+    ctx.fillStyle = '#9c9b95'; ctx.fillRect(0, 0, W, H);
+    // dark maria blotches
+    for (let i = 0; i < 42; i++) {
+      const x = rng() * W, y = H * 0.12 + rng() * H * 0.76;
+      const rw = 12 + rng() * 46, rh = 8 + rng() * 26;
+      ctx.fillStyle = `rgba(88,87,82,${0.18 + rng() * 0.22})`;
+      ctx.beginPath(); ctx.ellipse(x, y, rw, rh, rng() * Math.PI, 0, Math.PI * 2); ctx.fill();
+    }
+    // craters: darker floor + bright rim
+    for (let i = 0; i < 260; i++) {
+      const x = rng() * W, y = rng() * H, r = 1 + rng() * 4.5;
+      ctx.fillStyle = `rgba(70,69,65,${0.25 + rng() * 0.3})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = `rgba(220,219,210,${0.25 + rng() * 0.3})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath(); ctx.arc(x, y, r + 0.6, 0, Math.PI * 2); ctx.stroke();
+    }
+  } else if (planet.id === 'mars') {
+    ctx.fillStyle = '#b3552f'; ctx.fillRect(0, 0, W, H);
+    // dark basaltic basins
+    for (let i = 0; i < 34; i++) {
+      const x = rng() * W, y = H * 0.15 + rng() * H * 0.7;
+      const rw = 18 + rng() * 60, rh = 10 + rng() * 30;
+      ctx.fillStyle = `rgba(120,52,26,${0.2 + rng() * 0.25})`;
+      ctx.beginPath(); ctx.ellipse(x, y, rw, rh, rng() * Math.PI, 0, Math.PI * 2); ctx.fill();
+    }
+    // lighter dust bands
+    for (let i = 0; i < 30; i++) {
+      const x = rng() * W, y = rng() * H;
+      const rw = 24 + rng() * 70, rh = 5 + rng() * 14;
+      ctx.fillStyle = `rgba(214,132,82,${0.14 + rng() * 0.18})`;
+      ctx.beginPath(); ctx.ellipse(x, y, rw, rh, (rng() - 0.5) * 0.7, 0, Math.PI * 2); ctx.fill();
+    }
+    // a few craters
+    for (let i = 0; i < 90; i++) {
+      const x = rng() * W, y = rng() * H, r = 1 + rng() * 3.5;
+      ctx.fillStyle = `rgba(96,42,20,${0.2 + rng() * 0.3})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    // polar caps
+    ctx.fillStyle = 'rgba(240,238,232,0.92)';
+    ctx.beginPath(); ctx.ellipse(W / 2, 4, W * 0.34, 14 + rng() * 6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(W / 2, H - 3, W * 0.30, 11 + rng() * 5, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (planet.id === 'oceanus') {
+    ctx.fillStyle = '#16608f'; ctx.fillRect(0, 0, W, H);
+    // deep trenches
+    for (let i = 0; i < 40; i++) {
+      const x = rng() * W, y = H * 0.1 + rng() * H * 0.8;
+      const rw = 20 + rng() * 70, rh = 10 + rng() * 34;
+      ctx.fillStyle = `rgba(10,58,92,${0.22 + rng() * 0.25})`;
+      ctx.beginPath(); ctx.ellipse(x, y, rw, rh, rng() * Math.PI, 0, Math.PI * 2); ctx.fill();
+    }
+    // current swirls (light streaks)
+    for (let i = 0; i < 60; i++) {
+      const x = rng() * W, y = rng() * H;
+      const rw = 26 + rng() * 80, rh = 4 + rng() * 10;
+      ctx.strokeStyle = `rgba(94,182,214,${0.12 + rng() * 0.2})`;
+      ctx.lineWidth = 1.5 + rng() * 2.5;
+      ctx.beginPath(); ctx.ellipse(x, y, rw, rh, (rng() - 0.5) * 0.5, 0, Math.PI * 2); ctx.stroke();
+    }
+    // polar ice caps
+    ctx.fillStyle = 'rgba(235,246,250,0.95)';
+    ctx.beginPath(); ctx.ellipse(W / 2, 3, W * 0.36, 15 + rng() * 6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(W / 2, H - 2, W * 0.33, 13 + rng() * 5, 0, 0, Math.PI * 2); ctx.fill();
+  } else {
+    // fallback: flat tint
+    ctx.fillStyle = '#8a8f96'; ctx.fillRect(0, 0, W, H);
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function planetMaterial(planet) {
+  if (planet.id === 'earth') return earthMat;   // textured Earth material (buildEarth)
+  if (_planetMats[planet.id]) return _planetMats[planet.id];
+  const mat = new THREE.MeshPhongMaterial({
+    map: makePlanetTexture(planet),
+    specular: new THREE.Color(planet.water === 'all' ? 0x9adfd0 : 0x1c1c1c),
+    shininess: planet.water === 'all' ? 42 : 5
+  });
+  _planetMats[planet.id] = mat;
+  return mat;
+}
+
+// (Re)build the atmosphere glow for the active planet (null → none, airless Luna)
+function setAtmosphere(planet) {
+  if (atmosphere) {
+    scene.remove(atmosphere);
+    atmosphere.geometry.dispose();
+    atmosphere.material.dispose();
+    atmosphere = null;
+  }
+  if (!planet || planet.atmo == null) return;
+  const q = QUALITY_LEVELS[getEffectiveQuality()];
+  const geo = new THREE.SphereGeometry(EARTH_RADIUS * 1.025, q.atmoSegments, q.atmoSegments);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { glowColor: { value: new THREE.Color(planet.atmo) } },
     vertexShader: `
       varying vec3 vNormal;
       void main() {
@@ -3153,6 +3410,7 @@ const _PLOT_SHELL_MAT = new THREE.MeshBasicMaterial();
 let plotFillMesh = null, plotOwnedMesh = null, plotOutlineMesh = null, plotOwnedOutlineMesh = null;
 let fillTriToPlot = null, ownedTriToPlot = null;   // triangle index → plot index (for raycast)
 let _plotPoolsDirty = false;
+let plotGroupRef = null;   // the active planet's plot group (disposed/rebuilt on travel)
 
 function setPlotColors(p, fillHex, outlineHex) {
   p.userData._fillHex = fillHex;
@@ -3226,13 +3484,23 @@ function _setPooledGeometry(obj, positions, colors) {
   obj.geometry = g;
 }
 
-function generatePlots() {
-  const PLOT_COUNT = 2200;  // sweet spot: dense coverage, fast perf, irregular cells
-  const plotGroup = new THREE.Group();
-  plotGroup.name = 'plots';
+// Generate one planet's plot grid. Pass { metaOnly: true } to compute just
+// the production stats (PLANET_META) without building meshes — used for
+// off-planet plots that keep producing while you're visiting another world.
+// Deterministic per planet: plot ids are identical across sessions/users.
+function generatePlots(planet, opts = {}) {
+  planet = planet || PLANET_BY_ID.earth;
+  const metaOnly = !!opts.metaOnly;
+  const PLOT_COUNT = PLOTS_PER_PLANET;  // dense coverage, fast perf, irregular cells
+
+  // Fresh meta table for this planet (mesh or meta-only — same numbers)
+  const metaMap = PLANET_META[planet.id] = new Map();
+
+  const plotGroup = metaOnly ? null : new THREE.Group();
+  if (plotGroup) plotGroup.name = 'plots';
 
   // Seeded RNG for deterministic plot generation
-  const rng = mulberry32(1337);
+  const rng = mulberry32(planet.seed);
 
   // Reference area: average cell area on unit sphere = 4π / N
   const REF_AREA = (4 * Math.PI / PLOT_COUNT) * 0.5;
@@ -3389,16 +3657,7 @@ function generatePlots() {
       tris[o+6] = v2.x; tris[o+7] = v2.y; tris[o+8] = v2.z;
     }
 
-    // Build 2D polygon for area computation (shoelace on tangent plane)
-    let area = 0;
-    for (let k = 0; k < cell.length; k++) {
-      const p1 = cell[k];
-      const p2 = cell[(k + 1) % cell.length];
-      area += p1.u * p2.w - p2.u * p1.w;
-    }
-    area = Math.abs(area / 2);
-
-    // Boundary edges for the outline, as a flat Float32Array (3D, Earth-local)
+    // Boundary edges for the outline, as a flat Float32Array (3D, planet-local)
     const edges = new Float32Array(sphereVerts.length * 6);
     for (let k = 0; k < sphereVerts.length; k++) {
       const v1 = sphereVerts[k];
@@ -3408,10 +3667,20 @@ function generatePlots() {
       edges[o+3] = v2.x; edges[o+4] = v2.y; edges[o+5] = v2.z;
     }
 
+    // Build 2D polygon for area computation (shoelace on tangent plane)
+    let area = 0;
+    for (let k = 0; k < cell.length; k++) {
+      const p1 = cell[k];
+      const p2 = cell[(k + 1) % cell.length];
+      area += p1.u * p2.w - p2.u * p1.w;
+    }
+    area = Math.abs(area / 2);
+
     // ---- Pricing ----
     // v1.4 (slow-paced): doubled from the original bands — with a $100k
     // start you now begin on the cheap high-latitude frontier and work
-    // toward the valuable equator over time.
+    // toward the valuable equator over time. Farther worlds multiply the
+    // bands (their plots are pricier to match the buy-in cost).
     const absLat = Math.abs(seed.lat);
     let basePrice;
     if (absLat < 23)      basePrice = 70000;
@@ -3423,7 +3692,7 @@ function generatePlots() {
     // Cells with more sides are slightly rarer/more interesting
     const sidesPremium = 1 + Math.max(0, cell.length - 4) * 0.04;
     const jitter = 0.85 + rng() * 0.30;
-    const rawPrice = basePrice * areaMultiplier * sidesPremium * jitter;
+    const rawPrice = basePrice * areaMultiplier * sidesPremium * jitter * (planet.priceMult || 1);
     const price = Math.max(1000, Math.round(rawPrice / 100) * 100);
 
     // Tier name based on area
@@ -3436,6 +3705,33 @@ function generatePlots() {
 
     // Slight per-plot color tint for visual variety (shades of teal-green)
     const hueShift = (rng() - 0.5) * 0.05;
+
+    // Terrain for procedurally-classified planets: Earth ('mask') waits for
+    // its water/topology maps to load and is classified by
+    // classifyPlotsByTerrain(); all-land and all-ocean worlds are known
+    // immediately.
+    let isWater = undefined, region = undefined, isCoastal = undefined;
+    if (planet.water === 'all') {
+      isWater = true; isCoastal = false;
+      region = Math.abs(seed.lat) > 50 ? 'arctic-ocean' : 'ocean-deep';
+    } else if (planet.water === 'none') {
+      isWater = false; isCoastal = false;
+      region = climateZone(seed.lat);   // tropical / temperate / polar
+    }
+
+    const plotId = planet.idBase + i;
+    const nm = planet.id === 'earth' ? plotName(seed.lat, seed.lon) : planetPlotName(planet, seed.lat, seed.lon);
+
+    // Production stats for cross-planet production and troop housing
+    PLANET_META[planet.id].set(plotId, {
+      id: plotId, planet: planet.id,
+      lat: seed.lat, lon: seed.lon,
+      area, areaMultiplier, sides: cell.length, sizeName, price, name: nm,
+      isWater, isCoastal, region
+    });
+
+    if (metaOnly) continue;   // off-planet: stats only, no meshes
+
     const baseColor = new THREE.Color().setHSL(0.42 + hueShift, 0.65, 0.55);
 
     // Logical plot object — NOT added to the scene (rendering goes through
@@ -3444,7 +3740,8 @@ function generatePlots() {
     const mesh = new THREE.Mesh(_PLOT_SHELL_GEO, _PLOT_SHELL_MAT);
     mesh.userData = {
       isPlot: true,
-      id: i,
+      id: plotId,
+      planet: planet.id,
       lat: seed.lat, lon: seed.lon,
       price,
       area,
@@ -3461,13 +3758,14 @@ function generatePlots() {
         if (sizeName === 'estate')    return 2;
         return 1;                  // cottage, standard
       })(),
-      name: plotName(seed.lat, seed.lon),
+      name: nm,
       localDir: p_i.clone(),
       neighbors: bordering,     // plot ids sharing a Voronoi edge (border-buy rule)
+      isWater, isCoastal, region,
       baseColor: baseColor.getHex(),
       sizeA: Math.sqrt(area),   // linear plot size (business layout on plot)
-      _tris: tris,              // fill triangles, Earth-local coords
-      _edges: edges,            // outline segments, Earth-local coords
+      _tris: tris,              // fill triangles, planet-local coords
+      _edges: edges,            // outline segments, planet-local coords
       _fillHex: baseColor.getHex(),
       _outlineHex: PLOT_UNOWNED_OUTLINE
     };
@@ -3495,6 +3793,12 @@ function generatePlots() {
     p.userData.neighbors = (adjMap[p.userData.id] || []).sort((a, b) => a - b);
   }
 
+  if (metaOnly) return;   // no meshes/pools for off-planet meta passes
+
+  // Fast plotId → mesh lookup for the active planet
+  ACTIVE_PLOT_BY_ID.clear();
+  for (const p of STATE.plots) ACTIVE_PLOT_BY_ID.set(p.userData.id, p);
+
   // ---- Merged render pools: 4 draw calls for all 2,200 plots ----
   const fillMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
   const ownedFillMat = fillMat.clone();
@@ -3507,6 +3811,10 @@ function generatePlots() {
   plotGroup.add(plotFillMesh, plotOwnedMesh, plotOutlineMesh, plotOwnedOutlineMesh);
   rebuildPlotPools();
   earth.add(plotGroup);
+  plotGroupRef = plotGroup;
+  // New pools start with opacity 0 — force updatePlotVisibility to re-apply
+  // the current zoom bucket on the next frame
+  _lastOpacityBucket = -1;
 }
 
 // ====================================================================
@@ -3532,6 +3840,15 @@ function plotName(lat, lon) {
   const ew = lon >= 0 ? 'E' : 'W';
   const region = regionName(lat, lon);
   return `${region} ${Math.abs(lat).toFixed(2)}°${ns} ${Math.abs(lon).toFixed(2)}°${ew}`;
+}
+
+// Off-Earth plot names — latitude zones instead of Earth continents
+function planetPlotName(planet, lat, lon) {
+  const ns = lat >= 0 ? 'N' : 'S';
+  const ew = lon >= 0 ? 'E' : 'W';
+  const a = Math.abs(lat);
+  const zone = a > 60 ? 'Polar Reach' : (a > 25 ? 'Midlands' : 'Equatorial Belt');
+  return `${planet.name} ${zone} ${a.toFixed(2)}°${ns} ${Math.abs(lon).toFixed(2)}°${ew}`;
 }
 
 function regionName(lat, lon) {
@@ -3650,6 +3967,8 @@ function onPointerMove(e) {
     const ownedByOther = hitPlot.userData.ownedByOther;
     const businesses = hitPlot.userData.businesses || [];
     const terrainIcon = hitPlot.userData.isWater ? '🌊' : '🌿';
+    const hitPlanet = PLANET_BY_ID[hitPlot.userData.planet] || PLANET_BY_ID.earth;
+    const planetTag = hitPlanet.id === 'earth' ? '' : hitPlanet.icon + ' ';
     let tipText;
     if (ownedByOther) {
       // Owned by another user — show lock + owner name
@@ -3675,7 +3994,7 @@ function onPointerMove(e) {
       tipText = `${hitPlot.userData.name} ${terrainIcon}<span class="price">${buyable ? '$' + hitPlot.userData.price.toLocaleString() : '🔒 borders only — $' + hitPlot.userData.price.toLocaleString()}</span>`;
       tip.classList.remove('owned');
     }
-    tip.innerHTML = tipText;
+    tip.innerHTML = planetTag + tipText;
   } else {
     STATE.hoveredPlot = null;
     renderer.domElement.style.cursor = 'grab';
@@ -3709,6 +4028,7 @@ function openPlotModal(plot) {
   const ownedByOther = plot.userData.ownedByOther;
   const ownerName = plot.userData.ownerName;
   const affordable = STATE.money >= plot.userData.price;
+  const plotPlanet = PLANET_BY_ID[plot.userData.planet] || PLANET_BY_ID.earth;
   const borderLocked = (!owned && !ownedByOther) && !canBuyPlot(plot).ok;
   const status = ownedByOther ? 'locked' : (owned ? 'owned' : ((borderLocked || !affordable) ? 'locked' : 'available'));
 
@@ -3882,6 +4202,7 @@ function openPlotModal(plot) {
     <h2>${plot.userData.name}</h2>
     <div class="coords">LAT ${plot.userData.lat.toFixed(4)}° · LON ${plot.userData.lon.toFixed(4)}° · PLOT #${plot.userData.id.toString().padStart(4,'0')}</div>
     <div class="meta-row">
+      <span class="meta-chip">${plotPlanet.icon} Planet <b>${plotPlanet.name}</b></span>
       <span class="meta-chip meta-shape">${shapeIconSVG(plot.userData.sides)} Cell <b>${plot.userData.sides}-sided</b></span>
       <span class="meta-chip">Tier <b>${plot.userData.sizeName}</b></span>
       <span class="meta-chip">Area <b>${plot.userData.areaMultiplier.toFixed(1)}×</b></span>
@@ -3894,8 +4215,8 @@ function openPlotModal(plot) {
         : `This parcel is <b>claimed by ${ownerName}${clanTagHtml(ownerName)}</b> and cannot be purchased. But where money fails, <b>force</b> prevails — train an army and take it.`)
       : `An irregular <b>${plot.userData.sides}-sided polygonal</b> parcel — a <b>${plot.userData.sizeName}</b>-tier Voronoi cell in the ${plot.userData.name.split(' ')[0]} ${plot.userData.name.split(' ')[1]}. ${owned ? 'You hold the deed to this land. Build a business to produce materials for sale at the Market.' : (borderLocked
           ? 'This parcel doesn\'t touch your territory — <b>new plots must border land you already own</b>, so your empire grows as one connected realm.'
-          : (STATE.owned.size === 0
-            ? 'Founding parcel — a commander\'s <b>first plot</b> may be claimed anywhere on Earth. Acquire this land to found your empire.'
+          : (plotsOwnedOnPlanet(plot.userData.planet) === 0
+            ? `Founding parcel — your <b>first plot</b> on ${plotPlanet.name} may be claimed anywhere on it. Acquire this land to plant your flag.`
             : 'Acquire this land to expand your Open World holdings. Owned plots shine gold across the globe.'))}`
     }</div>
     <div class="price-row">
@@ -3920,10 +4241,12 @@ window.closePlotModal = function() {
 
 // ====================================================================
 // BORDER-BUY RULE
-// An empire grows outward: the FIRST plot (owned count zero — new
-// account, admin reset, or everything lost to conquest) can be claimed
-// anywhere on Earth. Every purchase after that must border a plot the
-// buyer already owns (share a Voronoi edge with it).
+// An empire grows outward on EVERY world: with no plots on a planet the
+// FIRST purchase there can be anywhere on it (new account, fresh planet
+// after buying in, or everything lost to conquest). Every purchase after
+// that must border a plot the buyer already owns on that same planet
+// (share a Voronoi edge with it) — neighbor lists are per-planet, so
+// empires on different worlds never mix.
 // ====================================================================
 function plotBordersOwned(p) {
   const nbs = p.userData.neighbors || [];
@@ -3934,9 +4257,153 @@ function plotBordersOwned(p) {
 }
 
 function canBuyPlot(p) {
-  if (STATE.owned.size === 0) return { ok: true, firstPlot: true };
+  if (plotsOwnedOnPlanet(p.userData.planet) === 0) return { ok: true, firstPlot: true };
   return plotBordersOwned(p) ? { ok: true } : { ok: false };
 }
+
+// ====================================================================
+// PLANETS — buy into new worlds and travel between them.
+// Travel swaps the planet rendered at the origin: businesses/ownership
+// persist per global plot id, so nothing is lost when you leave.
+// ====================================================================
+window.openPlanets = function() {
+  renderPlanetsPanel();
+  document.getElementById('planets-modal').classList.add('show');
+};
+window.closePlanets = function() {
+  document.getElementById('planets-modal').classList.remove('show');
+};
+
+function renderPlanetsPanel() {
+  const card = document.getElementById('planets-card');
+  const inGame = !document.getElementById('game').classList.contains('hidden');
+  const rows = PLANETS.map(pl => {
+    const unlocked = STATE.unlockedPlanets.includes(pl.id);
+    const here = STATE.planet === pl.id;
+    const owned = plotsOwnedOnPlanet(pl.id);
+    let action;
+    if (here) {
+      action = `<span class="planet-badge" style="background:rgba(127,255,212,.12);color:#7fffd4;border:1px solid #2c4a55">📍 You are here</span>`;
+    } else if (unlocked) {
+      action = `<button class="btn primary" style="padding:10px 16px" onclick="travelTo('${pl.id}')">🚀 Travel</button>`;
+    } else if (inGame && CURRENT_USER) {
+      const afford = STATE.money >= pl.cost;
+      action = `<button class="btn primary" style="padding:10px 16px" ${afford ? '' : 'disabled'} onclick="unlockPlanet('${pl.id}')">Buy In — $${pl.cost.toLocaleString()}</button>`;
+    } else {
+      action = `<span class="planet-badge" style="background:rgba(255,255,255,.05);color:#9bb4bd;border:1px solid #1a3340">🔒 $${pl.cost.toLocaleString()}</span>`;
+    }
+    return `
+      <div class="planet-row">
+        <div class="planet-icon">${pl.icon}</div>
+        <div class="planet-info">
+          <div class="planet-name">${pl.name} <span style="color:#9bb4bd;font-size:11px;font-family:Arial,sans-serif">· ${PLOTS_PER_PLANET.toLocaleString()} plots${owned ? ` · <b style="color:#f5cc74">${owned} yours</b>` : ''}</span></div>
+          <div class="planet-desc">${pl.desc}</div>
+          ${unlocked ? '' : `<div class="planet-cost">Buy-in: $${pl.cost.toLocaleString()} · plots priced ×${pl.priceMult}</div>`}
+        </div>
+        <div class="planet-action">${action}</div>
+      </div>
+    `;
+  }).join('');
+  card.innerHTML = `
+    <span class="badge available">🪐 planets</span>
+    <h2>Buy Into New Worlds</h2>
+    <div class="coords">EACH WORLD HAS ITS OWN PLOT GRID · YOUR FIRST PLOT ON A NEW PLANET GOES ANYWHERE ON IT</div>
+    <div class="desc" style="margin-bottom:14px">Buying into a planet is a one-time purchase — after that, travel freely and claim land on it. The border rule applies <b>per planet</b>: your Luna empire and your Earth empire grow separately.</div>
+    ${rows}
+    <div class="actions"><button class="btn" onclick="closePlanets()">Close</button></div>
+  `;
+}
+
+window.unlockPlanet = function(planetId) {
+  const planet = PLANET_BY_ID[planetId];
+  if (!planet) return;
+  if (!CURRENT_USER || !gameInitialized) { showToast('Enter the world to buy into planets', false); return; }
+  if (STATE.unlockedPlanets.includes(planetId)) return;
+  if (STATE.money < planet.cost) {
+    showToast(`Need $${planet.cost.toLocaleString()} to buy into ${planet.name}`, false);
+    return;
+  }
+  STATE.money -= planet.cost;
+  STATE.unlockedPlanets.push(planetId);
+  showToast(`${planet.icon} Bought into ${planet.name}! Travel there from the 🪐 Planets menu`, true);
+  updateHUD();
+  renderPlanetsPanel();
+  saveGame();
+};
+
+window.travelTo = function(planetId) {
+  const planet = PLANET_BY_ID[planetId];
+  if (!planet) return;
+  if (!gameInitialized) { showToast('Enter the world first', false); return; }
+  if (planetId === STATE.planet) { closePlanets(); return; }
+  if (!STATE.unlockedPlanets.includes(planetId)) {
+    showToast(`You haven't bought into ${planet.name} yet`, false);
+    return;
+  }
+
+  saveGame();   // persist the world you're leaving
+  closePlotModal();
+  closePlanets();
+  STATE.hoveredPlot = null;
+  STATE.selectedPlot = null;
+
+  // Tear down the current planet: business meshes + plot pools
+  for (const p of STATE.plots) {
+    for (const entry of (p.userData.businesses || [])) {
+      if (entry.mesh) {
+        earth.remove(entry.mesh);
+        entry.mesh.geometry.dispose();
+        entry.mesh.material.dispose();
+      }
+    }
+  }
+  if (plotGroupRef) {
+    earth.remove(plotGroupRef);
+    for (const m of plotGroupRef.children) {
+      if (m.geometry) m.geometry.dispose();
+      if (m.material) m.material.dispose();
+    }
+    plotGroupRef = null;
+  }
+  STATE.plots = [];
+  STATE.claimedPlots = [];
+  plotFillMesh = plotOwnedMesh = plotOutlineMesh = plotOwnedOutlineMesh = null;
+
+  // Swap the world
+  earth.material = planetMaterial(planet);
+  setAtmosphere(planet);
+  STATE.planet = planetId;
+  generatePlots(planet);
+
+  // Re-apply ownership + businesses + other players' claims.
+  // The global claims registry is the authority — if one of my plots here
+  // was conquered while I was away, it's stripped now (with a toast).
+  const claims = getClaims();
+  let stripped = 0;
+  for (const p of STATE.plots) {
+    const owner = claims[p.userData.id];
+    if (STATE.owned.has(p.userData.id) && owner && owner !== CURRENT_USER) {
+      STATE.owned.delete(p.userData.id);
+      BUSINESS_REGISTRY.delete(p.userData.id);
+      stripped++;
+    }
+    if (STATE.owned.has(p.userData.id)) {
+      p.userData.owned = true;
+      setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+      registerClaimedPlot(p);
+      const types = BUSINESS_REGISTRY.get(p.userData.id) || [];
+      types.forEach((type, idx) => {
+        const bt = getBusinessType(type);
+        if (bt) addBusinessToPlot(p, bt, idx);
+      });
+    }
+  }
+  applyClaimColors();
+  classifyPlotsByTerrain();   // Earth only — refreshes terrain from the masks
+  updateHUD();
+  saveGame();
+  showToast(`${planet.icon} Arrived at ${planet.name}${stripped ? ` — ⚔️ ${stripped} of your plots here were conquered while you were away` : ''}`, true);
+};
 
 // Debug/QA helper: open a plot card straight from its plot id (used by
 // automated tests; harmless in normal play — same as clicking the plot)
@@ -4010,6 +4477,10 @@ window.buildBusiness = function(businessId) {
   }
   STATE.money -= effCost;
   addBusinessToPlot(p, bt, existing.length);
+  // Registry is the all-planet authority for saves and production
+  const _reg = BUSINESS_REGISTRY.get(p.userData.id) || [];
+  _reg.push(bt.id);
+  BUSINESS_REGISTRY.set(p.userData.id, _reg);
 
   updateHUD();
   openPlotModal(p);
@@ -4033,6 +4504,12 @@ window.demolishBusiness = function(businessIndex) {
     entry.mesh.material.dispose();
   }
   p.userData.businesses.splice(businessIndex, 1);
+  // Drop it from the all-planet registry too
+  const _regTypes = BUSINESS_REGISTRY.get(p.userData.id) || [];
+  const _ri = _regTypes.indexOf(entry.type);
+  if (_ri >= 0) _regTypes.splice(_ri, 1);
+  if (_regTypes.length) BUSINESS_REGISTRY.set(p.userData.id, _regTypes);
+  else BUSINESS_REGISTRY.delete(p.userData.id);
   // If no businesses left, restore gold; otherwise recolor to first remaining
   if (p.userData.businesses.length === 0) {
     setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
@@ -4680,9 +5157,12 @@ window.attackPlot = function() {
     p.userData.ownerName = null;
     STATE.owned.add(p.userData.id);
     p.userData.businesses = [];
-    captured.forEach((b, idx) => {
-      const bt = getBusinessType(b.type);
-      if (bt) addBusinessToPlot(p, bt, idx);
+    // Captured businesses join your all-planet registry
+    const _capReg = captured.map(b => b.type).filter(t => getBusinessType(t));
+    BUSINESS_REGISTRY.set(p.userData.id, _capReg);
+    _capReg.forEach((type, idx) => {
+      const bt = getBusinessType(type);
+      addBusinessToPlot(p, bt, idx);
     });
     if (!p.userData.businesses.length) setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
     flushPlotPools();
@@ -5113,7 +5593,9 @@ function updateHUD() {
   updateGambleButton();
 }
 
-// Apply accumulated production since last tick (called from animate loop)
+// Apply accumulated production since last tick (called from animate loop).
+// Iterates the ALL-PLANET business registry — factories on Mars keep
+// producing while you're standing on Earth.
 function tickProduction() {
   const now = performance.now();
   if (STATE.lastProductionTime === 0) {
@@ -5123,15 +5605,17 @@ function tickProduction() {
   const dt = (now - STATE.lastProductionTime) / 1000;  // seconds
   if (dt < 0.5) return;  // update at most 2× per second
   let anyProduced = false;
-  for (const p of STATE.plots) {
-    const businesses = p.userData.businesses || [];
-    for (const entry of businesses) {
-      const bt = getBusinessType(entry.type);
+  for (const [plotId, types] of BUSINESS_REGISTRY) {
+    if (!types || !types.length) continue;
+    const info = plotProductionInfo(plotId);
+    if (!info) continue;
+    for (const type of types) {
+      const bt = getBusinessType(type);
       if (!bt) continue;
       // Steady production with region bonus (casinos included — the only
       // gambling left in the game is the interactive slot machine)
-      const regionBonus = getRegionBonus(bt.id, p);
-      const produced = bt.rate * p.userData.areaMultiplier * regionBonus * dt;
+      const regionBonus = regionBonusById(bt.id, info.region);
+      let produced = bt.rate * info.areaMultiplier * regionBonus * dt;
       if (produced > 0) {
         // Troops are capped by barracks housing — training pauses when
         // every barracks is full (excess troops are never removed)
@@ -5149,6 +5633,28 @@ function tickProduction() {
   }
   STATE.lastProductionTime = now;
   if (anyProduced) updateHUD();
+}
+
+// Production inputs for a plot id on ANY planet: live mesh userData when
+// the plot is on the active planet, cached generation meta otherwise.
+function plotProductionInfo(plotId) {
+  const active = ACTIVE_PLOT_BY_ID.get(plotId);
+  if (active) {
+    return { areaMultiplier: active.userData.areaMultiplier, region: active.userData.region };
+  }
+  const planet = planetOfPlotId(plotId);
+  const meta = PLANET_META[planet.id];
+  const m = meta ? meta.get(plotId) : null;
+  if (!m) return null;
+  return { areaMultiplier: m.areaMultiplier, region: m.region };
+}
+
+// Region bonus by region id (used by both mesh paths and off-planet meta)
+function regionBonusById(businessId, region) {
+  const config = REGION_BONUSES[businessId];
+  if (!config) return 1.0;
+  if (!region) return config.default;
+  return config.regions[region] !== undefined ? config.regions[region] : config.default;
 }
 
 function updateZoomMeter() {
@@ -5248,7 +5754,12 @@ window.enterGame = function() {
   if (!gameInitialized) {
     gameInitialized = true;
     initMarket();  // initialize market prices and inventory to defaults
-    initScene();   // generates plots (deterministic — same IDs every load)
+    // Start on the planet you last visited (older saves → Earth)
+    if (CURRENT_USER) {
+      const _peek = getSave(CURRENT_USER);
+      if (_peek && PLANET_BY_ID[_peek.planet]) STATE.planet = _peek.planet;
+    }
+    initScene();   // generates the active planet's plots (deterministic — same IDs every load)
     // Rebuild global claims from all users' saves, then apply colors
     rebuildClaims();
     // Load save AFTER plots exist (overwrites defaults with saved values)
@@ -5257,6 +5768,16 @@ window.enterGame = function() {
       if (loaded) {
         showToast(`Welcome back, ${CURRENT_USER}!`, true);
       }
+    }
+    // Businesses on planets you own land on but aren't visiting still
+    // produce — make sure their generation meta exists for production
+    for (const pl of PLANETS) {
+      if (pl.id === STATE.planet) continue;
+      let anyOwned = false;
+      for (const id of STATE.owned) {
+        if (id >= pl.idBase && id < pl.idBase + PLOTS_PER_PLANET) { anyOwned = true; break; }
+      }
+      if (anyOwned) generatePlots(pl, { metaOnly: true });
     }
     // Flush admin adoptions that happened at boot (before login) — the
     // fresh save above already contains them, so the live-sync interval
@@ -5297,6 +5818,7 @@ window.addEventListener('keydown', (e) => {
     window.closeLeaderboard();
     window.closeSettings();
     window.closeClans();
+    window.closePlanets();
   }
 });
 </script>
