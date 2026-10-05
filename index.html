@@ -2097,6 +2097,7 @@ function applyCloudWorldUpdates() {
       p.userData.owned = false;
       p.userData.ownedByOther = true;
       p.userData.ownerName = owner;
+      p.userData._selected = false;
       STATE.owned.delete(p.userData.id);
       BUSINESS_REGISTRY.delete(p.userData.id);   // those businesses now belong to the conqueror
       STATE.multiSelect.delete(p.userData.id);   // and it can't stay in a multi-buy selection
@@ -2928,6 +2929,7 @@ function initScene() {
 
   window.addEventListener('resize', onResize);
   renderer.domElement.addEventListener('pointermove', onPointerMove);
+  renderer.domElement.addEventListener('pointerdown', (e) => { _pointerDownPos = { x: e.clientX, y: e.clientY }; });
   renderer.domElement.addEventListener('click', onPointerClick);
 
   const qbtn = document.getElementById('quality-btn');
@@ -3491,7 +3493,10 @@ function rebuildPlotPools() {
   for (let i = 0; i < plots.length; i++) {
     const ud = plots[i].userData;
     const owned = ud.owned || ud.ownedByOther;
-    const scale = 1.0;   // owned plots hug the surface exactly like every other plot — no floating islands
+    // Selected-for-multibuy plots lift slightly off the surface so the
+    // selection reads clearly in 3D (temporary — the flag is cleared on
+    // deselect/buy, and owned plots themselves stay flush)
+    const scale = ud._selected ? 1.045 : 1.0;
     const t = ud._tris, n = t.length;
     const dPos = owned ? owPos : unPos, dCol = owned ? owCol : unCol;
     const base = owned ? vo : vu;
@@ -4046,6 +4051,12 @@ function onPointerMove(e) {
 
 function onPointerClick(e) {
   lastInteractionTime = performance.now();
+  // A rotation drag that ends on the canvas also fires a click — ignore it
+  // so rotating the globe doesn't open modals or toggle multi-buy picks
+  if (_pointerDownPos) {
+    const ddx = e.clientX - _pointerDownPos.x, ddy = e.clientY - _pointerDownPos.y;
+    if (ddx * ddx + ddy * ddy > 64) return;
+  }
   const rect = renderer.domElement.getBoundingClientRect();
   pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -4602,8 +4613,8 @@ window.openPlotById = function(id) {
 // Buy All is all-or-nothing: enough money for every plot or nothing
 // happens. The border chain is re-validated at purchase time.
 // ====================================================================
-const MULTI_SELECT_FILL = 0x53d8ff;     // bright cyan — distinct from owned gold / rival purple
-const MULTI_SELECT_OUTLINE = 0xeaffff;
+const MULTI_SELECT_FILL = 0x2fd6ff;     // saturated cyan — reads on both dark ocean and white ice
+const MULTI_SELECT_OUTLINE = 0xffffff;
 
 function plotBaseOutline(p) {
   return p.userData.isCoastal ? COASTAL_OUTLINE : PLOT_UNOWNED_OUTLINE;
@@ -4629,6 +4640,7 @@ function togglePlotSelection(p) {
   if (p.userData.ownedByOther) { showToast(`Claimed by ${p.userData.ownerName}`, false); return; }
   if (STATE.multiSelect.has(id)) {
     STATE.multiSelect.delete(id);
+    p.userData._selected = false;
     setPlotColors(p, p.userData.baseColor, plotBaseOutline(p));
     flushPlotPools();
     updateMultiBuyBar();
@@ -4637,6 +4649,7 @@ function togglePlotSelection(p) {
   const chk = multiBuyAllowed(p);
   if (!chk.ok) { showToast(chk.reason, false); return; }
   STATE.multiSelect.add(id);
+  p.userData._selected = true;
   setPlotColors(p, MULTI_SELECT_FILL, MULTI_SELECT_OUTLINE);
   flushPlotPools();
   updateMultiBuyBar();
@@ -4655,6 +4668,7 @@ function clearMultiSelect() {
   for (const id of STATE.multiSelect) {
     const p = ACTIVE_PLOT_BY_ID.get(id);
     if (p && !p.userData.owned && !p.userData.ownedByOther) {
+      p.userData._selected = false;
       setPlotColors(p, p.userData.baseColor, plotBaseOutline(p));
     }
   }
@@ -4729,6 +4743,7 @@ window.multiBuyAll = function() {
     const p = ACTIVE_PLOT_BY_ID.get(id);
     p.userData.owned = true;
     p.userData.ownedByOther = false;
+    p.userData._selected = false;   // no longer "picked" — it's yours now
     STATE.owned.add(id);
     claims[id] = CURRENT_USER;
     registerClaimedPlot(p);
@@ -6024,6 +6039,7 @@ function showToast(msg, success) {
 let earthAutoRotate = true;
 let lastInteractionTime = 0;
 let _lastZoomDom = 0;   // throttle zoom-meter DOM writes (~10/s)
+let _pointerDownPos = null;   // where the current drag started (rotation vs click)
 function animate() {
   requestAnimationFrame(animate);
   flushPlotPools();  // apply pending plot recolors (buy/build/demolish)
