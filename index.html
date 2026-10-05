@@ -235,7 +235,8 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
    over the home (menu) screen */
 #admin-modal{z-index:60}
 #admin-card{width:min(720px,94vw);padding:0;overflow:hidden;border-color:#3a5a68;
-  background:linear-gradient(160deg,#0d2231 0%,#0a1826 55%,#0b1520 100%);position:relative}
+  background:linear-gradient(160deg,#0d2231 0%,#0a1826 55%,#0b1520 100%);position:relative;
+  display:flex;flex-direction:column;max-height:min(780px,92vh)}
 #admin-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
   background:linear-gradient(90deg,transparent,#f5cc74 30%,#ffe9a8 50%,#f5cc74 70%,transparent)}
 @keyframes adminPop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
@@ -253,7 +254,11 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .admin-close-x{width:34px;height:34px;border-radius:10px;border:1px solid #2c4a55;background:rgba(10,20,32,.6);
   color:#9bb4bd;font-size:16px;cursor:pointer;flex-shrink:0;font-family:Arial,sans-serif}
 .admin-close-x:hover{color:#fff;border-color:#7fa0ab}
-.admin-body{padding:16px 24px 22px}
+.admin-body{padding:16px 24px 22px;flex:1;min-height:0;overflow-y:auto}
+.admin-body::-webkit-scrollbar{width:8px}
+.admin-body::-webkit-scrollbar-thumb{background:#2c4a55;border-radius:4px}
+.admin-body::-webkit-scrollbar-thumb:hover{background:#3a5a68}
+.admin-body::-webkit-scrollbar-track{background:transparent}
 .admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 .admin-stat{border:1px solid #1e3a48;border-radius:10px;padding:10px 12px;background:rgba(16,34,46,.55);text-align:center}
 .admin-stat-num{font-family:Georgia,serif;font-size:17px;color:#f5cc74;white-space:nowrap}
