@@ -501,11 +501,6 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .login-card .login-error{color:#ff8080;font-family:Arial,sans-serif;font-size:12px;margin-top:12px;min-height:16px}
 .login-cloud{font-family:Arial,sans-serif;font-size:11px;letter-spacing:.5px;margin-top:14px;color:#c9a24a}
 .login-cloud.on{color:#7fffd4}
-.login-tools{display:flex;gap:10px;justify-content:center;margin-top:10px}
-.login-tool-btn{padding:8px 18px;border:1px solid #2c4a55;border-radius:8px;background:rgba(8,19,29,.6);
-  color:#9bb4bd;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;
-  cursor:pointer;transition:all .15s}
-.login-tool-btn:hover{color:#f5cc74;border-color:#4a7a85}
 
 /* Logout button in game HUD */
 .logout-btn{flex-shrink:0;padding:9px 14px;border:1px solid #5a2424;border-radius:8px;background:rgba(90,36,36,.4);
@@ -1603,11 +1598,6 @@ function renderLogin() {
     <div class="login-cloud ${CloudSync.status() === 'cloud' ? 'on' : ''}">${CloudSync.status() === 'cloud'
       ? '🌐 Online multiplayer: ON — one shared world across all devices (live sync every 30s)'
       : '⚠ Cloud saving: OFF — accounts stay in this browser only (online play disabled)'}</div>
-    <div class="login-tools">
-      <button class="login-tool-btn" onclick="exportAccounts()" title="Download a backup file of every account on this device">⬇ Export accounts</button>
-      <button class="login-tool-btn" onclick="document.getElementById('import-file').click()" title="Restore accounts from a backup file">⬆ Import</button>
-      <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importAccounts(this)">
-    </div>
   `;
   setTimeout(() => {
     const nameInput = document.getElementById('login-name');
@@ -1730,78 +1720,6 @@ window.loginSubmit = function() {
   document.getElementById('menu').classList.remove('hidden');
 };
 
-// ============ ACCOUNT BACKUP — export/import every account ============
-window.exportAccounts = function() {
-  try {
-    const profiles = getProfiles();
-    const saves = {};
-    for (const p of profiles) {
-      const s = getSave(p);
-      if (s) saves[p] = s;
-    }
-    const backup = {
-      app: 'open-world',
-      type: 'accounts-backup',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      profiles,
-      saves,
-      claims: getClaims()
-    };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'open-world-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (e) {
-    alert('Export failed: ' + e.message);
-  }
-};
-
-window.importAccounts = function(input) {
-  const file = input.files && input.files[0];
-  input.value = ''; // allow re-selecting the same file later
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function() {
-    try {
-      const backup = JSON.parse(reader.result);
-      if (!backup || backup.type !== 'accounts-backup' || typeof backup.saves !== 'object') {
-        throw new Error('not a backup file');
-      }
-      let added = 0, updated = 0;
-      for (const [name, save] of Object.entries(backup.saves)) {
-        const local = getSave(name);
-        if (!local) {
-          localStorage.setItem(SAVE_PREFIX + name, JSON.stringify(save));
-          added++;
-        } else if ((save.savedAt || 0) > (local.savedAt || 0)) {
-          localStorage.setItem(SAVE_PREFIX + name, JSON.stringify(save));
-          updated++;
-        }
-        CloudSync.pushSave(name); // move imported accounts to cloud too
-      }
-      const profiles = getProfiles();
-      for (const name of Object.keys(backup.saves)) {
-        if (!profiles.includes(name)) profiles.push(name);
-      }
-      localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
-      CloudSync.pushProfiles();
-      if (backup.claims && typeof backup.claims === 'object') {
-        saveClaims(Object.assign({}, getClaims(), backup.claims));
-      }
-      alert('Import complete: ' + added + ' new account(s), ' + updated + ' updated.');
-      renderLogin();
-    } catch (e) {
-      alert('Import failed: not a valid Open World backup file.');
-    }
-  };
-  reader.readAsText(file);
-};
 
 // Populate the menu welcome panel with user's name and save stats
 function updateMenuWelcome() {
