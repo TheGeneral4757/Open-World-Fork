@@ -324,8 +324,9 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .admin-lock-hint{margin-top:13px;font-family:Arial,sans-serif;font-size:9.5px;letter-spacing:1.5px;color:#5d7885;text-transform:uppercase}
 @keyframes adminShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
 .admin-shake{animation:adminShake .4s ease}
-.mat-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #1a3340;border-radius:8px;
+.mat-row{display:flex;flex-direction:column;align-items:stretch;gap:9px;padding:12px;border:1px solid #1a3340;border-radius:8px;
   background:rgba(20,50,60,.4);margin-bottom:8px}
+.mat-row .mat-main{display:flex;align-items:center;gap:12px;width:100%}
 .mat-row .mat-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center}
 .mat-row .mat-info{flex:1;min-width:0}
 .mat-row .mat-name{font-family:Arial,sans-serif;font-size:14px;color:#e8eef0;font-weight:600}
@@ -343,6 +344,23 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .mat-row .mat-sell:disabled{opacity:.3;cursor:not-allowed}
 .mat-row .mat-sell.all{background:linear-gradient(135deg,#f5cc74,#d4a44a);color:#08141d;border-color:#f5cc74;font-weight:bold}
 .mat-row .mat-sell.all:hover:not(:disabled){filter:brightness(1.1)}
+/* Sell-amount strip — choose exactly how much of the stored material to sell */
+.mat-sell-ctrl{display:flex;align-items:center;flex-wrap:wrap;gap:5px;padding-left:44px}
+.mat-sell-ctrl .amt-btn{width:28px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;
+  border:1px solid #2c4a55;border-radius:6px;background:rgba(29,74,87,.6);color:#cbd7dc;cursor:pointer;
+  font-family:Arial,sans-serif;font-size:15px;line-height:1;transition:all .15s}
+.mat-sell-ctrl .amt-btn:hover{background:rgba(40,100,110,.8);color:#fff}
+.mat-sell-ctrl .amt-btn:active{transform:translateY(1px)}
+.mat-sell-ctrl .amt-input{width:76px;flex-shrink:0;background:#0a1420;border:1px solid #2c4a55;border-radius:6px;
+  color:#e8f4ff;font-family:Arial,sans-serif;font-size:12.5px;padding:7px 4px;text-align:center;outline:none;
+  -moz-appearance:textfield;appearance:textfield}
+.mat-sell-ctrl .amt-input:focus{border-color:#f5cc74;box-shadow:0 0 0 2px rgba(245,204,116,.12)}
+.mat-sell-ctrl .amt-input::-webkit-outer-spin-button,.mat-sell-ctrl .amt-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.mat-sell-ctrl .amt-chip{flex-shrink:0;padding:7px 8px;border:1px solid #2c4a55;border-radius:6px;background:transparent;
+  color:#9bb4bd;cursor:pointer;font-family:Arial,sans-serif;font-size:9.5px;font-weight:bold;letter-spacing:.5px;
+  text-transform:uppercase;transition:all .15s}
+.mat-sell-ctrl .amt-chip:hover{color:#f5cc74;border-color:#f5cc74}
+.mat-sell-ctrl .mat-sell{margin-left:auto}
 .market-actions{display:flex;gap:10px;margin-top:14px}
 .market-actions .btn{flex:1;padding:13px;border-radius:8px;border:1px solid #2c4a55;cursor:pointer;font-family:Arial,sans-serif;
   font-size:13px;letter-spacing:2px;text-transform:uppercase;transition:all .2s;background:#14323c;color:#cbd7dc}
@@ -3439,24 +3457,41 @@ window.openMarketModal = function() {
     const hasStock = stock > 0.01;
     const pctVsBase = ((price / m.basePrice - 1) * 100).toFixed(0);
     const pctSign = pctVsBase >= 0 ? '+' : '';
+    // Sell-amount strip: defaults to the full stock (one click still sells
+    // everything) but the commander can dial in any portion — type a number,
+    // use the − / + steppers, or hit the 25% / 50% / Max quick-fills. The
+    // Sell button previews the exact revenue for the chosen amount.
+    const sellCtrl = hasStock ? `
+      <div class="mat-sell-ctrl">
+        <button class="amt-btn" title="One less" onclick="nudgeSellAmount('${m.id}',-1)">−</button>
+        <input class="amt-input" id="sell-amt-${m.id}" type="number" min="0" step="any" inputmode="decimal"
+               value="${fmtQty(stock)}" title="Amount to sell (up to ${fmtQty(stock)})" oninput="updateSellPreview('${m.id}')">
+        <button class="amt-btn" title="One more" onclick="nudgeSellAmount('${m.id}',1)">+</button>
+        <button class="amt-chip" onclick="setSellPct('${m.id}',0.25)">25%</button>
+        <button class="amt-chip" onclick="setSellPct('${m.id}',0.5)">50%</button>
+        <button class="amt-chip" onclick="setSellPct('${m.id}',1)">Max</button>
+        <button class="mat-sell" id="sell-btn-${m.id}" onclick="sellMaterial('${m.id}')">Sell $${Math.round(stockValue).toLocaleString()}</button>
+      </div>
+    ` : '';
     return `
       <div class="mat-row">
-        <div class="mat-icon">${m.icon}</div>
-        <div class="mat-info">
-          <div class="mat-name">${m.name}</div>
-          <div class="mat-meta">Base $${m.basePrice} · ${pctSign}${pctVsBase}%</div>
+        <div class="mat-main">
+          <div class="mat-icon">${m.icon}</div>
+          <div class="mat-info">
+            <div class="mat-name">${m.name}</div>
+            <div class="mat-meta">Base $${m.basePrice} · ${pctSign}${pctVsBase}%</div>
+          </div>
+          <div>
+            <div class="mat-price">$${Math.round(price).toLocaleString()}</div>
+            <div class="mat-trend ${trendClass}">${trendIcon} ${trend}</div>
+          </div>
+          <div>
+            <div class="mat-stock">${hasStock ? stock.toFixed(1) : '—'}</div>
+            ${hasStock ? `<div class="mat-stock" style="color:#f5cc74">$${Math.round(stockValue).toLocaleString()}</div>` : ''}
+          </div>
+          ${hasStock ? '' : '<button class="mat-sell" disabled>Empty</button>'}
         </div>
-        <div>
-          <div class="mat-price">$${Math.round(price).toLocaleString()}</div>
-          <div class="mat-trend ${trendClass}">${trendIcon} ${trend}</div>
-        </div>
-        <div>
-          <div class="mat-stock">${hasStock ? stock.toFixed(1) : '—'}</div>
-          ${hasStock ? `<div class="mat-stock" style="color:#f5cc74">$${Math.round(stockValue).toLocaleString()}</div>` : ''}
-        </div>
-        <button class="mat-sell" ${hasStock ? '' : 'disabled'} onclick="sellMaterial('${m.id}')">
-          ${hasStock ? 'Sell' : 'Empty'}
-        </button>
+        ${sellCtrl}
       </div>
     `;
   }).join('');
@@ -3468,7 +3503,7 @@ window.openMarketModal = function() {
       Inventory value: <b>$${Math.round(invValue).toLocaleString()}</b> ·
       Next price update in: <b class="market-countdown">${countdown}</b>
     </div>
-    <div class="biz-hint" style="margin-bottom:14px">Prices fluctuate every 5 minutes. Sell when prices are high for maximum profit.</div>
+    <div class="biz-hint" style="margin-bottom:14px">Set exactly how much of each material to sell — type an amount, tap − / +, or use the quick chips. Prices fluctuate every 15 minutes; sell when they're high for maximum profit.</div>
     ${rows}
     <div class="market-actions">
       <button class="btn" onclick="closeMarketModal()">Close</button>
@@ -3482,18 +3517,73 @@ window.closeMarketModal = function() {
   document.getElementById('market-modal').classList.remove('show');
 };
 
+// Format a sell quantity for the amount input — trims float dust to 1 decimal
+function fmtQty(v) {
+  return String(+Number(v).toFixed(1));
+}
+
+// Clamp a requested sell quantity to what's actually in storage
+function clampSellQty(qty, stock) {
+  if (!isFinite(qty) || qty <= 0) return 0;
+  return Math.min(qty, stock);
+}
+
+// Live revenue preview — keeps the Sell button label in sync with the amount
+window.updateSellPreview = function(materialId) {
+  const inp = document.getElementById('sell-amt-' + materialId);
+  const btn = document.getElementById('sell-btn-' + materialId);
+  if (!inp || !btn) return;
+  const stock = STATE.inventory[materialId] || 0;
+  const qty = clampSellQty(parseFloat(inp.value), stock);
+  btn.textContent = qty > 0
+    ? 'Sell $' + Math.floor(qty * STATE.marketPrices[materialId]).toLocaleString()
+    : 'Sell';
+};
+
+// Quick-fill chips: put 25% / 50% / Max of the current stock into the input
+window.setSellPct = function(materialId, pct) {
+  const inp = document.getElementById('sell-amt-' + materialId);
+  if (!inp) return;
+  const stock = STATE.inventory[materialId] || 0;
+  const qty = pct >= 1 ? stock : Math.floor(stock * pct * 10) / 10;
+  inp.value = fmtQty(qty);
+  updateSellPreview(materialId);
+};
+
+// − / + steppers: adjust the amount by one unit, clamped to storage
+window.nudgeSellAmount = function(materialId, delta) {
+  const inp = document.getElementById('sell-amt-' + materialId);
+  if (!inp) return;
+  const stock = STATE.inventory[materialId] || 0;
+  const cur = parseFloat(inp.value);
+  const qty = clampSellQty((isFinite(cur) ? cur : 0) + delta, stock);
+  inp.value = fmtQty(qty);
+  updateSellPreview(materialId);
+};
+
 window.sellMaterial = function(materialId) {
   const m = getMaterial(materialId);
   if (!m) return;
-  const qty = STATE.inventory[materialId] || 0;
-  if (qty <= 0) return;
+  const stock = STATE.inventory[materialId] || 0;
+  if (stock <= 0) return;
+  // Sell exactly the amount chosen in the input (defaults to the full stock,
+  // so the single-click behaviour is unchanged); anything over stock is
+  // clamped, and zero/negative input is rejected with a hint.
+  const inp = document.getElementById('sell-amt-' + materialId);
+  const requested = inp ? parseFloat(inp.value) : stock;
+  const qty = clampSellQty(requested, stock);
+  if (qty <= 0) { showToast('Enter an amount to sell', false); return; }
   const price = STATE.marketPrices[materialId];
   const revenue = Math.floor(qty * price);
+  const remaining = stock - qty;
+  STATE.inventory[materialId] = remaining < 0.01 ? 0 : remaining;
   STATE.money += revenue;
-  STATE.inventory[materialId] = 0;
   updateHUD();
   openMarketModal();  // refresh to show updated stock
-  showToast(`Sold ${qty.toFixed(1)} ${m.icon} ${m.name} for $${revenue.toLocaleString()}`, true);
+  const left = STATE.inventory[materialId] > 0
+    ? ' · ' + fmtQty(STATE.inventory[materialId]) + ' left'
+    : '';
+  showToast(`Sold ${fmtQty(qty)} ${m.icon} ${m.name} for $${revenue.toLocaleString()}${left}`, true);
   saveGame();
 };
 

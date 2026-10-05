@@ -109,7 +109,8 @@ Notes: passwords are lightly hashed client-side and the anon key is public by de
 - Prices update every **15 minutes** via a gentle random walk (±8%, bounded 0.5×–2× base) — position your stock, don't watch the clock
 - Trend indicators: ▲ up / ▼ down / ◆ stable
 - Live countdown timer to next price update
-- **Sell individual materials** or **Sell All** at once
+- **Sell any amount** — every material row has an amount picker (type a number, tap − / +, or use the 25% / 50% / Max quick-fills) with a live revenue preview on the Sell button
+- **Sell All** at once still available for clearing the whole storage
 - HUD shows total stock value at current market prices
 
 ### 🏆 Leaderboard
@@ -182,6 +183,13 @@ python3 -m http.server 8000
 ```
 
 ## Changelog
+
+### v1.9 (2026-10-06) — Choose how much to sell
+- **Partial material sales**: the Global Market's sell button no longer dumps a material's entire storage — each row now has an amount picker (− / + steppers, a type-anything number field, and 25% / 50% / Max quick-fills)
+- The Sell button previews the **exact revenue** for the chosen amount and updates live as you type
+- Selling less than the full stock keeps the remainder in storage (toast reports what's left); overselling clamps to what you actually have, and an empty amount is rejected
+- Defaults to the full stock, so one click still sells everything; amounts also accepted as decimals (sell 0.5 Oil if you like)
+- Fixed the market hint that claimed prices update every 5 minutes (it's 15)
 
 ### v1.8 (2026-10-05) — Affordable army, troop housing cap, deploy language
 - **Military buildings are now mid-game affordable**: Barracks $500k → **$120k**, Naval Yard $650k → **$180k**, Airfield $900k → **$280k**
