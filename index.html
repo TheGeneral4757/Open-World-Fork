@@ -598,6 +598,57 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .multibuy-bar .btn.primary:disabled{opacity:.4;cursor:not-allowed}
 .market-btn.active{border-color:#f5cc74 !important;color:#f5cc74 !important;background:rgba(245,204,116,.14) !important}
 
+/* ============ WORLD CHAT — live global chat (menu + world) ============ */
+#chat-tab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:46;display:none;align-items:center;gap:6px;
+  padding:14px 10px;border-radius:12px 0 0 12px;cursor:pointer;background:rgba(8,19,29,.92);
+  border:1px solid #2c4a55;border-right:none;color:#f5cc74;font-family:Arial,sans-serif;font-size:12px;
+  font-weight:bold;letter-spacing:1px;text-transform:uppercase;box-shadow:-6px 6px 24px rgba(0,0,0,.45);
+  transition:padding .15s,background .15s;position:fixed}
+#chat-tab:hover{padding-right:16px;background:rgba(29,74,87,.6)}
+#chat-tab .chat-badge{position:absolute;top:-7px;left:-7px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;
+  background:#e74c3c;color:#fff;font-size:11px;line-height:20px;text-align:center;display:none;
+  box-shadow:0 2px 8px rgba(0,0,0,.5);font-weight:bold}
+#chat-panel{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:45;
+  width:min(370px,calc(100vw - 28px));height:min(540px,calc(100vh - 130px));
+  display:none;flex-direction:column;border-radius:14px;overflow:hidden;
+  border:1px solid #2c4a55;background:rgba(8,19,29,.96);backdrop-filter:blur(10px);
+  box-shadow:0 24px 80px rgba(0,0,0,.6);animation:chatPop .18s ease-out}
+#chat-panel.open{display:flex}
+@keyframes chatPop{from{opacity:0;transform:translateY(-50%) translateX(24px)}to{opacity:1;transform:translateY(-50%) translateX(0)}}
+.chat-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #1a3340;background:rgba(20,50,60,.3)}
+.chat-live-dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 8px #2ecc71;animation:chatPulse 1.6s infinite;flex:0 0 auto}
+@keyframes chatPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.chat-title{flex:1;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;letter-spacing:1px;color:#f5cc74;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-title small{color:#7fd0a0;text-transform:none;letter-spacing:0;font-weight:normal;margin-left:5px}
+.chat-clear{background:none;border:none;cursor:pointer;font-size:15px;opacity:.65;padding:2px 4px}
+.chat-clear:hover{opacity:1}
+.chat-x{background:none;border:none;cursor:pointer;color:#9bb4bd;font-size:15px;padding:2px 6px;border-radius:6px;flex:0 0 auto}
+.chat-x:hover{color:#fff;background:rgba(255,255,255,.08)}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px}
+.chat-msgs::-webkit-scrollbar{width:6px}
+.chat-msgs::-webkit-scrollbar-thumb{background:#2c4a55;border-radius:3px}
+.chat-msg{max-width:88%;background:rgba(20,50,60,.25);border:1px solid #1a3340;border-radius:10px;padding:7px 10px}
+.chat-msg.own{align-self:flex-end;background:rgba(245,204,116,.08);border-color:rgba(245,204,116,.18)}
+.chat-head-row{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.chat-name{font-family:Arial,sans-serif;font-size:12px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-name.chat-owner{text-shadow:0 0 8px rgba(245,204,116,.6)}
+.chat-time{margin-left:auto;font-size:10px;color:#6c8791;flex:0 0 auto;font-family:Arial,sans-serif}
+.chat-text{font-family:Arial,sans-serif;font-size:13px;color:#e8f0f2;word-break:break-word;line-height:1.45;white-space:pre-wrap}
+.chat-sys{align-self:center;font-size:11px;color:#6c8791;font-family:Arial,sans-serif;background:rgba(20,50,60,.2);
+  padding:4px 12px;border-radius:10px;text-align:center;max-width:90%}
+.chat-note{padding:0 14px;font-size:11px;color:#f0a35e;min-height:18px;line-height:18px;font-family:Arial,sans-serif}
+.chat-note:empty{display:none}
+.chat-composer{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #1a3340;background:rgba(20,50,60,.3)}
+.chat-composer input{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #2c4a55;background:rgba(0,0,0,.35);
+  color:#e8f0f2;font-family:Arial,sans-serif;font-size:13px;outline:none;min-width:0}
+.chat-composer input:focus{border-color:#f5cc74}
+.chat-composer button{padding:9px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#f5cc74,#e0a83e);
+  color:#08131d;font-weight:bold;cursor:pointer;font-family:Arial,sans-serif;font-size:12px;flex:0 0 auto}
+.chat-composer button:disabled{opacity:.5;cursor:not-allowed}
+@media (max-width:760px){
+  #chat-panel{right:8px;width:calc(100vw - 16px);height:72vh}
+}
+
 @media(max-width:700px){
   .top-bar{padding:10px 12px;gap:8px;flex-wrap:wrap}
   .brand{font-size:14px;order:3;flex-basis:100%;text-align:center;margin-top:4px}
@@ -818,6 +869,25 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 <div class="plot-modal" id="myplots-modal">
   <div class="plot-card" id="myplots-card">
     <!-- filled dynamically by renderMyPlotsPanel() -->
+  </div>
+</div>
+
+<!-- ============ WORLD CHAT — live global chat. Lives OUTSIDE #game so it
+     works on the menu screen AND inside the world. Rides the shared
+     openworld_data cloud row 'openworld_chat' (no extra Supabase setup). -->
+<button id="chat-tab" onclick="toggleChat()" title="World Chat — talk with other commanders" style="display:none">💬 Chat<span class="chat-badge" id="chat-badge"></span></button>
+<div id="chat-panel" role="dialog" aria-label="World Chat">
+  <div class="chat-head">
+    <span class="chat-live-dot"></span>
+    <div class="chat-title">World Chat<small>live</small></div>
+    <button class="chat-clear" id="chat-clear-btn" onclick="chatClearAll()" title="World owner: clear chat history for everyone" style="display:none">🧹</button>
+    <button class="chat-x" onclick="closeChat()" title="Close chat">✕</button>
+  </div>
+  <div class="chat-msgs" id="chat-msgs"></div>
+  <div class="chat-note" id="chat-note"></div>
+  <div class="chat-composer">
+    <input id="chat-input" maxlength="240" placeholder="Say something…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatMsg()">
+    <button id="chat-send" onclick="sendChatMsg()">Send</button>
   </div>
 </div>
 
@@ -1806,6 +1876,242 @@ window.clanRelationTo = clanRelationTo;
 window.clanTagOf = clanTagOf;
 
 // ====================================================================
+// WORLD CHAT — a live global chat every signed-in commander can use,
+// on the menu screen and inside the world. Design (mirrors Clans):
+//  • Rides the SHARED openworld_data table under key 'openworld_chat'
+//    → zero extra Supabase setup, works with the same RLS/policies.
+//  • Devices poll the row every 3s and merge-dedupe messages by a
+//    ts|name|text signature, so every device converges on one history.
+//  • Sends do a read-merge-write so a message typed during someone
+//    else's write window doesn't get clobbered (last-writer-wins is
+//    narrowed to a few ms).
+//  • History is capped (80 stored) and a `cleared` tombstone lets the
+//    world owner wipe chat for everyone without old devices resurrect
+//    it from their local caches.
+//  • Rendering is DOM-built with textContent ONLY — chat text is
+//    never innerHTML'd, so HTML/script injection can't run.
+// ====================================================================
+const Chat = (() => {
+  const KEY = 'openworld_chat';
+  const MAX_MSGS = 80;       // messages kept in the cloud row
+  const MAX_LEN = 240;       // per-message character cap
+  const COOLDOWN = 1500;     // ms between sends (light flood control)
+  const POLL_MS = 3000;      // live-poll interval
+
+  let client = null;
+  if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
+    try { client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
+  }
+
+  let msgs = [];             // [{ts, n, t}] ascending by ts (merged view)
+  const sigs = new Set();    // every signature ever seen this session
+  let clearedAt = 0;         // newest owner clear-tombstone seen
+  let unread = 0;            // messages from others while panel closed
+  let isOpen = false;
+  let timer = null;
+  let lastSendAt = 0;
+  let sending = false;
+
+  function status() { return client ? 'cloud' : 'local'; }
+
+  function nameHue(name) {
+    let x = 5381;
+    for (let i = 0; i < (name || '').length; i++) x = ((x << 5) + x + name.charCodeAt(i)) | 0;
+    return Math.abs(x) % 360;
+  }
+  function sig(m) { return m.ts + '|' + m.n + '|' + m.t; }
+
+  function noteEl() { return document.getElementById('chat-note'); }
+  function note(t) { const n = noteEl(); if (n) n.textContent = t || ''; }
+
+  // Merge a list of cloud messages into the local view. Returns the
+  // number of genuinely-new messages from OTHER players.
+  function ingest(list) {
+    let freshOthers = 0;
+    for (const m of (Array.isArray(list) ? list : [])) {
+      if (!m || typeof m.t !== 'string' || typeof m.n !== 'string' || !m.n) continue;
+      const clean = { ts: parseInt(m.ts, 10) || 0, n: m.n.slice(0, 24), t: m.t.slice(0, MAX_LEN) };
+      if (clean.ts <= clearedAt) continue;               // owner cleared history
+      const s = sig(clean);
+      if (sigs.has(s)) continue;
+      sigs.add(s);
+      msgs.push(clean);
+      if (CURRENT_USER && clean.n !== CURRENT_USER) freshOthers++;
+    }
+    if (msgs.length) {
+      msgs.sort((a, b) => a.ts - b.ts);
+      if (msgs.length > MAX_MSGS) msgs = msgs.slice(-MAX_MSGS);
+    }
+    return freshOthers;
+  }
+
+  function updateBadge() {
+    const b = document.getElementById('chat-badge');
+    if (!b) return;
+    if (unread > 0 && !isOpen) { b.style.display = 'block'; b.textContent = unread > 9 ? '9+' : unread; }
+    else b.style.display = 'none';
+  }
+
+  function render() {
+    const box = document.getElementById('chat-msgs');
+    if (!box) return;
+    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    box.textContent = '';
+    if (!msgs.length) {
+      const sys = document.createElement('div');
+      sys.className = 'chat-sys';
+      sys.textContent = 'No messages yet — say hi to the world!';
+      box.appendChild(sys);
+      return;
+    }
+    for (const m of msgs) {
+      const row = document.createElement('div');
+      row.className = 'chat-msg' + (CURRENT_USER && m.n === CURRENT_USER ? ' own' : '');
+
+      const head = document.createElement('div');
+      head.className = 'chat-head-row';
+      const name = document.createElement('span');
+      name.className = 'chat-name';
+      name.style.color = 'hsl(' + nameHue(m.n) + ',70%,72%)';
+      if (m.n === ADMIN_ACCOUNT) { name.classList.add('chat-owner'); name.textContent = '👑 ' + m.n; }
+      else {
+        const tag = clanTagOf(m.n);
+        name.textContent = (tag ? '[' + tag + '] ' : '') + m.n;
+      }
+      const time = document.createElement('span');
+      time.className = 'chat-time';
+      try { time.textContent = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+      catch (e) { time.textContent = ''; }
+      head.appendChild(name); head.appendChild(time);
+
+      const text = document.createElement('div');
+      text.className = 'chat-text';
+      text.textContent = m.t;          // NEVER innerHTML — chat is untrusted
+
+      row.appendChild(head); row.appendChild(text);
+      box.appendChild(row);
+    }
+    if (nearBottom) box.scrollTop = box.scrollHeight;
+  }
+
+  async function poll() {
+    if (!client) return;
+    try {
+      const { data, error } = await client.from('openworld_data').select('data').eq('key', KEY).maybeSingle();
+      if (error) throw error;
+      const d = (data && data.data) || {};
+      const cAt = parseInt(d.cleared, 10) || 0;
+      if (cAt > clearedAt) {
+        clearedAt = cAt;
+        msgs = msgs.filter(m => m.ts > clearedAt);
+        // signatures of cleared messages must be forgotten so nothing ghosts
+        sigs.clear();
+        for (const m of msgs) sigs.add(sig(m));
+      }
+      const freshOthers = ingest(Array.isArray(d.msgs) ? d.msgs : []);
+      if (freshOthers > 0) {
+        if (isOpen) { render(); }
+        else { unread = Math.min(99, unread + freshOthers); updateBadge(); }
+      }
+      if (isOpen && !msgs.length) render();
+    } catch (e) { /* chat is best-effort — never disturb gameplay */ }
+  }
+
+  async function send() {
+    if (sending) return;
+    if (!CURRENT_USER) { note('Log in to chat.'); return; }
+    if (status() !== 'cloud') { note('Chat lives in the shared online world — cloud saving must be configured.'); return; }
+    const inp = document.getElementById('chat-input');
+    const raw = (inp && inp.value ? inp.value : '').trim().replace(/\s+/g, ' ').slice(0, MAX_LEN);
+    if (!raw) return;
+    const now = Date.now();
+    if (now - lastSendAt < COOLDOWN) { note('Easy — wait a moment between messages.'); return; }
+    sending = true; lastSendAt = now;
+    const m = { ts: now, n: CURRENT_USER, t: raw };
+    ingest([m]);        // optimistic local echo (dedupes on next poll)
+    if (inp) inp.value = '';
+    render();
+    try {
+      // read-merge-write: adopt whatever landed in the cloud while we
+      // were typing so we don't clobber it
+      let cloud = [];
+      try {
+        const { data } = await client.from('openworld_data').select('data').eq('key', KEY).maybeSingle();
+        const d = (data && data.data) || {};
+        if ((parseInt(d.cleared, 10) || 0) > clearedAt) clearedAt = parseInt(d.cleared, 10) || 0;
+        cloud = Array.isArray(d.msgs) ? d.msgs : [];
+      } catch (e) { /* unreachable cloud — still attempt the push */ }
+      const merged = cloud.filter(x => x && typeof x.t === 'string' && typeof x.n === 'string' && (parseInt(x.ts, 10) || 0) > clearedAt);
+      merged.push(m);
+      const seen = new Set(); const out = [];
+      for (const x of merged) {
+        const c = { ts: parseInt(x.ts, 10) || 0, n: String(x.n).slice(0, 24), t: String(x.t).slice(0, MAX_LEN) };
+        const s = sig(c);
+        if (seen.has(s)) continue;
+        seen.add(s); out.push(c);
+      }
+      out.sort((a, b) => a.ts - b.ts);
+      const { error } = await client.from('openworld_data')
+        .upsert({ key: KEY, data: { msgs: out.slice(-MAX_MSGS), cleared: clearedAt || undefined }, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      if (error) throw error;
+      note('');
+    } catch (e) {
+      note('Could not send — check your connection.');
+      lastSendAt = 0;    // a failed send must not burn the cooldown
+    }
+    sending = false;
+  }
+
+  async function clearAll() {
+    if (!CURRENT_USER || CURRENT_USER !== ADMIN_ACCOUNT) return;
+    if (!client) return;
+    if (!window.confirm('Clear the ENTIRE world chat for everyone? This cannot be undone.')) return;
+    const t = Date.now();
+    try {
+      const { error } = await client.from('openworld_data')
+        .upsert({ key: KEY, data: { msgs: [], cleared: t }, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      if (error) throw error;
+      clearedAt = t;
+      msgs = []; sigs.clear(); unread = 0;
+      updateBadge(); render(); note('');
+    } catch (e) { note('Could not clear chat.'); }
+  }
+
+  function openPanel() {
+    isOpen = true;
+    const p = document.getElementById('chat-panel');
+    if (p) p.classList.add('open');
+    unread = 0; updateBadge(); render();
+    poll();                      // freshen immediately on open
+    const inp = document.getElementById('chat-input');
+    if (inp && window.innerWidth > 760) inp.focus();
+  }
+  function closePanel() {
+    isOpen = false;
+    const p = document.getElementById('chat-panel');
+    if (p) p.classList.remove('open');
+    updateBadge();
+  }
+
+  function onLogin() {
+    const tab = document.getElementById('chat-tab');
+    if (tab) tab.style.display = 'flex';
+    const clr = document.getElementById('chat-clear-btn');
+    if (clr) clr.style.display = CURRENT_USER === ADMIN_ACCOUNT ? '' : 'none';
+    if (!timer && client) timer = setInterval(poll, POLL_MS);
+    poll();
+  }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+  return { status, onLogin, stop, send, clearAll, openPanel, closePanel, isOpen: () => isOpen, poll };
+})();
+window.toggleChat = function() { Chat.isOpen() ? Chat.closePanel() : Chat.openPanel(); };
+window.closeChat = function() { Chat.closePanel(); };
+window.sendChatMsg = function() { Chat.send(); };
+window.chatClearAll = function() { Chat.clearAll(); };
+window.Chat = Chat;
+
+// ====================================================================
 // CLANS PANEL UI
 // ====================================================================
 function renderClansPanel() {
@@ -2586,6 +2892,7 @@ window.loginSubmit = function() {
   CURRENT_USER = name;
   errEl.textContent = '';
   updateMenuWelcome();
+  try { Chat.onLogin(); } catch (e) {}   // show 💬 tab + start live chat polling
   document.getElementById('login-screen').classList.add('hide');
   setTimeout(() => {
     document.getElementById('login-screen').style.display = 'none';

@@ -180,6 +180,14 @@ python3 -m http.server 8000
 
 ## Changelog
 
+### v1.13 (2026-10-07) — World chat
+- **💬 Live chat for everyone**: a Chat tab glides in from the right edge after you log in — on the menu screen AND inside the world — so commanders can talk while playing or before deploying
+- **Truly live**: devices poll the shared chat row every 3 seconds; messages from other players pop in without a reload, and a red badge counts what you missed while the panel was closed (clears on open)
+- **Identity you can trust**: messages always post as your logged-in account — clan tags show next to names, the world owner's name carries the 👑 crown, and each commander gets a stable name color
+- **Owner moderation**: the world owner gets a 🧹 button that clears the entire chat for everyone — a `cleared` tombstone stops stale devices from resurrecting old messages
+- **Safe by construction**: message text is rendered with textContent only (HTML/script injection can't run), sends are rate-limited (1.5s cooldown), and history is capped at the last 80 messages
+- **No schema change**: chat is one ordinary row (`openworld_chat`) in the existing `openworld_data` table — zero Supabase setup, rides the same cloud pipeline as saves and clans; sends do a read-merge-write so concurrent messages don't clobber each other
+
 ### v1.12 (2026-10-06) — Clans & alliances
 - **Team up: found a clan for $50,000** (🛡 Clans button on the menu and in the world HUD) — name, 2-5 char tag, motto; up to 20 commanders per clan with an open-join policy
 - **Clan life**: the owner 👑 can kick members; leaving hands the crown to the longest-standing member; the last one out (or Disband) dissolves the clan and its pacts; every roster change lands in a clan event log
