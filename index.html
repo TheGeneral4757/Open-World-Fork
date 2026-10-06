@@ -126,6 +126,15 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .close{padding:11px 25px;border:1px solid #73929b;border-radius:7px;background:#14323c;color:white;cursor:pointer;font-size:16px;transition:background .2s}
 .close:hover{background:#1d4a57}
 
+/* Plot color picker (Settings) */
+.plot-color-sub{margin:16px 0 12px!important}
+.plot-color-row{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 14px}
+.plot-color-swatch{width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;transition:transform .12s,box-shadow .12s;padding:0;flex:0 0 auto}
+.plot-color-swatch:hover{transform:scale(1.14)}
+.plot-color-swatch.active{border-color:#fff;box-shadow:0 0 0 3px rgba(245,204,116,.4),0 0 14px rgba(255,255,255,.35);transform:scale(1.14)}
+.plot-color-custom{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.plot-color-custom input[type=color]{width:46px;height:34px;border:2px solid rgba(255,255,255,.25);border-radius:8px;background:#0a1420;cursor:pointer;padding:2px}
+
 /* Leaderboard */
 .leaderboard-panel{width:min(500px,92vw);max-height:88vh;overflow-y:auto}
 .leaderboard-sub{font-family:Arial,sans-serif;font-size:12px;color:#7fa0ab;margin:0 0 20px;letter-spacing:1px}
@@ -674,6 +683,13 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
       </div>
       <p class="quality-note" id="quality-note"></p>
       <p class="quality-note">Detected for this device: <b id="quality-detected">—</b></p>
+      <p class="leaderboard-sub plot-color-sub"><b style="color:#f5cc74">PLOT COLOR</b> — every plot you own is painted in this color on the globe, and other commanders see it too. One color for all of your land; plots with businesses still show their business.</p>
+      <div class="plot-color-row" id="plot-color-row"></div>
+      <div class="plot-color-custom">
+        <input type="color" id="plot-color-picker" value="#f5cc74" title="Pick any custom color">
+        <button class="leaderboard-tab" style="flex:0 0 auto;padding:10px 14px" onclick="applyPlotColorFromPicker()">Use custom color</button>
+        <button class="leaderboard-tab" style="flex:0 0 auto;padding:10px 14px" onclick="setMyPlotColor(null)">Classic gold</button>
+      </div>
       <button class="close" onclick="closeSettings()">CLOSE</button>
     </div>
   </div>
@@ -988,6 +1004,7 @@ const STATE = {
   owned: new Set(),
   plots: [],
   claimedPlots: [],             // plots owned by you OR others (businesses + owned pool)
+  plotColor: null,              // your plot color ('#rrggbb') — one color for ALL your plots (Settings)
   hoveredPlot: null,
   selectedPlot: null,
   inventory: {},                // { materialId: quantity (float) }
@@ -2059,9 +2076,70 @@ function getPlotOwner(plotId) {
   return claims[plotId] || null;
 }
 
+// --------------------------------------------------------------------
+// PLOT COLOR — every commander can pick ONE color for all of their land
+// (Settings → Plot color on the menu screen). It lives in the player's
+// save (`plotColor`), so it rides the normal cloud-save sync: every
+// device pulls every save, so each device renders every player's plots
+// in that player's color. null = the classic palette (gold for you,
+// muted purple for everyone else).
+// --------------------------------------------------------------------
+const PLOT_COLOR_SWATCHES = ['#ff5d5d', '#ff9f43', '#58d68d', '#45c6e8', '#5b8def', '#a78bfa', '#ff7ac8', '#e8f4ff'];
+
+function normalizePlotColor(hex) {
+  if (typeof hex !== 'string') return null;
+  const m = hex.trim().match(/^#?([0-9a-fA-F]{6})$/);
+  return m ? ('#' + m[1].toLowerCase()) : null;
+}
+
+// Fill lifted toward white — keeps the outline readable for dark picks
+function lightenPlotColor(hex, t) {
+  const n = parseInt(hex.slice(1), 16) >>> 0;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return ((Math.round(r + (255 - r) * t) << 16) | (Math.round(g + (255 - g) * t) << 8) | Math.round(b + (255 - b) * t)) >>> 0;
+}
+
+// [fill, outline] hex ints for a plot owned by `name`.
+// Me → my live choice (STATE mirrors the save); others → their save.
+function ownedPlotColorsFor(name) {
+  const isMe = name === CURRENT_USER;
+  const hex = normalizePlotColor(isMe ? STATE.plotColor : ((getSave(name) || {}).plotColor));
+  if (!hex) {
+    return isMe ? [OWNED_FILL, OWNED_OUTLINE] : [OTHER_COLOR, OTHER_OUTLINE];
+  }
+  return [parseInt(hex.slice(1), 16) >>> 0, lightenPlotColor(hex, 0.35)];
+}
+
+// Re-apply every owner's plot color to the live render pools. Called
+// after each cloud pull (30s sync): a color picked anywhere — your other
+// device or another player's — arrives through the adopted save and shows
+// up without a reload. Also re-syncs STATE.plotColor from the freshest
+// save so the 10s autosave can't clobber a color a pull just adopted.
+function refreshOwnerPlotColors() {
+  if (!gameInitialized || !CURRENT_USER) return false;
+  let changed = false;
+  const myHex = normalizePlotColor((getSave(CURRENT_USER) || {}).plotColor);
+  if (normalizePlotColor(STATE.plotColor) !== myHex) { STATE.plotColor = myHex; changed = true; }
+  for (const p of STATE.plots) {
+    const ud = p.userData;
+    let pair = null;
+    if (ud.owned) {
+      if ((ud.businesses || []).length) continue;   // business color owns the tile
+      pair = ownedPlotColorsFor(CURRENT_USER);
+    } else if (ud.ownedByOther) {
+      pair = ownedPlotColorsFor(ud.ownerName);
+    }
+    if (pair && (ud._fillHex !== pair[0] || ud._outlineHex !== pair[1])) {
+      setPlotColors(p, pair[0], pair[1]);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 // Apply claim-based colors to all plots:
-//   - Claimed by current user → gold (already set by loadGame)
-//   - Claimed by other user → muted purple
+//   - Claimed by current user → their plot color (already set by loadGame)
+//   - Claimed by other user → that player's plot color (or muted purple)
 //   - Unclaimed → default green/teal (already the default)
 const OTHER_COLOR = 0x7a4a8a;       // muted purple fill for others' plots
 const OTHER_OUTLINE = 0x9a6aaa;     // brighter purple outline
@@ -2071,10 +2149,12 @@ function applyClaimColors() {
   for (const p of STATE.plots) {
     const owner = claims[p.userData.id];
     if (owner && owner !== CURRENT_USER) {
-      // Owned by another user — show in muted purple
+      // Owned by another user — show in that player's chosen plot color
+      // (or the muted-purple default if they never picked one)
       p.userData.ownedByOther = true;
       p.userData.ownerName = owner;
-      setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
+      const pair = ownedPlotColorsFor(owner);
+      setPlotColors(p, pair[0], pair[1]);
       registerClaimedPlot(p);
     }
   }
@@ -2110,7 +2190,8 @@ function applyCloudWorldUpdates() {
         }
       }
       p.userData.businesses = [];
-      setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
+      const pair = ownedPlotColorsFor(owner);
+      setPlotColors(p, pair[0], pair[1]);
       registerClaimedPlot(p);
       changed = true;
       showToast(`⚔️ ${owner} conquered ${p.userData.name}!`, false);
@@ -2119,7 +2200,8 @@ function applyCloudWorldUpdates() {
     else if (!p.userData.owned && owner && owner !== CURRENT_USER && !p.userData.ownedByOther) {
       p.userData.ownedByOther = true;
       p.userData.ownerName = owner;
-      setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
+      const pair = ownedPlotColorsFor(owner);
+      setPlotColors(p, pair[0], pair[1]);
       registerClaimedPlot(p);
       changed = true;
     }
@@ -2128,6 +2210,9 @@ function applyCloudWorldUpdates() {
       p.userData.ownerName = owner;
     }
   }
+  // Colors adopted from freshly pulled saves (another device of mine or
+  // another player changed their plot color) show up here without a reload
+  if (refreshOwnerPlotColors()) changed = true;
   if (changed) {
     flushPlotPools();
     updateHUD();
@@ -2185,6 +2270,10 @@ function saveGame() {
     // `adminStamp` = last world-owner edit applied to this save (see the
     // ADMIN section). Preserved so every device converges on it.
     adminStamp: existing ? existing.adminStamp : undefined,
+    // One color for all of this player's plots (Settings → Plot color).
+    // STATE is the live authority — never resurrect an old value from
+    // `existing`, or resetting to the classic gold wouldn't stick.
+    plotColor: normalizePlotColor(STATE.plotColor) || null,
     money: STATE.money,
     ownedPlotIds: Array.from(STATE.owned),
     // Planets: which world you're on and which ones you've bought into
@@ -2224,6 +2313,8 @@ function loadGame(username) {
   STATE.marketTrend = save.marketTrend || {};
   STATE.lastMarketUpdate = save.lastMarketUpdate || Date.now();
   STATE.lastProductionTime = 0;
+  // One color for all of this player's plots (Settings → Plot color)
+  STATE.plotColor = normalizePlotColor(save.plotColor);
   // Planets: restore unlocks (default Earth-only for older saves) and make
   // the OWNED set global — it may contain plots on planets whose meshes
   // aren't loaded right now (you're only looking at one world at a time)
@@ -2249,12 +2340,13 @@ function loadGame(username) {
     if (STATE.marketTrend[m.id] === undefined) STATE.marketTrend[m.id] = 'stable';
   }
 
-  // Restore owned plots (active planet meshes — gold fill)
+  // Restore owned plots (active planet meshes — the owner's plot color)
   const ownedIds = STATE.owned;
   for (const p of STATE.plots) {
     if (ownedIds.has(p.userData.id)) {
       p.userData.owned = true;
-      setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+      const pair = ownedPlotColorsFor(CURRENT_USER);
+      setPlotColors(p, pair[0], pair[1]);
       registerClaimedPlot(p);
     }
   }
@@ -4453,7 +4545,8 @@ window.travelTo = function(planetId) {
     }
     if (STATE.owned.has(p.userData.id)) {
       p.userData.owned = true;
-      setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+      const pair = ownedPlotColorsFor(CURRENT_USER);
+      setPlotColors(p, pair[0], pair[1]);
       registerClaimedPlot(p);
       const types = BUSINESS_REGISTRY.get(p.userData.id) || [];
       types.forEach((type, idx) => {
@@ -4747,7 +4840,8 @@ window.multiBuyAll = function() {
     STATE.owned.add(id);
     claims[id] = CURRENT_USER;
     registerClaimedPlot(p);
-    setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+    const pair = ownedPlotColorsFor(CURRENT_USER);
+    setPlotColors(p, pair[0], pair[1]);
     STATE.multiSelect.delete(id);
   }
   saveClaims(claims);
@@ -4782,8 +4876,10 @@ window.buySelectedPlot = function() {
   STATE.owned.add(p.userData.id);
   claimPlot(p.userData.id);  // register in global claims
   registerClaimedPlot(p);
-  // Turn gold in the merged pool (slight lift is handled by the rebuild)
-  setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+  // Turn it to the owner's plot color in the merged pool (slight lift is
+  // handled by the rebuild)
+  const pair = ownedPlotColorsFor(CURRENT_USER);
+  setPlotColors(p, pair[0], pair[1]);
   flushPlotPools();
 
   updateHUD();
@@ -4855,9 +4951,11 @@ window.demolishBusiness = function(businessIndex) {
   if (_ri >= 0) _regTypes.splice(_ri, 1);
   if (_regTypes.length) BUSINESS_REGISTRY.set(p.userData.id, _regTypes);
   else BUSINESS_REGISTRY.delete(p.userData.id);
-  // If no businesses left, restore gold; otherwise recolor to first remaining
+  // If no businesses left, restore the owner's plot color; otherwise
+  // recolor to first remaining
   if (p.userData.businesses.length === 0) {
-    setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+    const pair = ownedPlotColorsFor(CURRENT_USER);
+    setPlotColors(p, pair[0], pair[1]);
   } else {
     const firstBt = getBusinessType(p.userData.businesses[0].type);
     if (firstBt) setPlotColors(p, firstBt.color, firstBt.color);
@@ -5509,7 +5607,10 @@ window.attackPlot = function() {
       const bt = getBusinessType(type);
       addBusinessToPlot(p, bt, idx);
     });
-    if (!p.userData.businesses.length) setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+    if (!p.userData.businesses.length) {
+      const pair = ownedPlotColorsFor(CURRENT_USER);
+      setPlotColors(p, pair[0], pair[1]);
+    }
     flushPlotPools();
     const spoils = captured.length ? ` with ${captured.length} business${captured.length > 1 ? 'es' : ''}` : '';
     showToast(`${kIcon} Victory! Captured ${p.userData.name}${spoils} — lost ${atkLoss.toLocaleString()} ${kIcon}`, true);
@@ -6143,7 +6244,55 @@ window.exitGame = function() {
   document.getElementById('menu').classList.remove('hidden');
 };
 
-window.openSettings = function() { renderSettingsQuality(); document.getElementById('settings').classList.add('show'); };
+// ---- Settings → Plot color ----
+function renderPlotColorSettings() {
+  const row = document.getElementById('plot-color-row');
+  if (!row) return;
+  const cur = normalizePlotColor(
+    gameInitialized ? STATE.plotColor : ((getSave(CURRENT_USER) || {}).plotColor));
+  row.innerHTML = PLOT_COLOR_SWATCHES.map(c =>
+    `<button class="plot-color-swatch${cur === c ? ' active' : ''}" style="background:${c}" data-c="${c}" title="${c}" aria-label="Plot color ${c}" onclick="setMyPlotColor('${c}')"></button>`
+  ).join('');
+  const picker = document.getElementById('plot-color-picker');
+  if (picker) picker.value = cur || '#f5cc74';
+}
+
+// One funnel for every plot-color change, from either screen state:
+//  • a session already started (world was entered) → STATE + saveGame();
+//    the normal autosave/push pipeline uploads it (autosave keeps running
+//    on the menu after exitGame, so the direct edit below can't be used)
+//  • straight after login (menu only, no session yet) → edit the stored
+//    save directly (mirrors Clans.spendMoney) and push it right away so
+//    the change is live without ever entering the world
+function applyPlotColorChoice(hex) {
+  if (!CURRENT_USER) return;
+  const val = normalizePlotColor(hex);
+  if (gameInitialized) {
+    STATE.plotColor = val;
+    saveGame();
+    // Recolor the live globe right away — the world may be hidden (menu
+    // after exitGame) but its pools keep the old color, and re-entering
+    // skips loadGame, so without this the old color would stick until a
+    // 30s sync happened to adopt the save back.
+    if (refreshOwnerPlotColors()) flushPlotPools();
+  } else {
+    const s = getSave(CURRENT_USER);
+    if (!s) return;
+    s.plotColor = val;
+    s.savedAt = Date.now();
+    try { localStorage.setItem(SAVE_PREFIX + CURRENT_USER, JSON.stringify(s)); } catch (e) { return; }
+    CloudSync.pushSave(CURRENT_USER);   // upload immediately — don't wait for a session
+  }
+  renderPlotColorSettings();
+  showToast(val ? `🎨 All your plots are now ${val.toUpperCase()} — everyone sees your color` : '🎨 Plots restored to the classic gold', true);
+}
+window.setMyPlotColor = function(hex) { applyPlotColorChoice(hex); };
+window.applyPlotColorFromPicker = function() {
+  const el = document.getElementById('plot-color-picker');
+  if (el) applyPlotColorChoice(el.value);
+};
+
+window.openSettings = function() { renderSettingsQuality(); renderPlotColorSettings(); document.getElementById('settings').classList.add('show'); };
 window.closeSettings = function() { document.getElementById('settings').classList.remove('show'); };
 window.startGame = window.enterGame; // legacy
 

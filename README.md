@@ -61,7 +61,8 @@ Notes: passwords are lightly hashed client-side and the anon key is public by de
 - **Terrain detection** via water mask + topology (elevation) textures:
   - 7 regions: 🌴 Tropical, 🌳 Temperate, ❄️ Polar, ⛰️ Mountain, 🏔️ Highland, 🌊 Deep Ocean, 🧊 Arctic Ocean
 - **Shared ownership**: plots bought by one player are locked for everyone else (global claims registry)
-- Other players' plots show in **muted purple** on your globe
+- **Plot color** (Settings): pick from 8 swatches or any custom color — every plot you own is painted in it, and other commanders see your color on their globes too. One color for all of your land; the classic gold is one click away
+- Other players' plots show in **their chosen color** (muted purple by default)
 
 ### 🏗️ Businesses
 - **8 business types**, each producing a different material:
@@ -187,6 +188,13 @@ python3 -m http.server 8000
 - Clan tags show next to owners on the **leaderboard, plot cards and the HUD button**; join/leave/kick/pact events arrive as live toasts
 - **No schema change**: clans (`openworld_clan_<id>`) and pacts (`openworld_alliance_<a>__<b>`) are ordinary rows in the existing `openworld_data` table and ride along with the normal 30-second sync; the Clans panel additionally refreshes every 10 seconds while open
 - **Admin panel**: new Clans table (disband any clan), clan column on accounts, and deleted accounts are stripped from their clans automatically (crown passes or clan dissolves)
+
+### v1.12 (2026-10-06) — Pick your plot color
+- **New in Settings: Plot color** — 8 preset swatches (crimson, orange, emerald, cyan, blue, violet, pink, arctic), a full custom color picker, and a one-click **Classic gold** reset
+- One choice colors **all of your plots** — fill plus a lighter matching outline — and it's stored in your save, so it follows you to every device
+- **Everyone sees it**: because every device pulls every save, other commanders' globes render your land in your color (and theirs in theirs) — no schema change, it just rides the normal save sync
+- **Live everywhere**: the change lands on running worlds via the 30-second sync without a reload, applies instantly when you re-enter, and colors freshly bought plots the moment you claim them
+- Fixed along the way: changing the color mid-session used to leave the old color on the globe until the next sync — it now repaints immediately
 
 ### v1.11 (2026-10-06) — Admin resets stick
 - **Fixed: admin resets/set-money/zero-inventory no longer revert.** The in-game admin panel reused the previous edit's ownership stamp, so an online player's newer autosave pushed their pre-reset state right back over the reset within seconds
