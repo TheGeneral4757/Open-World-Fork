@@ -180,6 +180,15 @@ python3 -m http.server 8000
 
 ## Changelog
 
+### v1.14 (2026-10-07) — Slow-paced war
+- **Attacks are marches now, not coin-flips**: clicking DEPLOY sends your force on a **5-minute march** (8 minutes across planets) — the battle only resolves when it lands, so conquest unfolds in real time instead of instantly
+- **Defenders see it coming**: the moment you launch, the defender gets a ⚠️ toast, their plot card shows an incoming-attack warning, and the new ⚔ **War Room** (HUD button) lists every march with a live ETA — and because defender strength is **read when your force arrives**, every troop they train during the march counts
+- **Committed troops leave your army at launch** — marched men defend nothing and can't be double-spent on a second front (max **3 marches** at once; recall brings 60% home any time before arrival)
+- **Truce**: a just-conquered plot is immune for **10 minutes**, so land can't be ping-ponged back the second it falls
+- **Deterministic battles**: the dice seed travels inside the march record, so whichever device sees the force arrive computes the exact same fight (±15% luck, terrain and air support as before) — safe even if the attacker logged off, because any online device resolves it and both sides get battle-report toasts
+- **Spoils & losses flow correctly across devices**: survivors march home, captured businesses transfer to the attacker's registry, casualties hit both saves, and everything relays through the normal cloud sync
+- **No schema change**: marches and truces ride one shared row (`openworld_wars`) in the existing `openworld_data` table
+
 ### v1.13 (2026-10-07) — World chat
 - **💬 Live chat for everyone**: a Chat tab glides in from the right edge after you log in — on the menu screen AND inside the world — so commanders can talk while playing or before deploying
 - **Truly live**: devices poll the shared chat row every 3 seconds; messages from other players pop in without a reload, and a red badge counts what you missed while the panel was closed (clears on open)

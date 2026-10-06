@@ -649,6 +649,32 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
   #chat-panel{right:8px;width:calc(100vw - 16px);height:72vh}
 }
 
+/* ============ WARS — slow-paced conquest (marches, truces, reports) ============ */
+.wars-section{margin-bottom:16px}
+.wars-head{font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#f5cc74;font-weight:bold;margin:2px 0 8px;display:flex;align-items:center;gap:6px}
+.wars-head small{color:#6c8791;text-transform:none;letter-spacing:0;font-weight:normal}
+.wars-empty{font-size:12px;color:#6c8791;font-family:Arial,sans-serif;background:rgba(20,50,60,.2);border:1px dashed #2c4a55;border-radius:8px;padding:12px;text-align:center}
+.war-line{display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid #1a3340;border-radius:10px;background:rgba(20,50,60,.25);margin-bottom:7px;font-family:Arial,sans-serif;font-size:12px;color:#cbd7dc}
+.war-line .wl-ico{font-size:16px;flex:0 0 auto}
+.war-line .wl-main{flex:1;min-width:0}
+.war-line .wl-main b{color:#e8f0f2}
+.war-line .wl-sub{font-size:11px;color:#6c8791;margin-top:2px}
+.war-line .wl-eta{font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#f5cc74;flex:0 0 auto}
+.war-line .wl-eta.soon{color:#ff9a62}
+.war-line.incoming{border-color:rgba(231,76,60,.45);background:rgba(120,20,20,.18)}
+.war-line.incoming .wl-eta{color:#ff8080}
+.war-line .btn-recall{padding:6px 12px;font-size:11px;border-radius:7px;border:1px solid #2c4a55;background:rgba(29,74,87,.6);color:#cbd7dc;cursor:pointer;flex:0 0 auto;font-family:Arial,sans-serif}
+.war-line .btn-recall:hover{border-color:#f5cc74;color:#f5cc74}
+.wars-report{padding:9px 12px;border-radius:9px;margin-bottom:7px;font-family:Arial,sans-serif;font-size:12px;border:1px solid}
+.wars-report.win{border-color:rgba(46,204,113,.4);background:rgba(20,80,50,.18);color:#a8e6c3}
+.wars-report.loss{border-color:rgba(231,76,60,.4);background:rgba(120,20,20,.15);color:#f0b0a8}
+.wars-report.info{border-color:#2c4a55;background:rgba(20,50,60,.25);color:#cbd7dc}
+.war-march-banner{border:1px solid rgba(245,204,116,.4);background:rgba(245,204,116,.07);border-radius:10px;padding:12px;margin-bottom:10px;font-family:Arial,sans-serif;font-size:13px;color:#f5cc74}
+.war-march-banner .wl-sub{font-size:11px;color:#9bb4bd;margin-top:4px}
+.war-truce-banner{border:1px solid rgba(126,214,163,.4);background:rgba(20,80,50,.15);border-radius:10px;padding:12px;margin-bottom:10px;font-family:Arial,sans-serif;font-size:13px;color:#a8e6c3}
+.war-incoming-warn{border:1px solid rgba(231,76,60,.5);background:rgba(120,20,20,.2);border-radius:10px;padding:11px 13px;margin-bottom:10px;font-family:Arial,sans-serif;font-size:13px;color:#ff9a8a}
+.war-hint{font-size:11px;color:#8fa9b2;font-family:Arial,sans-serif;margin-top:8px;line-height:1.5}
+
 @media(max-width:700px){
   .top-bar{padding:10px 12px;gap:8px;flex-wrap:wrap}
   .brand{font-size:14px;order:3;flex-basis:100%;text-align:center;margin-top:4px}
@@ -778,6 +804,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <button class="market-btn" id="clans-btn" onclick="openClans()" title="Clans & Alliances — team up with other commanders">🛡 Clans</button>
         <button class="market-btn" id="planets-btn" onclick="openPlanets()" title="Planets — buy into new worlds and travel between them">🪐</button>
         <button class="market-btn" id="myland-btn" onclick="openMyPlots()" title="My Land — see your plots and sell the ones you don't want">🗺</button>
+        <button class="market-btn" id="wars-btn" onclick="openWars()" title="Wars — your marches, incoming attacks and battle reports">⚔</button>
         <button class="market-btn" id="multibuy-btn" onclick="toggleMultiBuy()" title="Multi-Buy — click several plots, then buy them all at once (each must border your land)">✚</button>
         <button class="market-btn" id="gamble-btn" onclick="openGambling()" style="display:none" title="Play at your casinos">🎰 Casino</button>
       </div>
@@ -869,6 +896,13 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 <div class="plot-modal" id="myplots-modal">
   <div class="plot-card" id="myplots-card">
     <!-- filled dynamically by renderMyPlotsPanel() -->
+  </div>
+</div>
+
+<!-- Wars — marches in transit, incoming attacks, battle reports. -->
+<div class="plot-modal" id="wars-modal">
+  <div class="plot-card" id="wars-card">
+    <!-- filled dynamically by renderWarsPanel() -->
   </div>
 </div>
 
@@ -2112,6 +2146,433 @@ window.chatClearAll = function() { Chat.clearAll(); };
 window.Chat = Chat;
 
 // ====================================================================
+// WARS — slow-paced conquest. A DEPLOY order no longer rolls dice on
+// the spot: it sends your force on a MARCH (5 min same planet, 8 min
+// cross-planet). The battle resolves only when the force arrives, and
+// the DEFENDER'S STRENGTH IS READ AT ARRIVAL — they see the attack
+// coming and can train troops, build defenses or recall diplomacy
+// while it flies. Design:
+//  • Rides the shared openworld_data row 'openworld_wars'
+//    { marches: [...], truces: {plotId: untilTs} } — zero schema change,
+//    read-merge-write like chat so concurrent launches don't clobber.
+//  • Resolution is DETERMINISTIC: the dice seed is stored in the march
+//    record, so whichever device sees "arrived" first computes the same
+//    battle (mulberry32). resolved flag + rev guard double-apply.
+//  • Committed troops leave your inventory AT LAUNCH — attacking leaves
+//    your own land thinner (marched men defend nothing).
+//  • Defender warnings: new incoming marches toast on their device and
+//    show a red warning on the target plot + the ⚔ Wars panel.
+//  • Truce: a just-conquered plot is immune for 10 minutes (no
+//    reconquest ping-pong). Max 3 active marches per attacker. Recall
+//    before arrival brings 60% home; a fizzled target (sold/conquered
+//    meanwhile) brings 80% home.
+// ====================================================================
+const Wars = (() => {
+  const KEY = 'openworld_wars';
+  const MAX_MARCHES = 40;            // rows kept (active + recent reports)
+  const RESOLVED_TTL = 30 * 60 * 1000;
+  const POLL_MS = 4000;
+  const TRUCE_MS = 10 * 60 * 1000;
+  const RECALL_RETURN = 0.6;
+  const FIZZLE_RETURN = 0.8;
+
+  let client = null;
+  if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
+    try { client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
+  }
+
+  let marches = [];                  // ascending launchedAt
+  let truces = {};                   // plotId -> truce-until ts
+  const toastedLaunch = new Set();   // march ids already launch-toasted
+  const toastedOutcome = new Set();  // 'id@rev' already report-toasted
+  let timer = null;
+  let writing = false;
+
+  function status() { return client ? 'cloud' : 'local'; }
+
+  // ?warmarch=<seconds> shrinks marches for QA/e2e (min 3s)
+  function marchSeconds(crossPlanet) {
+    let base = crossPlanet ? 480 : 300;
+    try {
+      const q = parseInt(new URLSearchParams(location.search).get('warmarch'), 10);
+      if (q >= 3) base = crossPlanet ? Math.round(q * 1.6) : q;
+    } catch (e) {}
+    return base;
+  }
+  function fmtEta(ms) {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return Math.floor(s / 60) + 'm ' + String(s % 60).padStart(2, '0') + 's';
+  }
+  // Deterministic PRNG — the seed travels inside the march record
+  function mulberry32(a) {
+    return function() {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  // ---------- cloud row (read-merge-write) ----------
+  async function fetchRow() {
+    const { data, error } = await client.from('openworld_data').select('data').eq('key', KEY).maybeSingle();
+    if (error) throw error;
+    const d = (data && data.data) || {};
+    return { marches: Array.isArray(d.marches) ? d.marches : [], truces: (d.truces && typeof d.truces === 'object') ? d.truces : {} };
+  }
+  function prune() {
+    const now = Date.now();
+    marches = marches.filter(m => m && m.id && (!m.resolved || ((m.outcome && m.outcome.at) || 0) > now - RESOLVED_TTL));
+    if (marches.length > MAX_MARCHES) marches = marches.slice(-MAX_MARCHES);
+  }
+  async function persist() {
+    if (!client || writing) return;
+    writing = true;
+    try {
+      const fresh = await fetchRow();
+      const byId = {};
+      for (const m of fresh.marches) byId[m.id] = m;
+      for (const m of marches) {
+        const f = byId[m.id];
+        if (!f || (m.rev || 0) > (f.rev || 0)) byId[m.id] = m;   // higher revision wins
+      }
+      const mergedT = Object.assign({}, fresh.truces, truces);
+      for (const k of Object.keys(mergedT)) if (!(mergedT[k] > 0)) delete mergedT[k];
+      const merged = Object.values(byId).sort((a, b) => (a.launchedAt || 0) - (b.launchedAt || 0));
+      marches = merged;
+      truces = mergedT;
+      prune();
+      const { error } = await client.from('openworld_data')
+        .upsert({ key: KEY, data: { marches: marches.slice(-MAX_MARCHES), truces }, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      if (error) throw error;
+    } catch (e) { /* war sync is best-effort — the poll retries */ }
+    writing = false;
+  }
+
+  // ---------- queries (used by UI + attackPlot) ----------
+  function activeByAttacker(name) {
+    return marches.filter(m => !m.resolved && m.atk === name);
+  }
+  function marchToPlotBy(plotId, attacker) {
+    return marches.find(m => !m.resolved && m.plotId === plotId && m.atk === attacker) || null;
+  }
+  function incomingFor(defender) {
+    return marches.filter(m => !m.resolved && m.def === defender);
+  }
+  function resolvedFor(name) {
+    return marches.filter(m => m.resolved && m.outcome && (m.atk === name || m.def === name))
+      .sort((a, b) => ((b.outcome && b.outcome.at) || 0) - ((a.outcome && a.outcome.at) || 0));
+  }
+  function truceUntil(plotId) { return truces[plotId] || 0; }
+
+  // ---------- launch / recall ----------
+  async function launch(m) {
+    marches.push(m);
+    toastedLaunch.add(m.id);
+    await persist();
+  }
+  async function recall(id) {
+    const m = marches.find(x => x.id === id && !x.resolved);
+    if (!m || m.atk !== CURRENT_USER) return;
+    const back = Math.floor(m.committed * RECALL_RETURN);
+    const atkSave = getSave(m.atk);
+    if (atkSave) {
+      atkSave.inventory = atkSave.inventory || {};
+      atkSave.inventory[m.kind] = (atkSave.inventory[m.kind] || 0) + back;
+      atkSave.savedAt = Date.now();
+      try { localStorage.setItem(SAVE_PREFIX + m.atk, JSON.stringify(atkSave)); } catch (e) {}
+    }
+    if (CURRENT_USER === m.atk) {
+      STATE.inventory[m.kind] = (STATE.inventory[m.kind] || 0) + back;   // keep live army in sync
+      saveGame();
+    }
+    m.resolved = true;
+    m.outcome = { recalled: true, returned: back, at: Date.now() };
+    m.rev = (m.rev || 0) + 1;
+    toastedOutcome.add(m.id + '@' + m.rev);
+    updateHUD();
+    saveGame();
+    await persist();
+  }
+
+  // ---------- deterministic resolution ----------
+  function resolveMarch(m) {
+    const claims = getClaims();
+    const ownerNow = claims[m.plotId] || null;
+    const defSave = getSave(m.def);
+    let outcome;
+    if (!defSave || ownerNow !== m.def || (truces[m.plotId] || 0) > m.launchedAt) {
+      // target changed hands / defender deleted / truce rose mid-march
+      const back = Math.floor(m.committed * FIZZLE_RETURN);
+      if (atkSave && back > 0) {
+        atkSave.inventory = atkSave.inventory || {};
+        atkSave.inventory[m.kind] = (atkSave.inventory[m.kind] || 0) + back;
+        atkSave.savedAt = Date.now();
+        try { localStorage.setItem(SAVE_PREFIX + m.atk, JSON.stringify(atkSave)); } catch (e) {}
+      }
+      // live memory must learn too, or the next autosave clobbers the save
+      if (CURRENT_USER === m.atk && back > 0) STATE.inventory[m.kind] = (STATE.inventory[m.kind] || 0) + back;
+      outcome = { fizzled: true, returned: back, at: Date.now() };
+    } else {
+      const defender = Math.floor((defSave.inventory && defSave.inventory[m.kind]) || 0);
+      const defAir = airBonus((defSave.inventory && defSave.inventory.planes) || 0);
+      const atkSave = getSave(m.atk);
+      const atkAir = airBonus((atkSave && atkSave.inventory && atkSave.inventory.planes) || 0);
+      const rng = mulberry32((m.seed || 1) >>> 0);
+      const atkRoll = m.committed * (1 + atkAir) * (0.85 + rng() * 0.3);
+      const defRoll = defender * (m.tb || 1.2) * (1 + defAir) * (0.85 + rng() * 0.3);
+      const win = defender <= 0 ? true : atkRoll > defRoll;
+      let atkLoss, defLoss;
+      if (win) {
+        atkLoss = Math.min(m.committed, Math.round(m.committed * (0.4 + 0.45 * Math.min(1, defRoll / Math.max(1, atkRoll)))));
+        defLoss = Math.round(defender * (0.4 + 0.45 * Math.min(1, atkRoll / Math.max(1, defRoll))));
+      } else {
+        atkLoss = m.committed;
+        defLoss = Math.min(defender, Math.round(defender * (0.1 + 0.15 * Math.min(1, m.committed / Math.max(1, defender)))));
+      }
+      // survivors march home into the attacker's inventory
+      if (atkSave) {
+        atkSave.inventory = atkSave.inventory || {};
+        const survivors = win ? (m.committed - atkLoss) : 0;
+        if (survivors > 0) {
+          atkSave.inventory[m.kind] = (atkSave.inventory[m.kind] || 0) + survivors;
+          if (CURRENT_USER === m.atk) STATE.inventory[m.kind] = (STATE.inventory[m.kind] || 0) + survivors;
+        }
+        // spoils: captured businesses become the attacker's property
+        let captured = 0;
+        if (win) {
+          const cap = (defSave.businesses || []).filter(b => b.plotId === m.plotId);
+          captured = cap.length;
+          if (cap.length) {
+            atkSave.businesses = atkSave.businesses || [];
+            for (const b of cap) if (!atkSave.businesses.some(x => x.plotId === b.plotId && x.type === b.type)) atkSave.businesses.push({ plotId: b.plotId, type: b.type });
+            // saveGame serializes businesses from this registry — keep the
+            // attacker's LIVE registry in sync or the next autosave
+            // resurrects the plots for the old owner
+            if (CURRENT_USER === m.atk) {
+              BUSINESS_REGISTRY.set(m.plotId, cap.map(b => b.type).filter(t => getBusinessType(t)));
+              STATE.owned.add(m.plotId);
+            }
+          }
+        }
+        atkSave.savedAt = Date.now();
+        try { localStorage.setItem(SAVE_PREFIX + m.atk, JSON.stringify(atkSave)); } catch (e) {}
+        outcome = { win, atkLoss, defLoss, captured, at: Date.now() };
+      } else {
+        outcome = { win: false, atkLoss: m.committed, defLoss: 0, captured: 0, at: Date.now() };
+      }
+      // defender casualties + territory loss
+      defSave.inventory = defSave.inventory || {};
+      defSave.inventory[m.kind] = Math.max(0, defender - defLoss);
+      if (CURRENT_USER === m.def) STATE.inventory[m.kind] = Math.max(0, (STATE.inventory[m.kind] || 0) - defLoss);
+      if (win) {
+        defSave.ownedPlotIds = (defSave.ownedPlotIds || []).filter(id => id !== m.plotId);
+        defSave.businesses = (defSave.businesses || []).filter(b => b.plotId !== m.plotId);
+        claims[m.plotId] = m.atk;
+        saveClaims(claims);
+        truces[m.plotId] = Date.now() + TRUCE_MS;
+      }
+      defSave.savedAt = Date.now();
+      try { localStorage.setItem(SAVE_PREFIX + m.def, JSON.stringify(defSave)); } catch (e) {}
+      // attacker on this device watching? apply the capture to the globe
+      if (win && CURRENT_USER === m.atk) applyCaptureVisuals(m);
+    }
+    m.resolved = true;
+    m.outcome = outcome;
+    m.rev = (m.rev || 0) + 1;
+    toastedOutcome.add(m.id + '@' + m.rev);
+    reportToast(m);          // the resolving device hears the battle first
+    return outcome;
+  }
+
+  // Local globe updates when the ATTACKER device resolves a win
+  function applyCaptureVisuals(m) {
+    try {
+      const p = ACTIVE_PLOT_BY_ID.get(m.plotId);
+      if (!p) return;
+      const bt = getBusinessType;
+      const atkSave = getSave(m.atk) || {};
+      const capTypes = (atkSave.businesses || []).filter(b => b.plotId === m.plotId).map(b => b.type).filter(t => getBusinessType(t));
+      claimPlot(m.plotId);
+      p.userData.owned = true;
+      p.userData.ownedByOther = false;
+      p.userData.ownerName = null;
+      STATE.owned.add(m.plotId);
+      p.userData.businesses = [];
+      BUSINESS_REGISTRY.set(m.plotId, capTypes);
+      capTypes.forEach((type, idx) => addBusinessToPlot(p, getBusinessType(type), idx));
+      if (!p.userData.businesses.length) {
+        const pair = ownedPlotColorsFor(CURRENT_USER);
+        setPlotColors(p, pair[0], pair[1]);
+      }
+      flushPlotPools();
+      updateHUD();
+    } catch (e) { /* visuals are cosmetic — the saves already carry truth */ }
+  }
+
+  // ---------- poll ----------
+  async function poll() {
+    if (!client || !CURRENT_USER) return;
+    try {
+      const row = await fetchRow();
+      // merge (don't clobber local resolutions not yet persisted)
+      for (const m of row.marches) {
+        const cur = marches.find(x => x.id === m.id);
+        if (!cur) marches.push(m);
+        else if ((m.rev || 0) > (cur.rev || 0)) Object.assign(cur, m);
+      }
+      truces = Object.assign({}, truces);
+      for (const [k, v] of Object.entries(row.truces || {})) if ((v || 0) > (truces[k] || 0)) truces[k] = v;
+      prune();
+      // resolve whatever arrived
+      const now = Date.now();
+      let resolvedAny = false;
+      for (const m of marches) {
+        if (!m.resolved && m.arriveAt <= now) { resolveMarch(m); resolvedAny = true; }
+      }
+      // toasts for marches involving me
+      for (const m of marches) {
+        const involves = m.atk === CURRENT_USER || m.def === CURRENT_USER;
+        if (!involves) continue;
+        if (!m.resolved && !toastedLaunch.has(m.id)) {
+          toastedLaunch.add(m.id);
+          if (m.launchedAt > Date.now() - 15000) {   // only fresh launches
+            const kIcon = m.kind === 'ships' ? '⚓' : '⚔️';
+            if (m.atk === CURRENT_USER) showToast(`${kIcon} ${m.committed.toLocaleString()} ${m.kind} marching to ${m.plotName} — arrives in ${fmtEta(m.arriveAt - Date.now())}`, true);
+            else showToast(`⚠️ ${m.atk} is marching ${m.committed.toLocaleString()} ${kIcon} toward ${m.plotName} — arrives in ${fmtEta(m.arriveAt - Date.now())}. Reinforce!`, false);
+          }
+        }
+        // outcomes arriving from OTHER devices (our own resolutions
+        // already toasted inside resolveMarch)
+        if (m.resolved && m.outcome && !toastedOutcome.has(m.id + '@' + (m.rev || 0))) {
+          toastedOutcome.add(m.id + '@' + (m.rev || 0));
+          reportToast(m);
+        }
+      }
+      if (resolvedAny) { await persist(); updateHUD(); }
+      if (document.getElementById('wars-modal').classList.contains('show')) renderWarsPanel();
+    } catch (e) { /* wars are best-effort */ }
+  }
+
+  function reportToast(m) {
+    const kIcon = m.kind === 'ships' ? '⚓' : '⚔️';
+    const o = m.outcome;
+    if (m.atk === CURRENT_USER) {
+      if (o.recalled) showToast(`↩ Force recalled from ${m.plotName} — ${o.returned.toLocaleString()} ${kIcon} returned home.`, false);
+      else if (o.fizzled) showToast(`⚔️ The march on ${m.plotName} fizzled — the target changed hands. ${o.returned.toLocaleString()} ${kIcon} returned.`, false);
+      else if (o.win) showToast(`${kIcon} Victory at ${m.plotName}! Captured${o.captured ? ` with ${o.captured} business${o.captured > 1 ? 'es' : ''}` : ''} — lost ${o.atkLoss.toLocaleString()} ${kIcon}.`, true);
+      else showToast(`💀 Defeat at ${m.plotName} — all ${o.atkLoss.toLocaleString()} ${kIcon} lost. ${m.def} holds.`, false);
+    } else if (m.def === CURRENT_USER) {
+      if (o.recalled || o.fizzled) return;
+      if (o.win) showToast(`⚔️ ${m.atk} overran ${m.plotName} — ${o.defLoss.toLocaleString()} ${kIcon} lost.`, false);
+      else showToast(`🛡 You repelled ${m.atk}'s attack on ${m.plotName}! ${m.atk} lost all ${o.atkLoss.toLocaleString()} ${kIcon}.`, true);
+    }
+  }
+
+  function onLogin() {
+    if (!timer && client) timer = setInterval(poll, POLL_MS);
+    poll();
+  }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+  return { status, onLogin, stop, launch, recall, poll,
+           activeByAttacker, marchToPlotBy, incomingFor, resolvedFor, truceUntil,
+           marchSeconds, fmtEta, MAX_ACTIVE: 3, TRUCE_MS,
+           get marches() { return marches; }, get truces() { return truces; } };
+})();
+window.openWars = function() {
+  document.getElementById('wars-modal').classList.add('show');
+  renderWarsPanel();
+  if (Wars.status() === 'cloud') Wars.poll();
+  if (!window.__warsTick) window.__warsTick = setInterval(() => {
+    if (document.getElementById('wars-modal').classList.contains('show')) renderWarsPanel();
+  }, 1000);
+};
+window.closeWars = function() {
+  document.getElementById('wars-modal').classList.remove('show');
+};
+window.recallMarch = function(id) { Wars.recall(id); };
+window.Wars = Wars;
+// Minimal QA hook (precedent: clanRelationTo) — lets the e2e open a
+// specific plot's modal without synthetic 3D raycasts.
+window.__qaOpenPlotById = function(id) {
+  const p = ACTIVE_PLOT_BY_ID.get(id);
+  if (p) openPlotModal(p);
+  return !!p;
+};
+
+function renderWarsPanel() {
+  const card = document.getElementById('wars-card');
+  if (!card || !CURRENT_USER) return;
+  const mine = Wars.activeByAttacker(CURRENT_USER);
+  const incoming = Wars.incomingFor(CURRENT_USER);
+  const reports = Wars.resolvedFor(CURRENT_USER).slice(0, 6);
+  const row = (html, cls) => `<div class="war-line${cls ? ' ' + cls : ''}">${html}</div>`;
+  let mineHtml;
+  if (mine.length) {
+    mineHtml = mine.map(m => {
+      const eta = Wars.fmtEta(m.arriveAt - Date.now());
+      const kIcon = m.kind === 'ships' ? '⚓' : '⚔️';
+      return row(`<span class="wl-ico">${kIcon}</span>
+        <div class="wl-main"><b>${m.plotName}</b> — ${m.committed.toLocaleString()} ${m.kind} vs ${m.def}<div class="wl-sub">defender strength is read on arrival</div></div>
+        <span class="wl-eta">${eta}</span>
+        <button class="btn-recall" onclick="recallMarch('${m.id}')">↩ Recall</button>`);
+    }).join('');
+  } else {
+    mineHtml = '<div class="wars-empty">No forces on the march. Click an enemy plot in the world to plan an attack.</div>';
+  }
+  let inHtml;
+  if (incoming.length) {
+    inHtml = incoming.map(m => {
+      const eta = Wars.fmtEta(m.arriveAt - Date.now());
+      const kIcon = m.kind === 'ships' ? '⚓' : '⚔️';
+      return row(`<span class="wl-ico">${kIcon}</span>
+        <div class="wl-main"><b>${m.atk}</b> → your ${m.plotName}<div class="wl-sub">${m.committed.toLocaleString()} ${m.kind} incoming — train troops / build defenses now</div></div>
+        <span class="wl-eta">${eta}</span>`, 'incoming');
+    }).join('');
+  } else {
+    inHtml = '<div class="wars-empty">No incoming attacks — your land is quiet.</div>';
+  }
+  let repHtml;
+  if (reports.length) {
+    repHtml = reports.map(m => {
+      const o = m.outcome;
+      const kIcon = m.kind === 'ships' ? '⚓' : '⚔️';
+      if (o.recalled) return `<div class="wars-report info">↩ Recalled the march on ${m.plotName} — ${o.returned.toLocaleString()} ${kIcon} came home.</div>`;
+      if (o.fizzled) return `<div class="wars-report info">⚔️ March on ${m.plotName} fizzled — target changed hands. ${o.returned.toLocaleString()} ${kIcon} returned.</div>`;
+      if (m.atk === CURRENT_USER) {
+        return o.win
+          ? `<div class="wars-report win">${kIcon} Won ${m.plotName} from ${m.def} — lost ${o.atkLoss.toLocaleString()}, killed ${o.defLoss.toLocaleString()}${o.captured ? `, took ${o.captured} business${o.captured > 1 ? 'es' : ''}` : ''}.</div>`
+          : `<div class="wars-report loss">💀 Lost ${o.atkLoss.toLocaleString()} ${kIcon} attacking ${m.plotName} — ${m.def} held (${o.defLoss.toLocaleString()} casualties).</div>`;
+      }
+      return o.win
+        ? `<div class="wars-report loss">⚔️ ${m.atk} took ${m.plotName} — lost ${o.defLoss.toLocaleString()} ${kIcon} defending.</div>`
+        : `<div class="wars-report win">🛡 Held ${m.plotName} against ${m.atk} — they lost all ${o.atkLoss.toLocaleString()} ${kIcon}, you lost ${o.defLoss.toLocaleString()}.</div>`;
+    }).join('');
+  } else {
+    repHtml = '<div class="wars-empty">No battles yet.</div>';
+  }
+  card.innerHTML = `
+    <span class="badge owned">⚔ War Room</span>
+    <h2>Wars</h2>
+    <div class="desc">Conquest is a march, not a coin-flip. Forces take <b>${Math.round(Wars.marchSeconds(false) / 60)} minutes</b> to arrive (${Math.round(Wars.marchSeconds(true) / 60)} across planets); defenders see you coming and their strength is read <b>on arrival</b>. Just-conquered land is under a ${Math.round(Wars.TRUCE_MS / 60000)}-minute truce.</div>
+    <div class="wars-section">
+      <div class="wars-head">Your marches <small>${mine.length}/${Wars.MAX_ACTIVE}</small></div>
+      ${mineHtml}
+    </div>
+    <div class="wars-section">
+      <div class="wars-head">Incoming <small>defend</small></div>
+      ${inHtml}
+    </div>
+    <div class="wars-section">
+      <div class="wars-head">Battle reports</div>
+      ${repHtml}
+    </div>
+    <div class="actions"><button class="btn primary" onclick="closeWars()">Close</button></div>
+  `;
+}
+
+// ====================================================================
 // CLANS PANEL UI
 // ====================================================================
 function renderClansPanel() {
@@ -2893,6 +3354,7 @@ window.loginSubmit = function() {
   errEl.textContent = '';
   updateMenuWelcome();
   try { Chat.onLogin(); } catch (e) {}   // show 💬 tab + start live chat polling
+  try { Wars.onLogin(); } catch (e) {}   // start war-march polling (arrivals, warnings)
   document.getElementById('login-screen').classList.add('hide');
   setTimeout(() => {
     document.getElementById('login-screen').style.display = 'none';
@@ -4632,12 +5094,25 @@ function openPlotModal(plot) {
     const myShips = Math.floor(STATE.inventory.ships || 0);
     const myPlanes = Math.floor(STATE.inventory.planes || 0);
     const panelTitle = kind === 'ships' ? '⚓ Naval Invasion' : '⚔️ Conquest';
-    warPanel = `
-      <div class="war-panel">
-        <div class="war-title">${panelTitle}</div>
-        <div class="war-row">Defense: <b>${defender.toLocaleString()} ${kIcon}</b>${tb > 1 ? ` · terrain ×${tb}` : ''}</div>
-        <div class="war-row">Your forces: <b>⚔️ ${myTroops.toLocaleString()}</b> · <b>⚓ ${myShips.toLocaleString()}</b> · <b>✈️ ${myPlanes.toLocaleString()}</b>${myPlanes > 0 ? ` <span style="color:#7fffd4">(air support +${Math.round(airBonus(myPlanes) * 100)}%)</span>` : ''}</div>
-        ${myForce > 0 ? `
+    const myMarch = Wars.marchToPlotBy(plot.userData.id, CURRENT_USER);
+    const truceLeft = Wars.truceUntil(plot.userData.id) - Date.now();
+    const cross = plot.userData.planet !== STATE.planet;
+    const marchMin = Math.max(1, Math.round(Wars.marchSeconds(cross) / 60));
+    let warBody;
+    if (myMarch) {
+      warBody = `
+        <div class="war-march-banner">
+          ⚔️ Your force of <b>${myMarch.committed.toLocaleString()} ${myMarch.kind}</b> is marching on this plot.
+          <div class="wl-sub">Arrives in <b>${Wars.fmtEta(myMarch.arriveAt - Date.now())}</b> — ${clEsc(ownerName)} has been warned, and their strength is read <b>when your force lands</b>.</div>
+          <button class="btn-recall" style="margin-top:9px" onclick="recallMarch('${myMarch.id}');closePlotModal()">↩ Recall force (60% returns)</button>
+        </div>`;
+    } else if (truceLeft > 0) {
+      warBody = `
+        <div class="war-truce-banner">
+          🕊 Just conquered — this land is under truce for <b>${Wars.fmtEta(truceLeft)}</b>. The population settles before new armies may march on it.
+        </div>`;
+    } else if (myForce > 0) {
+      warBody = `
           <div class="war-commit">
             <span>Deploy ${kind === 'ships' ? 'ships' : 'troops'}</span>
             <input type="number" id="war-commit-input" min="1" max="${myForce}" value="${Math.max(1, Math.floor(myForce / 2))}" oninput="updateWarEstimate()">
@@ -4646,13 +5121,33 @@ function openPlotModal(plot) {
             <button class="war-chip" onclick="setWarCommit(1)">ALL</button>
           </div>
           <div class="war-estimate" id="war-estimate"></div>
-          <button class="war-attack" id="war-attack-btn" onclick="attackPlot()">${kIcon} DEPLOY</button>
-        ` : `<div class="war-hint">${kind === 'ships'
+          <button class="war-attack" id="war-attack-btn" onclick="attackPlot()">${kIcon} MARCH — ${marchMin}m</button>
+          <div class="war-hint">Your force marches for ~${marchMin} min. ${clEsc(ownerName)} is warned the moment you launch and their strength is read <b>on arrival</b> — they can reinforce. Committed troops leave your army at launch.</div>`;
+    } else {
+      warBody = `<div class="war-hint">${kind === 'ships'
           ? 'Build a Naval Yard ($180,000) on a coast or ocean plot to train ⚓ ships for sea invasions.'
-          : 'Build Barracks ($120,000) on one of your plots — each houses 500 ⚔️ troops you can deploy here to take this land.'}</div>`}
+          : 'Build Barracks ($120,000) on one of your plots — each houses 500 ⚔️ troops you can deploy here to take this land.'}</div>`;
+    }
+    warPanel = `
+      <div class="war-panel">
+        <div class="war-title">${panelTitle}</div>
+        ${myMarch ? '' : `<div class="war-row">Defense now: <b>${defender.toLocaleString()} ${kIcon}</b>${tb > 1 ? ` · terrain ×${tb}` : ''} <span style="color:#8fa9b2;font-size:11px">(re-read when a force arrives)</span></div>
+        <div class="war-row">Your forces: <b>⚔️ ${myTroops.toLocaleString()}</b> · <b>⚓ ${myShips.toLocaleString()}</b> · <b>✈️ ${myPlanes.toLocaleString()}</b>${myPlanes > 0 ? ` <span style="color:#7fffd4">(air support +${Math.round(airBonus(myPlanes) * 100)}%)</span>` : ''}</div>`}
+        ${warBody}
         <div id="war-result"></div>
       </div>
     `;
+  } else if (owned && CURRENT_USER) {
+    const inc = Wars.incomingFor(CURRENT_USER).filter(m => m.plotId === plot.userData.id);
+    if (inc.length) {
+      const m0 = inc[0];
+      warPanel = `
+      <div class="war-panel">
+        <div class="war-incoming-warn">⚠️ <b>${m0.committed.toLocaleString()} ${m0.kind}</b> from <b>${clEsc(m0.atk)}</b> are marching on this plot — arrival in <b>${Wars.fmtEta(m0.arriveAt - Date.now())}</b>.</div>
+        <div class="war-hint">Their strength is matched against your garrison <b>when they land</b> — every Barracks trains troops right up to the battle.</div>
+      </div>
+    `;
+    }
   }
 
   card.innerHTML = `
@@ -5862,71 +6357,44 @@ window.attackPlot = function() {
     return;
   }
   const owner = p.userData.ownerName;
-  const defender = getDefenderForce(owner, kind);
-  const tb = warTerrainBonus(p);
-  const atkAir = airBonus(STATE.inventory.planes);
-  const defAir = airBonus(getDefenderPlanes(owner));
 
-  // Roll the battle (±15% luck on both sides, plus air support)
-  const atkRoll = committed * (1 + atkAir) * (0.85 + Math.random() * 0.3);
-  const defRoll = defender * tb * (1 + defAir) * (0.85 + Math.random() * 0.3);
-  const win = atkRoll > defRoll;
-  let atkLoss, defLoss;
-  if (win) {
-    atkLoss = Math.min(committed, Math.round(committed * (0.4 + 0.45 * Math.min(1, defRoll / atkRoll))));
-    defLoss = Math.round(defender * (0.4 + 0.45 * Math.min(1, atkRoll / Math.max(1, defRoll))));
-  } else {
-    atkLoss = committed;
-    defLoss = Math.min(defender, Math.round(defender * (0.1 + 0.15 * Math.min(1, committed / Math.max(1, defender)))));
+  // ---- slow-war gates (v1.14): truce + march cap ----
+  const truceLeft = Wars.truceUntil(p.userData.id) - Date.now();
+  if (truceLeft > 0) {
+    showToast(`🕊 ${p.userData.name} was just conquered — truce holds for ${Wars.fmtEta(truceLeft)}.`, false);
+    return;
+  }
+  if (Wars.activeByAttacker(CURRENT_USER).length >= Wars.MAX_ACTIVE && !Wars.marchToPlotBy(p.userData.id, CURRENT_USER)) {
+    showToast(`⚔️ You already have ${Wars.MAX_ACTIVE} forces on the march — recall one or wait for it to land.`, false);
+    return;
   }
 
-  // Attacker casualties
-  STATE.inventory[kind] = Math.max(0, (STATE.inventory[kind] || 0) - atkLoss);
+  // Committed troops leave your inventory AT LAUNCH — marched men
+  // defend nothing, and they cannot be double-spent on a second front.
+  STATE.inventory[kind] = Math.max(0, myForce - committed);
 
-  // Defender's save: apply their losses; on victory strip the plot from them
-  const vs = getSave(owner);
-  const captured = (win && vs) ? (vs.businesses || []).filter(b => b.plotId === p.userData.id) : [];
-  if (vs) {
-    vs.inventory = vs.inventory || {};
-    vs.inventory[kind] = Math.max(0, defender - defLoss);
-    // Fresh timestamp so the victim's stale local copy loses the next
-    // cloud merge and the conquest sticks across devices
-    vs.savedAt = Date.now();
-    if (win) {
-      vs.ownedPlotIds = (vs.ownedPlotIds || []).filter(id => id !== p.userData.id);
-      vs.businesses = (vs.businesses || []).filter(b => b.plotId !== p.userData.id);
-    }
-    try { localStorage.setItem(SAVE_PREFIX + owner, JSON.stringify(vs)); } catch (e) {}
-  }
-
-  if (win) {
-    // Claim the plot — captured businesses keep producing for the new owner
-    claimPlot(p.userData.id);
-    p.userData.owned = true;
-    p.userData.ownedByOther = false;
-    p.userData.ownerName = null;
-    STATE.owned.add(p.userData.id);
-    p.userData.businesses = [];
-    // Captured businesses join your all-planet registry
-    const _capReg = captured.map(b => b.type).filter(t => getBusinessType(t));
-    BUSINESS_REGISTRY.set(p.userData.id, _capReg);
-    _capReg.forEach((type, idx) => {
-      const bt = getBusinessType(type);
-      addBusinessToPlot(p, bt, idx);
-    });
-    if (!p.userData.businesses.length) {
-      const pair = ownedPlotColorsFor(CURRENT_USER);
-      setPlotColors(p, pair[0], pair[1]);
-    }
-    flushPlotPools();
-    const spoils = captured.length ? ` with ${captured.length} business${captured.length > 1 ? 'es' : ''}` : '';
-    showToast(`${kIcon} Victory! Captured ${p.userData.name}${spoils} — lost ${atkLoss.toLocaleString()} ${kIcon}`, true);
-  } else {
-    showToast(`💀 Defeat — all ${atkLoss.toLocaleString()} ${kind === 'ships' ? 'ships' : 'troops'} lost. ${owner} holds the plot.`, false);
-  }
-  updateHUD();
+  const now = Date.now();
+  const cross = p.userData.planet !== STATE.planet;
+  const secs = Wars.marchSeconds(cross);
+  Wars.launch({
+    id: now.toString(36) + Math.random().toString(36).slice(2, 8),
+    atk: CURRENT_USER,
+    def: owner,
+    plotId: p.userData.id,
+    plotName: p.userData.name,
+    planet: p.userData.planet,
+    kind,
+    committed,
+    seed: Math.floor(Math.random() * 0x7fffffff),   // stored → every device rolls the same battle
+    tb: warTerrainBonus(p),
+    launchedAt: now,
+    arriveAt: now + secs * 1000,
+    resolved: false,
+    rev: 1
+  });
+  showToast(`${kIcon} ${committed.toLocaleString()} ${kind} are marching to ${p.userData.name} — arrive in ${Wars.fmtEta(secs * 1000)}. ${owner} will see it coming.`, true);
   saveGame();
-  openPlotModal(p);  // re-render with fresh ownership / defense numbers
+  openPlotModal(p);  // re-render — the panel now shows the march banner
 };
 
 // ====================================================================
