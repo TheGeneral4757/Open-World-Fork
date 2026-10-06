@@ -4520,6 +4520,10 @@ function generatePlots(planet, opts = {}) {
     // True Voronoi neighbors: each final polygon edge lies on exactly one
     // bisector, so matching each edge midpoint back to its bisector tells
     // us which seeds actually border this cell (used by the border-buy rule).
+    // Stored as GLOBAL plot ids (idBase + seed index) — the border rule
+    // matches them against STATE.owned, which holds global ids. Storing the
+    // bare seed index here broke the rule on every planet except Earth
+    // (where idBase is 0 and the two coincide).
     const bordering = [];
     for (let k = 0; k < cell.length; k++) {
       const p1 = cell[k], p2 = cell[(k + 1) % cell.length];
@@ -4529,7 +4533,7 @@ function generatePlots(planet, opts = {}) {
         const d = Math.abs(mu * bisectors[b].u + mw * bisectors[b].w - bisectors[b].d);
         if (d < bestD) { bestD = d; best = b; }
       }
-      if (best >= 0 && bestD < 1e-6) bordering.push(neighbors[best].j);
+      if (best >= 0 && bestD < 1e-6) bordering.push(planet.idBase + neighbors[best].j);
     }
 
     // ---- Step 3: Build spherical polygon mesh ----
@@ -4684,6 +4688,8 @@ function generatePlots(planet, opts = {}) {
   // symmetric, but the per-cell edge matching above can drop a link in one
   // direction to float fuzz. Union both directions so the border-buy rule
   // gives the same answer no matter which plot is being checked.
+  // (All ids here are global — bordering stores idBase + seed index — so
+  // the map never mixes a plot id with a bare local index.)
   const adjPairs = new Set();
   for (const p of STATE.plots) {
     for (const nid of p.userData.neighbors) {

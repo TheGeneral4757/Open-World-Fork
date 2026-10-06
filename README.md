@@ -180,6 +180,13 @@ python3 -m http.server 8000
 
 ## Changelog
 
+### v1.15 (2026-10-07) — Border fix for Luna / Mars / Oceanus
+- **Fixed: "doesn't border your land" on every planet except Earth** — plots that clearly touched a player's territory were rejected by the border-buy rule (and plots nowhere near it were oddly allowed)
+- **Root cause**: plot neighbor lists were stored as *local grid indices* (0–2199) while the rule matches them against *global plot ids* (Luna 10000+, Mars 20000+, Oceanus 30000+). On Earth the two numbering systems coincide, which is why the home planet always worked — on other worlds every border check was comparing the wrong numbers entirely
+- **What players will notice now**: on Luna, Mars and Oceanus the Buy button lights up exactly for the plots touching your land; multi-buy chains validate correctly there too, and plots claimed by others near your frontier are no longer accidentally purchasable through id collisions
+- **No save changes needed** — plot ids, ownership and empires are untouched; only the adjacency matching was corrected, so every existing empire keeps its land and instantly gains a correct frontier
+- Verified with a full-world audit: all 4 planets × 2,200 plots × both test empires (8,800 plots per account, 35,200 plot verdicts) now agree exactly with an independent exact-Voronoi ground truth, plus the war and chat regression suites
+
 ### v1.14 (2026-10-07) — Slow-paced war
 - **Attacks are marches now, not coin-flips**: clicking DEPLOY sends your force on a **5-minute march** (8 minutes across planets) — the battle only resolves when it lands, so conquest unfolds in real time instead of instantly
 - **Defenders see it coming**: the moment you launch, the defender gets a ⚠️ toast, their plot card shows an incoming-attack warning, and the new ⚔ **War Room** (HUD button) lists every march with a live ETA — and because defender strength is **read when your force arrives**, every troop they train during the march counts
