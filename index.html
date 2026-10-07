@@ -733,7 +733,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 @keyframes chatPulse{0%,100%{opacity:1}50%{opacity:.35}}
 .chat-title{flex:1;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;letter-spacing:1px;color:#f5cc74;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-title small{color:#7fd0a0;text-transform:none;letter-spacing:0;font-weight:normal;margin-left:5px}
-.chat-clear{background:none;border:none;cursor:pointer;font-size:15px;opacity:.65;padding:2px 4px}
+.chat-clear{background:none;border:none;cursor:pointer;font-size:15px;opacity:.65;padding:2px 4px;display:none}
 .chat-clear:hover{opacity:1}
 .chat-x{background:none;border:none;cursor:pointer;color:#9bb4bd;font-size:15px;padding:2px 6px;border-radius:6px;flex:0 0 auto}
 .chat-x:hover{color:#fff;background:rgba(255,255,255,.08)}
@@ -2244,6 +2244,10 @@ const Chat = (() => {
     isOpen = true;
     const p = document.getElementById('chat-panel');
     if (p) p.classList.add('open');
+    // Re-assert owner-only clear button every open (CSS keeps it hidden
+    // by default; only the world owner's session ever reveals it)
+    const clr = document.getElementById('chat-clear-btn');
+    if (clr) clr.style.display = CURRENT_USER === ADMIN_ACCOUNT ? 'inline-block' : 'none';
     unread = 0; updateBadge(); render();
     poll();                      // freshen immediately on open
     const inp = document.getElementById('chat-input');
@@ -2260,7 +2264,8 @@ const Chat = (() => {
     const tab = document.getElementById('chat-tab');
     if (tab) tab.style.display = 'flex';
     const clr = document.getElementById('chat-clear-btn');
-    if (clr) clr.style.display = CURRENT_USER === ADMIN_ACCOUNT ? '' : 'none';
+    // CSS default is display:none — only the owner's session ever flips it on
+    if (clr) clr.style.display = CURRENT_USER === ADMIN_ACCOUNT ? 'inline-block' : 'none';
     if (!timer && client) timer = setInterval(poll, POLL_MS);
     poll();
   }
