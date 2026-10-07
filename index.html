@@ -126,15 +126,6 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .close{padding:11px 25px;border:1px solid #73929b;border-radius:7px;background:#14323c;color:white;cursor:pointer;font-size:16px;transition:background .2s}
 .close:hover{background:#1d4a57}
 
-/* Plot color picker (Settings) */
-.plot-color-sub{margin:16px 0 12px!important}
-.plot-color-row{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 14px}
-.plot-color-swatch{width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;transition:transform .12s,box-shadow .12s;padding:0;flex:0 0 auto}
-.plot-color-swatch:hover{transform:scale(1.14)}
-.plot-color-swatch.active{border-color:#fff;box-shadow:0 0 0 3px rgba(245,204,116,.4),0 0 14px rgba(255,255,255,.35);transform:scale(1.14)}
-.plot-color-custom{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.plot-color-custom input[type=color]{width:46px;height:34px;border:2px solid rgba(255,255,255,.25);border-radius:8px;background:#0a1420;cursor:pointer;padding:2px}
-
 /* Leaderboard */
 .leaderboard-panel{width:min(500px,92vw);max-height:88vh;overflow-y:auto}
 .leaderboard-sub{font-family:Arial,sans-serif;font-size:12px;color:#7fa0ab;margin:0 0 20px;letter-spacing:1px}
@@ -598,82 +589,24 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .multibuy-bar .btn.primary:disabled{opacity:.4;cursor:not-allowed}
 .market-btn.active{border-color:#f5cc74 !important;color:#f5cc74 !important;background:rgba(245,204,116,.14) !important}
 
-/* ============ WORLD CHAT — live global chat (menu + world) ============ */
-#chat-tab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:46;display:none;align-items:center;gap:6px;
-  padding:14px 10px;border-radius:12px 0 0 12px;cursor:pointer;background:rgba(8,19,29,.92);
-  border:1px solid #2c4a55;border-right:none;color:#f5cc74;font-family:Arial,sans-serif;font-size:12px;
-  font-weight:bold;letter-spacing:1px;text-transform:uppercase;box-shadow:-6px 6px 24px rgba(0,0,0,.45);
-  transition:padding .15s,background .15s;position:fixed}
-#chat-tab:hover{padding-right:16px;background:rgba(29,74,87,.6)}
-#chat-tab .chat-badge{position:absolute;top:-7px;left:-7px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;
-  background:#e74c3c;color:#fff;font-size:11px;line-height:20px;text-align:center;display:none;
-  box-shadow:0 2px 8px rgba(0,0,0,.5);font-weight:bold}
-#chat-panel{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:45;
-  width:min(370px,calc(100vw - 28px));height:min(540px,calc(100vh - 130px));
-  display:none;flex-direction:column;border-radius:14px;overflow:hidden;
-  border:1px solid #2c4a55;background:rgba(8,19,29,.96);backdrop-filter:blur(10px);
-  box-shadow:0 24px 80px rgba(0,0,0,.6);animation:chatPop .18s ease-out}
-#chat-panel.open{display:flex}
-@keyframes chatPop{from{opacity:0;transform:translateY(-50%) translateX(24px)}to{opacity:1;transform:translateY(-50%) translateX(0)}}
-.chat-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #1a3340;background:rgba(20,50,60,.3)}
-.chat-live-dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 8px #2ecc71;animation:chatPulse 1.6s infinite;flex:0 0 auto}
-@keyframes chatPulse{0%,100%{opacity:1}50%{opacity:.35}}
-.chat-title{flex:1;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;letter-spacing:1px;color:#f5cc74;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-title small{color:#7fd0a0;text-transform:none;letter-spacing:0;font-weight:normal;margin-left:5px}
-.chat-clear{background:none;border:none;cursor:pointer;font-size:15px;opacity:.65;padding:2px 4px}
-.chat-clear:hover{opacity:1}
-.chat-x{background:none;border:none;cursor:pointer;color:#9bb4bd;font-size:15px;padding:2px 6px;border-radius:6px;flex:0 0 auto}
-.chat-x:hover{color:#fff;background:rgba(255,255,255,.08)}
-.chat-msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px}
-.chat-msgs::-webkit-scrollbar{width:6px}
-.chat-msgs::-webkit-scrollbar-thumb{background:#2c4a55;border-radius:3px}
-.chat-msg{max-width:88%;background:rgba(20,50,60,.25);border:1px solid #1a3340;border-radius:10px;padding:7px 10px}
-.chat-msg.own{align-self:flex-end;background:rgba(245,204,116,.08);border-color:rgba(245,204,116,.18)}
-.chat-head-row{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
-.chat-name{font-family:Arial,sans-serif;font-size:12px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chat-name.chat-owner{text-shadow:0 0 8px rgba(245,204,116,.6)}
-.chat-time{margin-left:auto;font-size:10px;color:#6c8791;flex:0 0 auto;font-family:Arial,sans-serif}
-.chat-text{font-family:Arial,sans-serif;font-size:13px;color:#e8f0f2;word-break:break-word;line-height:1.45;white-space:pre-wrap}
-.chat-sys{align-self:center;font-size:11px;color:#6c8791;font-family:Arial,sans-serif;background:rgba(20,50,60,.2);
-  padding:4px 12px;border-radius:10px;text-align:center;max-width:90%}
-.chat-note{padding:0 14px;font-size:11px;color:#f0a35e;min-height:18px;line-height:18px;font-family:Arial,sans-serif}
-.chat-note:empty{display:none}
-.chat-composer{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #1a3340;background:rgba(20,50,60,.3)}
-.chat-composer input{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #2c4a55;background:rgba(0,0,0,.35);
-  color:#e8f0f2;font-family:Arial,sans-serif;font-size:13px;outline:none;min-width:0}
-.chat-composer input:focus{border-color:#f5cc74}
-.chat-composer button{padding:9px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#f5cc74,#e0a83e);
-  color:#08131d;font-weight:bold;cursor:pointer;font-family:Arial,sans-serif;font-size:12px;flex:0 0 auto}
-.chat-composer button:disabled{opacity:.5;cursor:not-allowed}
-@media (max-width:760px){
-  #chat-panel{right:8px;width:calc(100vw - 16px);height:72vh}
-}
+/* What's New popup — scrollable body, capped height */
+#update-modal .plot-card{max-height:min(680px,90vh);display:flex;flex-direction:column;overflow:hidden}
+.update-body{flex:1;min-height:0;overflow-y:auto;margin:8px 0 18px;padding-right:8px}
+.update-body::-webkit-scrollbar{width:8px}
+.update-body::-webkit-scrollbar-thumb{background:#2c4a55;border-radius:4px}
+.update-body::-webkit-scrollbar-track{background:transparent}
+.update-ver{font-family:Georgia,serif;color:#f5cc74;font-size:19px;margin:16px 0 6px}
+.update-body .update-ver:first-child{margin-top:2px}
+.update-list{margin:0;padding-left:18px;font-family:Arial,sans-serif;font-size:13px;color:#cbd7dc;line-height:1.65}
+.update-list b{color:#e8eef0}
 
-/* ============ WARS — slow-paced conquest (marches, truces, reports) ============ */
-.wars-section{margin-bottom:16px}
-.wars-head{font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#f5cc74;font-weight:bold;margin:2px 0 8px;display:flex;align-items:center;gap:6px}
-.wars-head small{color:#6c8791;text-transform:none;letter-spacing:0;font-weight:normal}
-.wars-empty{font-size:12px;color:#6c8791;font-family:Arial,sans-serif;background:rgba(20,50,60,.2);border:1px dashed #2c4a55;border-radius:8px;padding:12px;text-align:center}
-.war-line{display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid #1a3340;border-radius:10px;background:rgba(20,50,60,.25);margin-bottom:7px;font-family:Arial,sans-serif;font-size:12px;color:#cbd7dc}
-.war-line .wl-ico{font-size:16px;flex:0 0 auto}
-.war-line .wl-main{flex:1;min-width:0}
-.war-line .wl-main b{color:#e8f0f2}
-.war-line .wl-sub{font-size:11px;color:#6c8791;margin-top:2px}
-.war-line .wl-eta{font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#f5cc74;flex:0 0 auto}
-.war-line .wl-eta.soon{color:#ff9a62}
-.war-line.incoming{border-color:rgba(231,76,60,.45);background:rgba(120,20,20,.18)}
-.war-line.incoming .wl-eta{color:#ff8080}
-.war-line .btn-recall{padding:6px 12px;font-size:11px;border-radius:7px;border:1px solid #2c4a55;background:rgba(29,74,87,.6);color:#cbd7dc;cursor:pointer;flex:0 0 auto;font-family:Arial,sans-serif}
-.war-line .btn-recall:hover{border-color:#f5cc74;color:#f5cc74}
-.wars-report{padding:9px 12px;border-radius:9px;margin-bottom:7px;font-family:Arial,sans-serif;font-size:12px;border:1px solid}
-.wars-report.win{border-color:rgba(46,204,113,.4);background:rgba(20,80,50,.18);color:#a8e6c3}
-.wars-report.loss{border-color:rgba(231,76,60,.4);background:rgba(120,20,20,.15);color:#f0b0a8}
-.wars-report.info{border-color:#2c4a55;background:rgba(20,50,60,.25);color:#cbd7dc}
-.war-march-banner{border:1px solid rgba(245,204,116,.4);background:rgba(245,204,116,.07);border-radius:10px;padding:12px;margin-bottom:10px;font-family:Arial,sans-serif;font-size:13px;color:#f5cc74}
-.war-march-banner .wl-sub{font-size:11px;color:#9bb4bd;margin-top:4px}
-.war-truce-banner{border:1px solid rgba(126,214,163,.4);background:rgba(20,80,50,.15);border-radius:10px;padding:12px;margin-bottom:10px;font-family:Arial,sans-serif;font-size:13px;color:#a8e6c3}
-.war-incoming-warn{border:1px solid rgba(231,76,60,.5);background:rgba(120,20,20,.2);border-radius:10px;padding:11px 13px;margin-bottom:10px;font-family:Arial,sans-serif;font-size:13px;color:#ff9a8a}
-.war-hint{font-size:11px;color:#8fa9b2;font-family:Arial,sans-serif;margin-top:8px;line-height:1.5}
+/* Plot color swatches (Settings) */
+.color-swatches{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px}
+.color-swatch{width:34px;height:34px;border-radius:9px;border:2px solid #2c4a55;cursor:pointer;transition:transform .12s,border-color .12s}
+.color-swatch:hover{transform:scale(1.1)}
+.color-swatch.sel{border-color:#fff;box-shadow:0 0 10px rgba(255,255,255,.45)}
+.color-custom-row{display:flex;align-items:center;gap:10px;margin-top:8px;font-family:Arial,sans-serif;font-size:12px;color:#9bb4bd}
+.color-custom-row input[type=color]{width:44px;height:30px;border:1px solid #2c4a55;border-radius:7px;background:#0a1420;cursor:pointer;padding:2px}
 
 @media(max-width:700px){
   .top-bar{padding:10px 12px;gap:8px;flex-wrap:wrap}
@@ -760,12 +693,10 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
       </div>
       <p class="quality-note" id="quality-note"></p>
       <p class="quality-note">Detected for this device: <b id="quality-detected">—</b></p>
-      <p class="leaderboard-sub plot-color-sub"><b style="color:#f5cc74">PLOT COLOR</b> — every plot you own is painted in this color on the globe, and other commanders see it too. One color for all of your land; plots with businesses still show their business.</p>
-      <div class="plot-color-row" id="plot-color-row"></div>
-      <div class="plot-color-custom">
-        <input type="color" id="plot-color-picker" value="#f5cc74" title="Pick any custom color">
-        <button class="leaderboard-tab" style="flex:0 0 auto;padding:10px 14px" onclick="applyPlotColorFromPicker()">Use custom color</button>
-        <button class="leaderboard-tab" style="flex:0 0 auto;padding:10px 14px" onclick="setMyPlotColor(null)">Classic gold</button>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid #1a3340">
+        <p class="leaderboard-sub" style="margin-bottom:4px">🎨 <b>Plot color</b> — paint every plot you own one single color, across all planets.</p>
+        <div class="color-swatches" id="plot-color-row"></div>
+        <div class="color-custom-row">Custom shade: <input type="color" id="plot-color-custom" value="#f5cc74" onchange="setPlotColor(this.value)"><span>Applies instantly and follows your account to every device.</span></div>
       </div>
       <button class="close" onclick="closeSettings()">CLOSE</button>
     </div>
@@ -804,7 +735,6 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <button class="market-btn" id="clans-btn" onclick="openClans()" title="Clans & Alliances — team up with other commanders">🛡 Clans</button>
         <button class="market-btn" id="planets-btn" onclick="openPlanets()" title="Planets — buy into new worlds and travel between them">🪐</button>
         <button class="market-btn" id="myland-btn" onclick="openMyPlots()" title="My Land — see your plots and sell the ones you don't want">🗺</button>
-        <button class="market-btn" id="wars-btn" onclick="openWars()" title="Wars — your marches, incoming attacks and battle reports">⚔</button>
         <button class="market-btn" id="multibuy-btn" onclick="toggleMultiBuy()" title="Multi-Buy — click several plots, then buy them all at once (each must border your land)">✚</button>
         <button class="market-btn" id="gamble-btn" onclick="openGambling()" style="display:none" title="Play at your casinos">🎰 Casino</button>
       </div>
@@ -899,29 +829,10 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
   </div>
 </div>
 
-<!-- Wars — marches in transit, incoming attacks, battle reports. -->
-<div class="plot-modal" id="wars-modal">
-  <div class="plot-card" id="wars-card">
-    <!-- filled dynamically by renderWarsPanel() -->
-  </div>
-</div>
-
-<!-- ============ WORLD CHAT — live global chat. Lives OUTSIDE #game so it
-     works on the menu screen AND inside the world. Rides the shared
-     openworld_data cloud row 'openworld_chat' (no extra Supabase setup). -->
-<button id="chat-tab" onclick="toggleChat()" title="World Chat — talk with other commanders" style="display:none">💬 Chat<span class="chat-badge" id="chat-badge"></span></button>
-<div id="chat-panel" role="dialog" aria-label="World Chat">
-  <div class="chat-head">
-    <span class="chat-live-dot"></span>
-    <div class="chat-title">World Chat<small>live</small></div>
-    <button class="chat-clear" id="chat-clear-btn" onclick="chatClearAll()" title="World owner: clear chat history for everyone" style="display:none">🧹</button>
-    <button class="chat-x" onclick="closeChat()" title="Close chat">✕</button>
-  </div>
-  <div class="chat-msgs" id="chat-msgs"></div>
-  <div class="chat-note" id="chat-note"></div>
-  <div class="chat-composer">
-    <input id="chat-input" maxlength="240" placeholder="Say something…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatMsg()">
-    <button id="chat-send" onclick="sendChatMsg()">Send</button>
+<!-- What's New — shows after login whenever a new game version ships. -->
+<div class="plot-modal" id="update-modal">
+  <div class="plot-card" id="update-card">
+    <!-- filled dynamically by maybeShowUpdatePopup() -->
   </div>
 </div>
 
@@ -1101,6 +1012,58 @@ function renderSettingsQuality() {
 }
 
 // ====================================================================
+// SETTINGS — PLOT COLOR (🎨)
+// One color for every plot you own, on every planet. Stored in the
+// save (follows the account); 'default' restores gold/business colors.
+// ====================================================================
+const PLOT_COLOR_CHOICES = ['default', '#ff6b6b', '#ffa94d', '#ffe066', '#69db7c', '#4dd0e1', '#4d96ff', '#b197fc', '#f783ac', '#f8f9fa'];
+
+function currentPlotColorPref() {
+  if (gameInitialized && CURRENT_USER) return STATE.plotColor;
+  if (CURRENT_USER) {
+    const s = getSave(CURRENT_USER);
+    if (s && (s.plotColor === 'default' || /^#[0-9a-fA-F]{6}$/.test(s.plotColor || ''))) return s.plotColor;
+  }
+  return 'default';
+}
+
+function renderPlotColorSetting() {
+  const row = document.getElementById('plot-color-row');
+  if (!row) return;
+  const current = currentPlotColorPref();
+  row.innerHTML = PLOT_COLOR_CHOICES.map(c => `
+    <button class="color-swatch ${c === 'default' ? 'default' : ''} ${current === c ? 'sel' : ''}"
+      style="${c === 'default' ? 'background:linear-gradient(135deg,#f5cc74,#d4a44a)' : 'background:' + c}"
+      title="${c === 'default' ? 'Default (gold / business colors)' : c}"
+      onclick="setPlotColor('${c}')"></button>
+  `).join('');
+}
+
+window.setPlotColor = function(color) {
+  if (!(color === 'default' || /^#[0-9a-fA-F]{6}$/.test(color || ''))) return;
+  if (!CURRENT_USER) return;
+  if (gameInitialized) {
+    STATE.plotColor = color;
+    let any = false;
+    for (const p of STATE.plots) {
+      if (p.userData.owned) { paintOwnedPlot(p); any = true; }
+    }
+    if (any) flushPlotPools();
+    saveGame();
+  } else {
+    // At the menu (world not built yet) — write the preference straight
+    // into the save; loadGame applies it when the world opens
+    const save = getSave(CURRENT_USER);
+    if (!save) { showToast('Enter the world once first', false); renderPlotColorSetting(); return; }
+    save.plotColor = color;
+    save.savedAt = Date.now();
+    try { localStorage.setItem(SAVE_PREFIX + CURRENT_USER, JSON.stringify(save)); } catch (e) {}
+  }
+  renderPlotColorSetting();
+  showToast(color === 'default' ? 'Plot colors reset to default' : 'Your plots now paint ' + color, true);
+};
+
+// ====================================================================
 // STATE
 // ====================================================================
 const STATE = {
@@ -1108,7 +1071,6 @@ const STATE = {
   owned: new Set(),
   plots: [],
   claimedPlots: [],             // plots owned by you OR others (businesses + owned pool)
-  plotColor: null,              // your plot color ('#rrggbb') — one color for ALL your plots (Settings)
   hoveredPlot: null,
   selectedPlot: null,
   inventory: {},                // { materialId: quantity (float) }
@@ -1131,7 +1093,9 @@ const STATE = {
   unlockedPlanets: ['earth'],
   // MULTI-BUY — session-only selection mode (never saved)
   multiBuy: false,
-  multiSelect: new Set()
+  multiSelect: new Set(),
+  // Plot color preference — 'default' or a #rrggbb string (Settings → 🎨)
+  plotColor: 'default'
 };
 
 const EARTH_RADIUS = STATE.radius;
@@ -1910,669 +1874,6 @@ window.clanRelationTo = clanRelationTo;
 window.clanTagOf = clanTagOf;
 
 // ====================================================================
-// WORLD CHAT — a live global chat every signed-in commander can use,
-// on the menu screen and inside the world. Design (mirrors Clans):
-//  • Rides the SHARED openworld_data table under key 'openworld_chat'
-//    → zero extra Supabase setup, works with the same RLS/policies.
-//  • Devices poll the row every 3s and merge-dedupe messages by a
-//    ts|name|text signature, so every device converges on one history.
-//  • Sends do a read-merge-write so a message typed during someone
-//    else's write window doesn't get clobbered (last-writer-wins is
-//    narrowed to a few ms).
-//  • History is capped (80 stored) and a `cleared` tombstone lets the
-//    world owner wipe chat for everyone without old devices resurrect
-//    it from their local caches.
-//  • Rendering is DOM-built with textContent ONLY — chat text is
-//    never innerHTML'd, so HTML/script injection can't run.
-// ====================================================================
-const Chat = (() => {
-  const KEY = 'openworld_chat';
-  const MAX_MSGS = 80;       // messages kept in the cloud row
-  const MAX_LEN = 240;       // per-message character cap
-  const COOLDOWN = 1500;     // ms between sends (light flood control)
-  const POLL_MS = 3000;      // live-poll interval
-
-  let client = null;
-  if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
-    try { client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
-  }
-
-  let msgs = [];             // [{ts, n, t}] ascending by ts (merged view)
-  const sigs = new Set();    // every signature ever seen this session
-  let clearedAt = 0;         // newest owner clear-tombstone seen
-  let unread = 0;            // messages from others while panel closed
-  let isOpen = false;
-  let timer = null;
-  let lastSendAt = 0;
-  let sending = false;
-
-  function status() { return client ? 'cloud' : 'local'; }
-
-  function nameHue(name) {
-    let x = 5381;
-    for (let i = 0; i < (name || '').length; i++) x = ((x << 5) + x + name.charCodeAt(i)) | 0;
-    return Math.abs(x) % 360;
-  }
-  function sig(m) { return m.ts + '|' + m.n + '|' + m.t; }
-
-  function noteEl() { return document.getElementById('chat-note'); }
-  function note(t) { const n = noteEl(); if (n) n.textContent = t || ''; }
-
-  // Merge a list of cloud messages into the local view. Returns the
-  // number of genuinely-new messages from OTHER players.
-  function ingest(list) {
-    let freshOthers = 0;
-    for (const m of (Array.isArray(list) ? list : [])) {
-      if (!m || typeof m.t !== 'string' || typeof m.n !== 'string' || !m.n) continue;
-      const clean = { ts: parseInt(m.ts, 10) || 0, n: m.n.slice(0, 24), t: m.t.slice(0, MAX_LEN) };
-      if (clean.ts <= clearedAt) continue;               // owner cleared history
-      const s = sig(clean);
-      if (sigs.has(s)) continue;
-      sigs.add(s);
-      msgs.push(clean);
-      if (CURRENT_USER && clean.n !== CURRENT_USER) freshOthers++;
-    }
-    if (msgs.length) {
-      msgs.sort((a, b) => a.ts - b.ts);
-      if (msgs.length > MAX_MSGS) msgs = msgs.slice(-MAX_MSGS);
-    }
-    return freshOthers;
-  }
-
-  function updateBadge() {
-    const b = document.getElementById('chat-badge');
-    if (!b) return;
-    if (unread > 0 && !isOpen) { b.style.display = 'block'; b.textContent = unread > 9 ? '9+' : unread; }
-    else b.style.display = 'none';
-  }
-
-  function render() {
-    const box = document.getElementById('chat-msgs');
-    if (!box) return;
-    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-    box.textContent = '';
-    if (!msgs.length) {
-      const sys = document.createElement('div');
-      sys.className = 'chat-sys';
-      sys.textContent = 'No messages yet — say hi to the world!';
-      box.appendChild(sys);
-      return;
-    }
-    for (const m of msgs) {
-      const row = document.createElement('div');
-      row.className = 'chat-msg' + (CURRENT_USER && m.n === CURRENT_USER ? ' own' : '');
-
-      const head = document.createElement('div');
-      head.className = 'chat-head-row';
-      const name = document.createElement('span');
-      name.className = 'chat-name';
-      name.style.color = 'hsl(' + nameHue(m.n) + ',70%,72%)';
-      if (m.n === ADMIN_ACCOUNT) { name.classList.add('chat-owner'); name.textContent = '👑 ' + m.n; }
-      else {
-        const tag = clanTagOf(m.n);
-        name.textContent = (tag ? '[' + tag + '] ' : '') + m.n;
-      }
-      const time = document.createElement('span');
-      time.className = 'chat-time';
-      try { time.textContent = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
-      catch (e) { time.textContent = ''; }
-      head.appendChild(name); head.appendChild(time);
-
-      const text = document.createElement('div');
-      text.className = 'chat-text';
-      text.textContent = m.t;          // NEVER innerHTML — chat is untrusted
-
-      row.appendChild(head); row.appendChild(text);
-      box.appendChild(row);
-    }
-    if (nearBottom) box.scrollTop = box.scrollHeight;
-  }
-
-  async function poll() {
-    if (!client) return;
-    try {
-      const { data, error } = await client.from('openworld_data').select('data').eq('key', KEY).maybeSingle();
-      if (error) throw error;
-      const d = (data && data.data) || {};
-      const cAt = parseInt(d.cleared, 10) || 0;
-      if (cAt > clearedAt) {
-        clearedAt = cAt;
-        msgs = msgs.filter(m => m.ts > clearedAt);
-        // signatures of cleared messages must be forgotten so nothing ghosts
-        sigs.clear();
-        for (const m of msgs) sigs.add(sig(m));
-      }
-      const freshOthers = ingest(Array.isArray(d.msgs) ? d.msgs : []);
-      if (freshOthers > 0) {
-        if (isOpen) { render(); }
-        else { unread = Math.min(99, unread + freshOthers); updateBadge(); }
-      }
-      if (isOpen && !msgs.length) render();
-    } catch (e) { /* chat is best-effort — never disturb gameplay */ }
-  }
-
-  async function send() {
-    if (sending) return;
-    if (!CURRENT_USER) { note('Log in to chat.'); return; }
-    if (status() !== 'cloud') { note('Chat lives in the shared online world — cloud saving must be configured.'); return; }
-    const inp = document.getElementById('chat-input');
-    const raw = (inp && inp.value ? inp.value : '').trim().replace(/\s+/g, ' ').slice(0, MAX_LEN);
-    if (!raw) return;
-    const now = Date.now();
-    if (now - lastSendAt < COOLDOWN) { note('Easy — wait a moment between messages.'); return; }
-    sending = true; lastSendAt = now;
-    const m = { ts: now, n: CURRENT_USER, t: raw };
-    ingest([m]);        // optimistic local echo (dedupes on next poll)
-    if (inp) inp.value = '';
-    render();
-    try {
-      // read-merge-write: adopt whatever landed in the cloud while we
-      // were typing so we don't clobber it
-      let cloud = [];
-      try {
-        const { data } = await client.from('openworld_data').select('data').eq('key', KEY).maybeSingle();
-        const d = (data && data.data) || {};
-        if ((parseInt(d.cleared, 10) || 0) > clearedAt) clearedAt = parseInt(d.cleared, 10) || 0;
-        cloud = Array.isArray(d.msgs) ? d.msgs : [];
-      } catch (e) { /* unreachable cloud — still attempt the push */ }
-      const merged = cloud.filter(x => x && typeof x.t === 'string' && typeof x.n === 'string' && (parseInt(x.ts, 10) || 0) > clearedAt);
-      merged.push(m);
-      const seen = new Set(); const out = [];
-      for (const x of merged) {
-        const c = { ts: parseInt(x.ts, 10) || 0, n: String(x.n).slice(0, 24), t: String(x.t).slice(0, MAX_LEN) };
-        const s = sig(c);
-        if (seen.has(s)) continue;
-        seen.add(s); out.push(c);
-      }
-      out.sort((a, b) => a.ts - b.ts);
-      const { error } = await client.from('openworld_data')
-        .upsert({ key: KEY, data: { msgs: out.slice(-MAX_MSGS), cleared: clearedAt || undefined }, updated_at: new Date().toISOString() }, { onConflict: 'key' });
-      if (error) throw error;
-      note('');
-    } catch (e) {
-      note('Could not send — check your connection.');
-      lastSendAt = 0;    // a failed send must not burn the cooldown
-    }
-    sending = false;
-  }
-
-  async function clearAll() {
-    if (!CURRENT_USER || CURRENT_USER !== ADMIN_ACCOUNT) return;
-    if (!client) return;
-    if (!window.confirm('Clear the ENTIRE world chat for everyone? This cannot be undone.')) return;
-    const t = Date.now();
-    try {
-      const { error } = await client.from('openworld_data')
-        .upsert({ key: KEY, data: { msgs: [], cleared: t }, updated_at: new Date().toISOString() }, { onConflict: 'key' });
-      if (error) throw error;
-      clearedAt = t;
-      msgs = []; sigs.clear(); unread = 0;
-      updateBadge(); render(); note('');
-    } catch (e) { note('Could not clear chat.'); }
-  }
-
-  function openPanel() {
-    isOpen = true;
-    const p = document.getElementById('chat-panel');
-    if (p) p.classList.add('open');
-    unread = 0; updateBadge(); render();
-    poll();                      // freshen immediately on open
-    const inp = document.getElementById('chat-input');
-    if (inp && window.innerWidth > 760) inp.focus();
-  }
-  function closePanel() {
-    isOpen = false;
-    const p = document.getElementById('chat-panel');
-    if (p) p.classList.remove('open');
-    updateBadge();
-  }
-
-  function onLogin() {
-    const tab = document.getElementById('chat-tab');
-    if (tab) tab.style.display = 'flex';
-    const clr = document.getElementById('chat-clear-btn');
-    if (clr) clr.style.display = CURRENT_USER === ADMIN_ACCOUNT ? '' : 'none';
-    if (!timer && client) timer = setInterval(poll, POLL_MS);
-    poll();
-  }
-  function stop() { if (timer) { clearInterval(timer); timer = null; } }
-
-  return { status, onLogin, stop, send, clearAll, openPanel, closePanel, isOpen: () => isOpen, poll };
-})();
-window.toggleChat = function() { Chat.isOpen() ? Chat.closePanel() : Chat.openPanel(); };
-window.closeChat = function() { Chat.closePanel(); };
-window.sendChatMsg = function() { Chat.send(); };
-window.chatClearAll = function() { Chat.clearAll(); };
-window.Chat = Chat;
-
-// ====================================================================
-// WARS — slow-paced conquest. A DEPLOY order no longer rolls dice on
-// the spot: it sends your force on a MARCH (5 min same planet, 8 min
-// cross-planet). The battle resolves only when the force arrives, and
-// the DEFENDER'S STRENGTH IS READ AT ARRIVAL — they see the attack
-// coming and can train troops, build defenses or recall diplomacy
-// while it flies. Design:
-//  • Rides the shared openworld_data row 'openworld_wars'
-//    { marches: [...], truces: {plotId: untilTs} } — zero schema change,
-//    read-merge-write like chat so concurrent launches don't clobber.
-//  • Resolution is DETERMINISTIC: the dice seed is stored in the march
-//    record, so whichever device sees "arrived" first computes the same
-//    battle (mulberry32). resolved flag + rev guard double-apply.
-//  • Committed troops leave your inventory AT LAUNCH — attacking leaves
-//    your own land thinner (marched men defend nothing).
-//  • Defender warnings: new incoming marches toast on their device and
-//    show a red warning on the target plot + the ⚔ Wars panel.
-//  • Truce: a just-conquered plot is immune for 10 minutes (no
-//    reconquest ping-pong). Max 3 active marches per attacker. Recall
-//    before arrival brings 60% home; a fizzled target (sold/conquered
-//    meanwhile) brings 80% home.
-// ====================================================================
-const Wars = (() => {
-  const KEY = 'openworld_wars';
-  const MAX_MARCHES = 40;            // rows kept (active + recent reports)
-  const RESOLVED_TTL = 30 * 60 * 1000;
-  const POLL_MS = 4000;
-  const TRUCE_MS = 10 * 60 * 1000;
-  const RECALL_RETURN = 0.6;
-  const FIZZLE_RETURN = 0.8;
-
-  let client = null;
-  if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
-    try { client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
-  }
-
-  let marches = [];                  // ascending launchedAt
-  let truces = {};                   // plotId -> truce-until ts
-  const toastedLaunch = new Set();   // march ids already launch-toasted
-  const toastedOutcome = new Set();  // 'id@rev' already report-toasted
-  let timer = null;
-  let writing = false;
-
-  function status() { return client ? 'cloud' : 'local'; }
-
-  // ?warmarch=<seconds> shrinks marches for QA/e2e (min 3s)
-  function marchSeconds(crossPlanet) {
-    let base = crossPlanet ? 480 : 300;
-    try {
-      const q = parseInt(new URLSearchParams(location.search).get('warmarch'), 10);
-      if (q >= 3) base = crossPlanet ? Math.round(q * 1.6) : q;
-    } catch (e) {}
-    return base;
-  }
-  function fmtEta(ms) {
-    const s = Math.max(0, Math.ceil(ms / 1000));
-    return Math.floor(s / 60) + 'm ' + String(s % 60).padStart(2, '0') + 's';
-  }
-  // Deterministic PRNG — the seed travels inside the march record
-  function mulberry32(a) {
-    return function() {
-      a |= 0; a = a + 0x6D2B79F5 | 0;
-      let t = Math.imul(a ^ a >>> 15, 1 | a);
-      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
-  }
-
-  // ---------- cloud row (read-merge-write) ----------
-  async function fetchRow() {
-    const { data, error } = await client.from('openworld_data').select('data').eq('key', KEY).maybeSingle();
-    if (error) throw error;
-    const d = (data && data.data) || {};
-    return { marches: Array.isArray(d.marches) ? d.marches : [], truces: (d.truces && typeof d.truces === 'object') ? d.truces : {} };
-  }
-  function prune() {
-    const now = Date.now();
-    marches = marches.filter(m => m && m.id && (!m.resolved || ((m.outcome && m.outcome.at) || 0) > now - RESOLVED_TTL));
-    if (marches.length > MAX_MARCHES) marches = marches.slice(-MAX_MARCHES);
-  }
-  async function persist() {
-    if (!client || writing) return;
-    writing = true;
-    try {
-      const fresh = await fetchRow();
-      const byId = {};
-      for (const m of fresh.marches) byId[m.id] = m;
-      for (const m of marches) {
-        const f = byId[m.id];
-        if (!f || (m.rev || 0) > (f.rev || 0)) byId[m.id] = m;   // higher revision wins
-      }
-      const mergedT = Object.assign({}, fresh.truces, truces);
-      for (const k of Object.keys(mergedT)) if (!(mergedT[k] > 0)) delete mergedT[k];
-      const merged = Object.values(byId).sort((a, b) => (a.launchedAt || 0) - (b.launchedAt || 0));
-      marches = merged;
-      truces = mergedT;
-      prune();
-      const { error } = await client.from('openworld_data')
-        .upsert({ key: KEY, data: { marches: marches.slice(-MAX_MARCHES), truces }, updated_at: new Date().toISOString() }, { onConflict: 'key' });
-      if (error) throw error;
-    } catch (e) { /* war sync is best-effort — the poll retries */ }
-    writing = false;
-  }
-
-  // ---------- queries (used by UI + attackPlot) ----------
-  function activeByAttacker(name) {
-    return marches.filter(m => !m.resolved && m.atk === name);
-  }
-  function marchToPlotBy(plotId, attacker) {
-    return marches.find(m => !m.resolved && m.plotId === plotId && m.atk === attacker) || null;
-  }
-  function incomingFor(defender) {
-    return marches.filter(m => !m.resolved && m.def === defender);
-  }
-  function resolvedFor(name) {
-    return marches.filter(m => m.resolved && m.outcome && (m.atk === name || m.def === name))
-      .sort((a, b) => ((b.outcome && b.outcome.at) || 0) - ((a.outcome && a.outcome.at) || 0));
-  }
-  function truceUntil(plotId) { return truces[plotId] || 0; }
-
-  // ---------- launch / recall ----------
-  async function launch(m) {
-    marches.push(m);
-    toastedLaunch.add(m.id);
-    await persist();
-  }
-  async function recall(id) {
-    const m = marches.find(x => x.id === id && !x.resolved);
-    if (!m || m.atk !== CURRENT_USER) return;
-    const back = Math.floor(m.committed * RECALL_RETURN);
-    const atkSave = getSave(m.atk);
-    if (atkSave) {
-      atkSave.inventory = atkSave.inventory || {};
-      atkSave.inventory[m.kind] = (atkSave.inventory[m.kind] || 0) + back;
-      atkSave.savedAt = Date.now();
-      try { localStorage.setItem(SAVE_PREFIX + m.atk, JSON.stringify(atkSave)); } catch (e) {}
-    }
-    if (CURRENT_USER === m.atk) {
-      STATE.inventory[m.kind] = (STATE.inventory[m.kind] || 0) + back;   // keep live army in sync
-      saveGame();
-    }
-    m.resolved = true;
-    m.outcome = { recalled: true, returned: back, at: Date.now() };
-    m.rev = (m.rev || 0) + 1;
-    toastedOutcome.add(m.id + '@' + m.rev);
-    updateHUD();
-    saveGame();
-    await persist();
-  }
-
-  // ---------- deterministic resolution ----------
-  function resolveMarch(m) {
-    const claims = getClaims();
-    const ownerNow = claims[m.plotId] || null;
-    const defSave = getSave(m.def);
-    let outcome;
-    if (!defSave || ownerNow !== m.def || (truces[m.plotId] || 0) > m.launchedAt) {
-      // target changed hands / defender deleted / truce rose mid-march
-      const back = Math.floor(m.committed * FIZZLE_RETURN);
-      if (atkSave && back > 0) {
-        atkSave.inventory = atkSave.inventory || {};
-        atkSave.inventory[m.kind] = (atkSave.inventory[m.kind] || 0) + back;
-        atkSave.savedAt = Date.now();
-        try { localStorage.setItem(SAVE_PREFIX + m.atk, JSON.stringify(atkSave)); } catch (e) {}
-      }
-      // live memory must learn too, or the next autosave clobbers the save
-      if (CURRENT_USER === m.atk && back > 0) STATE.inventory[m.kind] = (STATE.inventory[m.kind] || 0) + back;
-      outcome = { fizzled: true, returned: back, at: Date.now() };
-    } else {
-      const defender = Math.floor((defSave.inventory && defSave.inventory[m.kind]) || 0);
-      const defAir = airBonus((defSave.inventory && defSave.inventory.planes) || 0);
-      const atkSave = getSave(m.atk);
-      const atkAir = airBonus((atkSave && atkSave.inventory && atkSave.inventory.planes) || 0);
-      const rng = mulberry32((m.seed || 1) >>> 0);
-      const atkRoll = m.committed * (1 + atkAir) * (0.85 + rng() * 0.3);
-      const defRoll = defender * (m.tb || 1.2) * (1 + defAir) * (0.85 + rng() * 0.3);
-      const win = defender <= 0 ? true : atkRoll > defRoll;
-      let atkLoss, defLoss;
-      if (win) {
-        atkLoss = Math.min(m.committed, Math.round(m.committed * (0.4 + 0.45 * Math.min(1, defRoll / Math.max(1, atkRoll)))));
-        defLoss = Math.round(defender * (0.4 + 0.45 * Math.min(1, atkRoll / Math.max(1, defRoll))));
-      } else {
-        atkLoss = m.committed;
-        defLoss = Math.min(defender, Math.round(defender * (0.1 + 0.15 * Math.min(1, m.committed / Math.max(1, defender)))));
-      }
-      // survivors march home into the attacker's inventory
-      if (atkSave) {
-        atkSave.inventory = atkSave.inventory || {};
-        const survivors = win ? (m.committed - atkLoss) : 0;
-        if (survivors > 0) {
-          atkSave.inventory[m.kind] = (atkSave.inventory[m.kind] || 0) + survivors;
-          if (CURRENT_USER === m.atk) STATE.inventory[m.kind] = (STATE.inventory[m.kind] || 0) + survivors;
-        }
-        // spoils: captured businesses become the attacker's property
-        let captured = 0;
-        if (win) {
-          const cap = (defSave.businesses || []).filter(b => b.plotId === m.plotId);
-          captured = cap.length;
-          if (cap.length) {
-            atkSave.businesses = atkSave.businesses || [];
-            for (const b of cap) if (!atkSave.businesses.some(x => x.plotId === b.plotId && x.type === b.type)) atkSave.businesses.push({ plotId: b.plotId, type: b.type });
-            // saveGame serializes businesses from this registry — keep the
-            // attacker's LIVE registry in sync or the next autosave
-            // resurrects the plots for the old owner
-            if (CURRENT_USER === m.atk) {
-              BUSINESS_REGISTRY.set(m.plotId, cap.map(b => b.type).filter(t => getBusinessType(t)));
-              STATE.owned.add(m.plotId);
-            }
-          }
-        }
-        atkSave.savedAt = Date.now();
-        try { localStorage.setItem(SAVE_PREFIX + m.atk, JSON.stringify(atkSave)); } catch (e) {}
-        outcome = { win, atkLoss, defLoss, captured, at: Date.now() };
-      } else {
-        outcome = { win: false, atkLoss: m.committed, defLoss: 0, captured: 0, at: Date.now() };
-      }
-      // defender casualties + territory loss
-      defSave.inventory = defSave.inventory || {};
-      defSave.inventory[m.kind] = Math.max(0, defender - defLoss);
-      if (CURRENT_USER === m.def) STATE.inventory[m.kind] = Math.max(0, (STATE.inventory[m.kind] || 0) - defLoss);
-      if (win) {
-        defSave.ownedPlotIds = (defSave.ownedPlotIds || []).filter(id => id !== m.plotId);
-        defSave.businesses = (defSave.businesses || []).filter(b => b.plotId !== m.plotId);
-        claims[m.plotId] = m.atk;
-        saveClaims(claims);
-        truces[m.plotId] = Date.now() + TRUCE_MS;
-      }
-      defSave.savedAt = Date.now();
-      try { localStorage.setItem(SAVE_PREFIX + m.def, JSON.stringify(defSave)); } catch (e) {}
-      // attacker on this device watching? apply the capture to the globe
-      if (win && CURRENT_USER === m.atk) applyCaptureVisuals(m);
-    }
-    m.resolved = true;
-    m.outcome = outcome;
-    m.rev = (m.rev || 0) + 1;
-    toastedOutcome.add(m.id + '@' + m.rev);
-    reportToast(m);          // the resolving device hears the battle first
-    return outcome;
-  }
-
-  // Local globe updates when the ATTACKER device resolves a win
-  function applyCaptureVisuals(m) {
-    try {
-      const p = ACTIVE_PLOT_BY_ID.get(m.plotId);
-      if (!p) return;
-      const bt = getBusinessType;
-      const atkSave = getSave(m.atk) || {};
-      const capTypes = (atkSave.businesses || []).filter(b => b.plotId === m.plotId).map(b => b.type).filter(t => getBusinessType(t));
-      claimPlot(m.plotId);
-      p.userData.owned = true;
-      p.userData.ownedByOther = false;
-      p.userData.ownerName = null;
-      STATE.owned.add(m.plotId);
-      p.userData.businesses = [];
-      BUSINESS_REGISTRY.set(m.plotId, capTypes);
-      capTypes.forEach((type, idx) => addBusinessToPlot(p, getBusinessType(type), idx));
-      if (!p.userData.businesses.length) {
-        const pair = ownedPlotColorsFor(CURRENT_USER);
-        setPlotColors(p, pair[0], pair[1]);
-      }
-      flushPlotPools();
-      updateHUD();
-    } catch (e) { /* visuals are cosmetic — the saves already carry truth */ }
-  }
-
-  // ---------- poll ----------
-  async function poll() {
-    if (!client || !CURRENT_USER) return;
-    try {
-      const row = await fetchRow();
-      // merge (don't clobber local resolutions not yet persisted)
-      for (const m of row.marches) {
-        const cur = marches.find(x => x.id === m.id);
-        if (!cur) marches.push(m);
-        else if ((m.rev || 0) > (cur.rev || 0)) Object.assign(cur, m);
-      }
-      truces = Object.assign({}, truces);
-      for (const [k, v] of Object.entries(row.truces || {})) if ((v || 0) > (truces[k] || 0)) truces[k] = v;
-      prune();
-      // resolve whatever arrived
-      const now = Date.now();
-      let resolvedAny = false;
-      for (const m of marches) {
-        if (!m.resolved && m.arriveAt <= now) { resolveMarch(m); resolvedAny = true; }
-      }
-      // toasts for marches involving me
-      for (const m of marches) {
-        const involves = m.atk === CURRENT_USER || m.def === CURRENT_USER;
-        if (!involves) continue;
-        if (!m.resolved && !toastedLaunch.has(m.id)) {
-          toastedLaunch.add(m.id);
-          if (m.launchedAt > Date.now() - 15000) {   // only fresh launches
-            const kIcon = m.kind === 'ships' ? '⚓' : '⚔️';
-            if (m.atk === CURRENT_USER) showToast(`${kIcon} ${m.committed.toLocaleString()} ${m.kind} marching to ${m.plotName} — arrives in ${fmtEta(m.arriveAt - Date.now())}`, true);
-            else showToast(`⚠️ ${m.atk} is marching ${m.committed.toLocaleString()} ${kIcon} toward ${m.plotName} — arrives in ${fmtEta(m.arriveAt - Date.now())}. Reinforce!`, false);
-          }
-        }
-        // outcomes arriving from OTHER devices (our own resolutions
-        // already toasted inside resolveMarch)
-        if (m.resolved && m.outcome && !toastedOutcome.has(m.id + '@' + (m.rev || 0))) {
-          toastedOutcome.add(m.id + '@' + (m.rev || 0));
-          reportToast(m);
-        }
-      }
-      if (resolvedAny) { await persist(); updateHUD(); }
-      if (document.getElementById('wars-modal').classList.contains('show')) renderWarsPanel();
-    } catch (e) { /* wars are best-effort */ }
-  }
-
-  function reportToast(m) {
-    const kIcon = m.kind === 'ships' ? '⚓' : '⚔️';
-    const o = m.outcome;
-    if (m.atk === CURRENT_USER) {
-      if (o.recalled) showToast(`↩ Force recalled from ${m.plotName} — ${o.returned.toLocaleString()} ${kIcon} returned home.`, false);
-      else if (o.fizzled) showToast(`⚔️ The march on ${m.plotName} fizzled — the target changed hands. ${o.returned.toLocaleString()} ${kIcon} returned.`, false);
-      else if (o.win) showToast(`${kIcon} Victory at ${m.plotName}! Captured${o.captured ? ` with ${o.captured} business${o.captured > 1 ? 'es' : ''}` : ''} — lost ${o.atkLoss.toLocaleString()} ${kIcon}.`, true);
-      else showToast(`💀 Defeat at ${m.plotName} — all ${o.atkLoss.toLocaleString()} ${kIcon} lost. ${m.def} holds.`, false);
-    } else if (m.def === CURRENT_USER) {
-      if (o.recalled || o.fizzled) return;
-      if (o.win) showToast(`⚔️ ${m.atk} overran ${m.plotName} — ${o.defLoss.toLocaleString()} ${kIcon} lost.`, false);
-      else showToast(`🛡 You repelled ${m.atk}'s attack on ${m.plotName}! ${m.atk} lost all ${o.atkLoss.toLocaleString()} ${kIcon}.`, true);
-    }
-  }
-
-  function onLogin() {
-    if (!timer && client) timer = setInterval(poll, POLL_MS);
-    poll();
-  }
-  function stop() { if (timer) { clearInterval(timer); timer = null; } }
-
-  return { status, onLogin, stop, launch, recall, poll,
-           activeByAttacker, marchToPlotBy, incomingFor, resolvedFor, truceUntil,
-           marchSeconds, fmtEta, MAX_ACTIVE: 3, TRUCE_MS,
-           get marches() { return marches; }, get truces() { return truces; } };
-})();
-window.openWars = function() {
-  document.getElementById('wars-modal').classList.add('show');
-  renderWarsPanel();
-  if (Wars.status() === 'cloud') Wars.poll();
-  if (!window.__warsTick) window.__warsTick = setInterval(() => {
-    if (document.getElementById('wars-modal').classList.contains('show')) renderWarsPanel();
-  }, 1000);
-};
-window.closeWars = function() {
-  document.getElementById('wars-modal').classList.remove('show');
-};
-window.recallMarch = function(id) { Wars.recall(id); };
-window.Wars = Wars;
-// Minimal QA hook (precedent: clanRelationTo) — lets the e2e open a
-// specific plot's modal without synthetic 3D raycasts.
-window.__qaOpenPlotById = function(id) {
-  const p = ACTIVE_PLOT_BY_ID.get(id);
-  if (p) openPlotModal(p);
-  return !!p;
-};
-
-function renderWarsPanel() {
-  const card = document.getElementById('wars-card');
-  if (!card || !CURRENT_USER) return;
-  const mine = Wars.activeByAttacker(CURRENT_USER);
-  const incoming = Wars.incomingFor(CURRENT_USER);
-  const reports = Wars.resolvedFor(CURRENT_USER).slice(0, 6);
-  const row = (html, cls) => `<div class="war-line${cls ? ' ' + cls : ''}">${html}</div>`;
-  let mineHtml;
-  if (mine.length) {
-    mineHtml = mine.map(m => {
-      const eta = Wars.fmtEta(m.arriveAt - Date.now());
-      const kIcon = m.kind === 'ships' ? '⚓' : '⚔️';
-      return row(`<span class="wl-ico">${kIcon}</span>
-        <div class="wl-main"><b>${m.plotName}</b> — ${m.committed.toLocaleString()} ${m.kind} vs ${m.def}<div class="wl-sub">defender strength is read on arrival</div></div>
-        <span class="wl-eta">${eta}</span>
-        <button class="btn-recall" onclick="recallMarch('${m.id}')">↩ Recall</button>`);
-    }).join('');
-  } else {
-    mineHtml = '<div class="wars-empty">No forces on the march. Click an enemy plot in the world to plan an attack.</div>';
-  }
-  let inHtml;
-  if (incoming.length) {
-    inHtml = incoming.map(m => {
-      const eta = Wars.fmtEta(m.arriveAt - Date.now());
-      const kIcon = m.kind === 'ships' ? '⚓' : '⚔️';
-      return row(`<span class="wl-ico">${kIcon}</span>
-        <div class="wl-main"><b>${m.atk}</b> → your ${m.plotName}<div class="wl-sub">${m.committed.toLocaleString()} ${m.kind} incoming — train troops / build defenses now</div></div>
-        <span class="wl-eta">${eta}</span>`, 'incoming');
-    }).join('');
-  } else {
-    inHtml = '<div class="wars-empty">No incoming attacks — your land is quiet.</div>';
-  }
-  let repHtml;
-  if (reports.length) {
-    repHtml = reports.map(m => {
-      const o = m.outcome;
-      const kIcon = m.kind === 'ships' ? '⚓' : '⚔️';
-      if (o.recalled) return `<div class="wars-report info">↩ Recalled the march on ${m.plotName} — ${o.returned.toLocaleString()} ${kIcon} came home.</div>`;
-      if (o.fizzled) return `<div class="wars-report info">⚔️ March on ${m.plotName} fizzled — target changed hands. ${o.returned.toLocaleString()} ${kIcon} returned.</div>`;
-      if (m.atk === CURRENT_USER) {
-        return o.win
-          ? `<div class="wars-report win">${kIcon} Won ${m.plotName} from ${m.def} — lost ${o.atkLoss.toLocaleString()}, killed ${o.defLoss.toLocaleString()}${o.captured ? `, took ${o.captured} business${o.captured > 1 ? 'es' : ''}` : ''}.</div>`
-          : `<div class="wars-report loss">💀 Lost ${o.atkLoss.toLocaleString()} ${kIcon} attacking ${m.plotName} — ${m.def} held (${o.defLoss.toLocaleString()} casualties).</div>`;
-      }
-      return o.win
-        ? `<div class="wars-report loss">⚔️ ${m.atk} took ${m.plotName} — lost ${o.defLoss.toLocaleString()} ${kIcon} defending.</div>`
-        : `<div class="wars-report win">🛡 Held ${m.plotName} against ${m.atk} — they lost all ${o.atkLoss.toLocaleString()} ${kIcon}, you lost ${o.defLoss.toLocaleString()}.</div>`;
-    }).join('');
-  } else {
-    repHtml = '<div class="wars-empty">No battles yet.</div>';
-  }
-  card.innerHTML = `
-    <span class="badge owned">⚔ War Room</span>
-    <h2>Wars</h2>
-    <div class="desc">Conquest is a march, not a coin-flip. Forces take <b>${Math.round(Wars.marchSeconds(false) / 60)} minutes</b> to arrive (${Math.round(Wars.marchSeconds(true) / 60)} across planets); defenders see you coming and their strength is read <b>on arrival</b>. Just-conquered land is under a ${Math.round(Wars.TRUCE_MS / 60000)}-minute truce.</div>
-    <div class="wars-section">
-      <div class="wars-head">Your marches <small>${mine.length}/${Wars.MAX_ACTIVE}</small></div>
-      ${mineHtml}
-    </div>
-    <div class="wars-section">
-      <div class="wars-head">Incoming <small>defend</small></div>
-      ${inHtml}
-    </div>
-    <div class="wars-section">
-      <div class="wars-head">Battle reports</div>
-      ${repHtml}
-    </div>
-    <div class="actions"><button class="btn primary" onclick="closeWars()">Close</button></div>
-  `;
-}
-
-// ====================================================================
 // CLANS PANEL UI
 // ====================================================================
 function renderClansPanel() {
@@ -2843,70 +2144,9 @@ function getPlotOwner(plotId) {
   return claims[plotId] || null;
 }
 
-// --------------------------------------------------------------------
-// PLOT COLOR — every commander can pick ONE color for all of their land
-// (Settings → Plot color on the menu screen). It lives in the player's
-// save (`plotColor`), so it rides the normal cloud-save sync: every
-// device pulls every save, so each device renders every player's plots
-// in that player's color. null = the classic palette (gold for you,
-// muted purple for everyone else).
-// --------------------------------------------------------------------
-const PLOT_COLOR_SWATCHES = ['#ff5d5d', '#ff9f43', '#58d68d', '#45c6e8', '#5b8def', '#a78bfa', '#ff7ac8', '#e8f4ff'];
-
-function normalizePlotColor(hex) {
-  if (typeof hex !== 'string') return null;
-  const m = hex.trim().match(/^#?([0-9a-fA-F]{6})$/);
-  return m ? ('#' + m[1].toLowerCase()) : null;
-}
-
-// Fill lifted toward white — keeps the outline readable for dark picks
-function lightenPlotColor(hex, t) {
-  const n = parseInt(hex.slice(1), 16) >>> 0;
-  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-  return ((Math.round(r + (255 - r) * t) << 16) | (Math.round(g + (255 - g) * t) << 8) | Math.round(b + (255 - b) * t)) >>> 0;
-}
-
-// [fill, outline] hex ints for a plot owned by `name`.
-// Me → my live choice (STATE mirrors the save); others → their save.
-function ownedPlotColorsFor(name) {
-  const isMe = name === CURRENT_USER;
-  const hex = normalizePlotColor(isMe ? STATE.plotColor : ((getSave(name) || {}).plotColor));
-  if (!hex) {
-    return isMe ? [OWNED_FILL, OWNED_OUTLINE] : [OTHER_COLOR, OTHER_OUTLINE];
-  }
-  return [parseInt(hex.slice(1), 16) >>> 0, lightenPlotColor(hex, 0.35)];
-}
-
-// Re-apply every owner's plot color to the live render pools. Called
-// after each cloud pull (30s sync): a color picked anywhere — your other
-// device or another player's — arrives through the adopted save and shows
-// up without a reload. Also re-syncs STATE.plotColor from the freshest
-// save so the 10s autosave can't clobber a color a pull just adopted.
-function refreshOwnerPlotColors() {
-  if (!gameInitialized || !CURRENT_USER) return false;
-  let changed = false;
-  const myHex = normalizePlotColor((getSave(CURRENT_USER) || {}).plotColor);
-  if (normalizePlotColor(STATE.plotColor) !== myHex) { STATE.plotColor = myHex; changed = true; }
-  for (const p of STATE.plots) {
-    const ud = p.userData;
-    let pair = null;
-    if (ud.owned) {
-      if ((ud.businesses || []).length) continue;   // business color owns the tile
-      pair = ownedPlotColorsFor(CURRENT_USER);
-    } else if (ud.ownedByOther) {
-      pair = ownedPlotColorsFor(ud.ownerName);
-    }
-    if (pair && (ud._fillHex !== pair[0] || ud._outlineHex !== pair[1])) {
-      setPlotColors(p, pair[0], pair[1]);
-      changed = true;
-    }
-  }
-  return changed;
-}
-
 // Apply claim-based colors to all plots:
-//   - Claimed by current user → their plot color (already set by loadGame)
-//   - Claimed by other user → that player's plot color (or muted purple)
+//   - Claimed by current user → gold (already set by loadGame)
+//   - Claimed by other user → muted purple
 //   - Unclaimed → default green/teal (already the default)
 const OTHER_COLOR = 0x7a4a8a;       // muted purple fill for others' plots
 const OTHER_OUTLINE = 0x9a6aaa;     // brighter purple outline
@@ -2916,12 +2156,10 @@ function applyClaimColors() {
   for (const p of STATE.plots) {
     const owner = claims[p.userData.id];
     if (owner && owner !== CURRENT_USER) {
-      // Owned by another user — show in that player's chosen plot color
-      // (or the muted-purple default if they never picked one)
+      // Owned by another user — show in muted purple
       p.userData.ownedByOther = true;
       p.userData.ownerName = owner;
-      const pair = ownedPlotColorsFor(owner);
-      setPlotColors(p, pair[0], pair[1]);
+      setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
       registerClaimedPlot(p);
     }
   }
@@ -2957,8 +2195,7 @@ function applyCloudWorldUpdates() {
         }
       }
       p.userData.businesses = [];
-      const pair = ownedPlotColorsFor(owner);
-      setPlotColors(p, pair[0], pair[1]);
+      setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
       registerClaimedPlot(p);
       changed = true;
       showToast(`⚔️ ${owner} conquered ${p.userData.name}!`, false);
@@ -2967,8 +2204,7 @@ function applyCloudWorldUpdates() {
     else if (!p.userData.owned && owner && owner !== CURRENT_USER && !p.userData.ownedByOther) {
       p.userData.ownedByOther = true;
       p.userData.ownerName = owner;
-      const pair = ownedPlotColorsFor(owner);
-      setPlotColors(p, pair[0], pair[1]);
+      setPlotColors(p, OTHER_COLOR, OTHER_OUTLINE);
       registerClaimedPlot(p);
       changed = true;
     }
@@ -2977,9 +2213,6 @@ function applyCloudWorldUpdates() {
       p.userData.ownerName = owner;
     }
   }
-  // Colors adopted from freshly pulled saves (another device of mine or
-  // another player changed their plot color) show up here without a reload
-  if (refreshOwnerPlotColors()) changed = true;
   if (changed) {
     flushPlotPools();
     updateHUD();
@@ -3037,12 +2270,10 @@ function saveGame() {
     // `adminStamp` = last world-owner edit applied to this save (see the
     // ADMIN section). Preserved so every device converges on it.
     adminStamp: existing ? existing.adminStamp : undefined,
-    // One color for all of this player's plots (Settings → Plot color).
-    // STATE is the live authority — never resurrect an old value from
-    // `existing`, or resetting to the classic gold wouldn't stick.
-    plotColor: normalizePlotColor(STATE.plotColor) || null,
     money: STATE.money,
     ownedPlotIds: Array.from(STATE.owned),
+    // Personalization: one-color plot painting (Settings → 🎨 Plot Color)
+    plotColor: STATE.plotColor,
     // Planets: which world you're on and which ones you've bought into
     planet: STATE.planet,
     unlockedPlanets: [...STATE.unlockedPlanets],
@@ -3080,8 +2311,6 @@ function loadGame(username) {
   STATE.marketTrend = save.marketTrend || {};
   STATE.lastMarketUpdate = save.lastMarketUpdate || Date.now();
   STATE.lastProductionTime = 0;
-  // One color for all of this player's plots (Settings → Plot color)
-  STATE.plotColor = normalizePlotColor(save.plotColor);
   // Planets: restore unlocks (default Earth-only for older saves) and make
   // the OWNED set global — it may contain plots on planets whose meshes
   // aren't loaded right now (you're only looking at one world at a time)
@@ -3090,6 +2319,9 @@ function loadGame(username) {
     : ['earth'];
   if (!STATE.unlockedPlanets.includes('earth')) STATE.unlockedPlanets.unshift('earth');
   STATE.owned = new Set(save.ownedPlotIds || []);
+  // Plot color preference (older saves → default scheme)
+  STATE.plotColor = (save.plotColor === 'default' || /^#[0-9a-fA-F]{6}$/.test(save.plotColor || ''))
+    ? save.plotColor : 'default';
 
   // Rebuild the all-planet business registry from the save, then mirror
   // the active planet's businesses into meshes below
@@ -3107,13 +2339,12 @@ function loadGame(username) {
     if (STATE.marketTrend[m.id] === undefined) STATE.marketTrend[m.id] = 'stable';
   }
 
-  // Restore owned plots (active planet meshes — the owner's plot color)
+  // Restore owned plots (active planet meshes — colored per preference)
   const ownedIds = STATE.owned;
   for (const p of STATE.plots) {
     if (ownedIds.has(p.userData.id)) {
       p.userData.owned = true;
-      const pair = ownedPlotColorsFor(CURRENT_USER);
-      setPlotColors(p, pair[0], pair[1]);
+      paintOwnedPlot(p);
       registerClaimedPlot(p);
     }
   }
@@ -3191,11 +2422,72 @@ function addBusinessToPlot(plot, bt, index) {
   plot.userData.businesses.push(entry);
   earth.add(bizMesh);
 
-  // Recolor plot to the FIRST business color (primary business)
+  // Primary business recolors the plot — unless the player painted their
+  // empire one color in Settings (paintOwnedPlot decides)
   if (plot.userData.businesses.length === 1) {
-    setPlotColors(plot, bt.color, bt.color);
+    paintOwnedPlot(plot);
   }
 }
+
+// ====================================================================
+// GAME VERSION + RELEASE NOTES — the "What's New" popup after login.
+// Bump GAME_VERSION and add a section at the TOP of RELEASE_NOTES with
+// every ship; players see the popup once per account (per device) after
+// logging in, listing every version newer than the one they last saw.
+// ====================================================================
+const GAME_VERSION = 'v1.11';
+const RELEASE_NOTES = [
+  { v: 'v1.11', items: [
+    '🎨 <b>Plot colors</b> — Settings now lets you paint every plot you own in ONE color (presets or any custom shade). It follows you across all planets, applies to new and captured plots instantly.',
+    '🆕 <b>This popup</b> — from now on you\'ll see what\'s new after logging in whenever the game updates.'
+  ]},
+  { v: 'v1.10', items: [
+    '✚ <b>Multi-Buy</b> — hit the ✚ button, click several plots (they glow cyan and lift off the globe), then buy them all in one go. Each pick must border your land — or your earlier picks.',
+    '🖱️ Rotating the globe no longer triggers accidental plot clicks.'
+  ]},
+  { v: 'v1.9', items: [
+    '🗺 <b>My Land</b> — see every plot you own across all planets and sell the ones you don\'t want for 50% of their value. Sold land becomes unclaimed again.',
+    '📜 The admin panel scrolls now.'
+  ]},
+  { v: 'v1.8', items: [
+    '🪐 <b>Planets</b> — buy into Luna ($2M), Mars ($8M) and Oceanus ($20M). Each world has its own 2,200 plots; travel freely — your businesses produce on every world at once.'
+  ]},
+  { v: 'v1.7', items: [
+    '🔒 <b>Border rule</b> — your first plot on a planet can go anywhere; after that you can only buy plots that border land you already own.'
+  ]}
+];
+
+function maybeShowUpdatePopup() {
+  if (!CURRENT_USER) return;
+  const seenKey = 'openworld_seen_update_' + CURRENT_USER;
+  let seen = '';
+  try { seen = localStorage.getItem(seenKey) || ''; } catch (e) { return; }
+  if (seen === GAME_VERSION) return;
+  // Every version newer than what this account last saw on this device
+  // (all listed versions for first-timers — doubles as a highlights tour)
+  const seenIdx = RELEASE_NOTES.findIndex(n => n.v === seen);
+  const sections = seenIdx === -1 ? RELEASE_NOTES : RELEASE_NOTES.slice(0, seenIdx);
+  if (!sections.length) return;
+  const card = document.getElementById('update-card');
+  if (!card) return;
+  card.innerHTML = `
+    <span class="badge available">🆕 what's new</span>
+    <h2>The World Grew</h2>
+    <div class="coords">UPDATES SINCE YOUR LAST VISIT</div>
+    <div class="update-body">
+      ${sections.map(s => `
+        <div class="update-ver">${s.v}</div>
+        <ul class="update-list">${s.items.map(t => `<li>${t}</li>`).join('')}</ul>
+      `).join('')}
+    </div>
+    <div class="actions"><button class="btn primary" onclick="closeUpdatePopup()">Nice — let's go</button></div>
+  `;
+  document.getElementById('update-modal').classList.add('show');
+  try { localStorage.setItem(seenKey, GAME_VERSION); } catch (e) {}
+}
+window.closeUpdatePopup = function() {
+  document.getElementById('update-modal').classList.remove('show');
+};
 
 // ====================================================================
 // LOGIN SYSTEM (username + password)
@@ -3353,13 +2645,13 @@ window.loginSubmit = function() {
   CURRENT_USER = name;
   errEl.textContent = '';
   updateMenuWelcome();
-  try { Chat.onLogin(); } catch (e) {}   // show 💬 tab + start live chat polling
-  try { Wars.onLogin(); } catch (e) {}   // start war-march polling (arrivals, warnings)
   document.getElementById('login-screen').classList.add('hide');
   setTimeout(() => {
     document.getElementById('login-screen').style.display = 'none';
   }, 600);
   document.getElementById('menu').classList.remove('hidden');
+  // "What's New" popup — once per account per device after an update
+  setTimeout(maybeShowUpdatePopup, 650);
 };
 
 
@@ -4322,6 +3614,26 @@ function setPlotColors(p, fillHex, outlineHex) {
   p.userData._outlineHex = outlineHex;
   _plotPoolsDirty = true;
 }
+
+// Paint an OWNED plot according to the player's Settings preference:
+// a custom color (single color for the whole empire) or the default
+// scheme (gold when empty, the primary business's color once built).
+// Every path that colors an owned plot (buy, build, demolish, war,
+// travel, load) goes through this so the preference never drifts.
+function paintOwnedPlot(p) {
+  const pref = STATE.plotColor;
+  if (pref && pref !== 'default' && /^#[0-9a-fA-F]{6}$/.test(pref)) {
+    const intCol = parseInt(pref.slice(1), 16);
+    setPlotColors(p, intCol, intCol);
+    return;
+  }
+  const biz = p.userData.businesses || [];
+  if (biz.length) {
+    const bt = getBusinessType(biz[0].type);
+    if (bt) { setPlotColors(p, bt.color, bt.color); return; }
+  }
+  setPlotColors(p, OWNED_FILL, OWNED_OUTLINE);
+}
 function flushPlotPools() {
   if (_plotPoolsDirty) { _plotPoolsDirty = false; rebuildPlotPools(); }
 }
@@ -4520,10 +3832,6 @@ function generatePlots(planet, opts = {}) {
     // True Voronoi neighbors: each final polygon edge lies on exactly one
     // bisector, so matching each edge midpoint back to its bisector tells
     // us which seeds actually border this cell (used by the border-buy rule).
-    // Stored as GLOBAL plot ids (idBase + seed index) — the border rule
-    // matches them against STATE.owned, which holds global ids. Storing the
-    // bare seed index here broke the rule on every planet except Earth
-    // (where idBase is 0 and the two coincide).
     const bordering = [];
     for (let k = 0; k < cell.length; k++) {
       const p1 = cell[k], p2 = cell[(k + 1) % cell.length];
@@ -4533,7 +3841,7 @@ function generatePlots(planet, opts = {}) {
         const d = Math.abs(mu * bisectors[b].u + mw * bisectors[b].w - bisectors[b].d);
         if (d < bestD) { bestD = d; best = b; }
       }
-      if (best >= 0 && bestD < 1e-6) bordering.push(planet.idBase + neighbors[best].j);
+      if (best >= 0 && bestD < 1e-6) bordering.push(neighbors[best].j);
     }
 
     // ---- Step 3: Build spherical polygon mesh ----
@@ -4688,8 +3996,6 @@ function generatePlots(planet, opts = {}) {
   // symmetric, but the per-cell edge matching above can drop a link in one
   // direction to float fuzz. Union both directions so the border-buy rule
   // gives the same answer no matter which plot is being checked.
-  // (All ids here are global — bordering stores idBase + seed index — so
-  // the map never mixes a plot id with a bare local index.)
   const adjPairs = new Set();
   for (const p of STATE.plots) {
     for (const nid of p.userData.neighbors) {
@@ -5100,25 +4406,12 @@ function openPlotModal(plot) {
     const myShips = Math.floor(STATE.inventory.ships || 0);
     const myPlanes = Math.floor(STATE.inventory.planes || 0);
     const panelTitle = kind === 'ships' ? '⚓ Naval Invasion' : '⚔️ Conquest';
-    const myMarch = Wars.marchToPlotBy(plot.userData.id, CURRENT_USER);
-    const truceLeft = Wars.truceUntil(plot.userData.id) - Date.now();
-    const cross = plot.userData.planet !== STATE.planet;
-    const marchMin = Math.max(1, Math.round(Wars.marchSeconds(cross) / 60));
-    let warBody;
-    if (myMarch) {
-      warBody = `
-        <div class="war-march-banner">
-          ⚔️ Your force of <b>${myMarch.committed.toLocaleString()} ${myMarch.kind}</b> is marching on this plot.
-          <div class="wl-sub">Arrives in <b>${Wars.fmtEta(myMarch.arriveAt - Date.now())}</b> — ${clEsc(ownerName)} has been warned, and their strength is read <b>when your force lands</b>.</div>
-          <button class="btn-recall" style="margin-top:9px" onclick="recallMarch('${myMarch.id}');closePlotModal()">↩ Recall force (60% returns)</button>
-        </div>`;
-    } else if (truceLeft > 0) {
-      warBody = `
-        <div class="war-truce-banner">
-          🕊 Just conquered — this land is under truce for <b>${Wars.fmtEta(truceLeft)}</b>. The population settles before new armies may march on it.
-        </div>`;
-    } else if (myForce > 0) {
-      warBody = `
+    warPanel = `
+      <div class="war-panel">
+        <div class="war-title">${panelTitle}</div>
+        <div class="war-row">Defense: <b>${defender.toLocaleString()} ${kIcon}</b>${tb > 1 ? ` · terrain ×${tb}` : ''}</div>
+        <div class="war-row">Your forces: <b>⚔️ ${myTroops.toLocaleString()}</b> · <b>⚓ ${myShips.toLocaleString()}</b> · <b>✈️ ${myPlanes.toLocaleString()}</b>${myPlanes > 0 ? ` <span style="color:#7fffd4">(air support +${Math.round(airBonus(myPlanes) * 100)}%)</span>` : ''}</div>
+        ${myForce > 0 ? `
           <div class="war-commit">
             <span>Deploy ${kind === 'ships' ? 'ships' : 'troops'}</span>
             <input type="number" id="war-commit-input" min="1" max="${myForce}" value="${Math.max(1, Math.floor(myForce / 2))}" oninput="updateWarEstimate()">
@@ -5127,33 +4420,13 @@ function openPlotModal(plot) {
             <button class="war-chip" onclick="setWarCommit(1)">ALL</button>
           </div>
           <div class="war-estimate" id="war-estimate"></div>
-          <button class="war-attack" id="war-attack-btn" onclick="attackPlot()">${kIcon} MARCH — ${marchMin}m</button>
-          <div class="war-hint">Your force marches for ~${marchMin} min. ${clEsc(ownerName)} is warned the moment you launch and their strength is read <b>on arrival</b> — they can reinforce. Committed troops leave your army at launch.</div>`;
-    } else {
-      warBody = `<div class="war-hint">${kind === 'ships'
+          <button class="war-attack" id="war-attack-btn" onclick="attackPlot()">${kIcon} DEPLOY</button>
+        ` : `<div class="war-hint">${kind === 'ships'
           ? 'Build a Naval Yard ($180,000) on a coast or ocean plot to train ⚓ ships for sea invasions.'
-          : 'Build Barracks ($120,000) on one of your plots — each houses 500 ⚔️ troops you can deploy here to take this land.'}</div>`;
-    }
-    warPanel = `
-      <div class="war-panel">
-        <div class="war-title">${panelTitle}</div>
-        ${myMarch ? '' : `<div class="war-row">Defense now: <b>${defender.toLocaleString()} ${kIcon}</b>${tb > 1 ? ` · terrain ×${tb}` : ''} <span style="color:#8fa9b2;font-size:11px">(re-read when a force arrives)</span></div>
-        <div class="war-row">Your forces: <b>⚔️ ${myTroops.toLocaleString()}</b> · <b>⚓ ${myShips.toLocaleString()}</b> · <b>✈️ ${myPlanes.toLocaleString()}</b>${myPlanes > 0 ? ` <span style="color:#7fffd4">(air support +${Math.round(airBonus(myPlanes) * 100)}%)</span>` : ''}</div>`}
-        ${warBody}
+          : 'Build Barracks ($120,000) on one of your plots — each houses 500 ⚔️ troops you can deploy here to take this land.'}</div>`}
         <div id="war-result"></div>
       </div>
     `;
-  } else if (owned && CURRENT_USER) {
-    const inc = Wars.incomingFor(CURRENT_USER).filter(m => m.plotId === plot.userData.id);
-    if (inc.length) {
-      const m0 = inc[0];
-      warPanel = `
-      <div class="war-panel">
-        <div class="war-incoming-warn">⚠️ <b>${m0.committed.toLocaleString()} ${m0.kind}</b> from <b>${clEsc(m0.atk)}</b> are marching on this plot — arrival in <b>${Wars.fmtEta(m0.arriveAt - Date.now())}</b>.</div>
-        <div class="war-hint">Their strength is matched against your garrison <b>when they land</b> — every Barracks trains troops right up to the battle.</div>
-      </div>
-    `;
-    }
   }
 
   card.innerHTML = `
@@ -5353,8 +4626,7 @@ window.travelTo = function(planetId) {
     }
     if (STATE.owned.has(p.userData.id)) {
       p.userData.owned = true;
-      const pair = ownedPlotColorsFor(CURRENT_USER);
-      setPlotColors(p, pair[0], pair[1]);
+      paintOwnedPlot(p);
       registerClaimedPlot(p);
       const types = BUSINESS_REGISTRY.get(p.userData.id) || [];
       types.forEach((type, idx) => {
@@ -5648,8 +4920,7 @@ window.multiBuyAll = function() {
     STATE.owned.add(id);
     claims[id] = CURRENT_USER;
     registerClaimedPlot(p);
-    const pair = ownedPlotColorsFor(CURRENT_USER);
-    setPlotColors(p, pair[0], pair[1]);
+    paintOwnedPlot(p);
     STATE.multiSelect.delete(id);
   }
   saveClaims(claims);
@@ -5684,10 +4955,8 @@ window.buySelectedPlot = function() {
   STATE.owned.add(p.userData.id);
   claimPlot(p.userData.id);  // register in global claims
   registerClaimedPlot(p);
-  // Turn it to the owner's plot color in the merged pool (slight lift is
-  // handled by the rebuild)
-  const pair = ownedPlotColorsFor(CURRENT_USER);
-  setPlotColors(p, pair[0], pair[1]);
+  // Paint per the player's Settings preference (default: gold)
+  paintOwnedPlot(p);
   flushPlotPools();
 
   updateHUD();
@@ -5759,15 +5028,9 @@ window.demolishBusiness = function(businessIndex) {
   if (_ri >= 0) _regTypes.splice(_ri, 1);
   if (_regTypes.length) BUSINESS_REGISTRY.set(p.userData.id, _regTypes);
   else BUSINESS_REGISTRY.delete(p.userData.id);
-  // If no businesses left, restore the owner's plot color; otherwise
-  // recolor to first remaining
-  if (p.userData.businesses.length === 0) {
-    const pair = ownedPlotColorsFor(CURRENT_USER);
-    setPlotColors(p, pair[0], pair[1]);
-  } else {
-    const firstBt = getBusinessType(p.userData.businesses[0].type);
-    if (firstBt) setPlotColors(p, firstBt.color, firstBt.color);
-  }
+  // If no businesses left, restore gold; otherwise recolor to first remaining
+  // (a custom plot color from Settings overrides both — paintOwnedPlot decides)
+  paintOwnedPlot(p);
   flushPlotPools();
   updateHUD();
   openPlotModal(p);
@@ -6363,44 +5626,68 @@ window.attackPlot = function() {
     return;
   }
   const owner = p.userData.ownerName;
+  const defender = getDefenderForce(owner, kind);
+  const tb = warTerrainBonus(p);
+  const atkAir = airBonus(STATE.inventory.planes);
+  const defAir = airBonus(getDefenderPlanes(owner));
 
-  // ---- slow-war gates (v1.14): truce + march cap ----
-  const truceLeft = Wars.truceUntil(p.userData.id) - Date.now();
-  if (truceLeft > 0) {
-    showToast(`🕊 ${p.userData.name} was just conquered — truce holds for ${Wars.fmtEta(truceLeft)}.`, false);
-    return;
+  // Roll the battle (±15% luck on both sides, plus air support)
+  const atkRoll = committed * (1 + atkAir) * (0.85 + Math.random() * 0.3);
+  const defRoll = defender * tb * (1 + defAir) * (0.85 + Math.random() * 0.3);
+  const win = atkRoll > defRoll;
+  let atkLoss, defLoss;
+  if (win) {
+    atkLoss = Math.min(committed, Math.round(committed * (0.4 + 0.45 * Math.min(1, defRoll / atkRoll))));
+    defLoss = Math.round(defender * (0.4 + 0.45 * Math.min(1, atkRoll / Math.max(1, defRoll))));
+  } else {
+    atkLoss = committed;
+    defLoss = Math.min(defender, Math.round(defender * (0.1 + 0.15 * Math.min(1, committed / Math.max(1, defender)))));
   }
-  if (Wars.activeByAttacker(CURRENT_USER).length >= Wars.MAX_ACTIVE && !Wars.marchToPlotBy(p.userData.id, CURRENT_USER)) {
-    showToast(`⚔️ You already have ${Wars.MAX_ACTIVE} forces on the march — recall one or wait for it to land.`, false);
-    return;
+
+  // Attacker casualties
+  STATE.inventory[kind] = Math.max(0, (STATE.inventory[kind] || 0) - atkLoss);
+
+  // Defender's save: apply their losses; on victory strip the plot from them
+  const vs = getSave(owner);
+  const captured = (win && vs) ? (vs.businesses || []).filter(b => b.plotId === p.userData.id) : [];
+  if (vs) {
+    vs.inventory = vs.inventory || {};
+    vs.inventory[kind] = Math.max(0, defender - defLoss);
+    // Fresh timestamp so the victim's stale local copy loses the next
+    // cloud merge and the conquest sticks across devices
+    vs.savedAt = Date.now();
+    if (win) {
+      vs.ownedPlotIds = (vs.ownedPlotIds || []).filter(id => id !== p.userData.id);
+      vs.businesses = (vs.businesses || []).filter(b => b.plotId !== p.userData.id);
+    }
+    try { localStorage.setItem(SAVE_PREFIX + owner, JSON.stringify(vs)); } catch (e) {}
   }
 
-  // Committed troops leave your inventory AT LAUNCH — marched men
-  // defend nothing, and they cannot be double-spent on a second front.
-  STATE.inventory[kind] = Math.max(0, myForce - committed);
-
-  const now = Date.now();
-  const cross = p.userData.planet !== STATE.planet;
-  const secs = Wars.marchSeconds(cross);
-  Wars.launch({
-    id: now.toString(36) + Math.random().toString(36).slice(2, 8),
-    atk: CURRENT_USER,
-    def: owner,
-    plotId: p.userData.id,
-    plotName: p.userData.name,
-    planet: p.userData.planet,
-    kind,
-    committed,
-    seed: Math.floor(Math.random() * 0x7fffffff),   // stored → every device rolls the same battle
-    tb: warTerrainBonus(p),
-    launchedAt: now,
-    arriveAt: now + secs * 1000,
-    resolved: false,
-    rev: 1
-  });
-  showToast(`${kIcon} ${committed.toLocaleString()} ${kind} are marching to ${p.userData.name} — arrive in ${Wars.fmtEta(secs * 1000)}. ${owner} will see it coming.`, true);
+  if (win) {
+    // Claim the plot — captured businesses keep producing for the new owner
+    claimPlot(p.userData.id);
+    p.userData.owned = true;
+    p.userData.ownedByOther = false;
+    p.userData.ownerName = null;
+    STATE.owned.add(p.userData.id);
+    p.userData.businesses = [];
+    // Captured businesses join your all-planet registry
+    const _capReg = captured.map(b => b.type).filter(t => getBusinessType(t));
+    BUSINESS_REGISTRY.set(p.userData.id, _capReg);
+    _capReg.forEach((type, idx) => {
+      const bt = getBusinessType(type);
+      addBusinessToPlot(p, bt, idx);
+    });
+    paintOwnedPlot(p);   // captured plots adopt your color scheme too
+    flushPlotPools();
+    const spoils = captured.length ? ` with ${captured.length} business${captured.length > 1 ? 'es' : ''}` : '';
+    showToast(`${kIcon} Victory! Captured ${p.userData.name}${spoils} — lost ${atkLoss.toLocaleString()} ${kIcon}`, true);
+  } else {
+    showToast(`💀 Defeat — all ${atkLoss.toLocaleString()} ${kind === 'ships' ? 'ships' : 'troops'} lost. ${owner} holds the plot.`, false);
+  }
+  updateHUD();
   saveGame();
-  openPlotModal(p);  // re-render — the panel now shows the march banner
+  openPlotModal(p);  // re-render with fresh ownership / defense numbers
 };
 
 // ====================================================================
@@ -7025,55 +6312,7 @@ window.exitGame = function() {
   document.getElementById('menu').classList.remove('hidden');
 };
 
-// ---- Settings → Plot color ----
-function renderPlotColorSettings() {
-  const row = document.getElementById('plot-color-row');
-  if (!row) return;
-  const cur = normalizePlotColor(
-    gameInitialized ? STATE.plotColor : ((getSave(CURRENT_USER) || {}).plotColor));
-  row.innerHTML = PLOT_COLOR_SWATCHES.map(c =>
-    `<button class="plot-color-swatch${cur === c ? ' active' : ''}" style="background:${c}" data-c="${c}" title="${c}" aria-label="Plot color ${c}" onclick="setMyPlotColor('${c}')"></button>`
-  ).join('');
-  const picker = document.getElementById('plot-color-picker');
-  if (picker) picker.value = cur || '#f5cc74';
-}
-
-// One funnel for every plot-color change, from either screen state:
-//  • a session already started (world was entered) → STATE + saveGame();
-//    the normal autosave/push pipeline uploads it (autosave keeps running
-//    on the menu after exitGame, so the direct edit below can't be used)
-//  • straight after login (menu only, no session yet) → edit the stored
-//    save directly (mirrors Clans.spendMoney) and push it right away so
-//    the change is live without ever entering the world
-function applyPlotColorChoice(hex) {
-  if (!CURRENT_USER) return;
-  const val = normalizePlotColor(hex);
-  if (gameInitialized) {
-    STATE.plotColor = val;
-    saveGame();
-    // Recolor the live globe right away — the world may be hidden (menu
-    // after exitGame) but its pools keep the old color, and re-entering
-    // skips loadGame, so without this the old color would stick until a
-    // 30s sync happened to adopt the save back.
-    if (refreshOwnerPlotColors()) flushPlotPools();
-  } else {
-    const s = getSave(CURRENT_USER);
-    if (!s) return;
-    s.plotColor = val;
-    s.savedAt = Date.now();
-    try { localStorage.setItem(SAVE_PREFIX + CURRENT_USER, JSON.stringify(s)); } catch (e) { return; }
-    CloudSync.pushSave(CURRENT_USER);   // upload immediately — don't wait for a session
-  }
-  renderPlotColorSettings();
-  showToast(val ? `🎨 All your plots are now ${val.toUpperCase()} — everyone sees your color` : '🎨 Plots restored to the classic gold', true);
-}
-window.setMyPlotColor = function(hex) { applyPlotColorChoice(hex); };
-window.applyPlotColorFromPicker = function() {
-  const el = document.getElementById('plot-color-picker');
-  if (el) applyPlotColorChoice(el.value);
-};
-
-window.openSettings = function() { renderSettingsQuality(); renderPlotColorSettings(); document.getElementById('settings').classList.add('show'); };
+window.openSettings = function() { renderSettingsQuality(); renderPlotColorSetting(); document.getElementById('settings').classList.add('show'); };
 window.closeSettings = function() { document.getElementById('settings').classList.remove('show'); };
 window.startGame = window.enterGame; // legacy
 
@@ -7096,6 +6335,7 @@ window.addEventListener('keydown', (e) => {
     window.closeClans();
     window.closePlanets();
     window.closeMyPlots();
+    window.closeUpdatePopup();
     if (STATE.multiBuy) window.toggleMultiBuy();
   }
 });
