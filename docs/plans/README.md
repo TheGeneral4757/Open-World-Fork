@@ -11,6 +11,7 @@ Status: **Planning** · Fork point: upstream v1.15 (`f50ea29`) · Last updated: 
 | [04-auth-and-admin.md](04-auth-and-admin.md) | Passwords, sessions, roles, admin panel v2, legacy account migration |
 | [05-typescript-migration.md](05-typescript-migration.md) | Step-by-step move from single `index.html` to Vite + TS without breaking the game |
 | [06-self-hosting.md](06-self-hosting.md) | Home-hardware topology, Compose sketch, hardening, backups, monitoring |
+| [07-owner-workflow.md](07-owner-workflow.md) | How the owner keeps pushing to GitHub to update the live game, before and after the transition |
 | [friend-security-summary.md](friend-security-summary.md) | Short, friendly write-up of the security issues to send the game's owner |
 
 ## The one-paragraph version
@@ -42,3 +43,4 @@ Still open: **Q1, Q13, Q14** (+ Q21 specs, Q24 domain, Q71 wager cap). Everythin
 | D10 | 2026-10-07 | TypeScript on server + client, strict, shared rules package | Q86 |
 | D11 | 2026-10-07 | Economy: server-authoritative, ONE global market with supply/demand pricing, NO offline production, casino stays (server RNG) | Q67–Q69, Q71 |
 | D12 | 2026-10-07 | Phase 0 = Boss sends friend the security summary; no hotfix PR from us | Q3 |
+| D13 | 2026-10-07 | Owner keeps "push to main = live" workflow; client via Pages, server auto-pulls images from GHCR on Boss's box | Boss |
