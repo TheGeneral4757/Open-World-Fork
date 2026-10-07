@@ -609,6 +609,40 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 .update-list{margin:0;padding-left:18px;font-family:Arial,sans-serif;font-size:13px;color:#cbd7dc;line-height:1.65}
 .update-list b{color:#e8eef0}
 
+/* Support — player submission modal */
+.support-type-row{display:flex;gap:10px;margin:14px 0 10px}
+.support-type{flex:1;padding:12px;border:1px solid #2c4a55;border-radius:9px;background:rgba(20,50,60,.35);
+  color:#9bb4bd;font-family:Arial,sans-serif;font-size:14px;cursor:pointer;transition:all .15s}
+.support-type:hover{border-color:#7fa0ab;color:#cbd7dc}
+.support-type.sel{border-color:#f5cc74;color:#f5cc74;background:rgba(245,204,116,.08);font-weight:bold}
+.support-text{width:100%;box-sizing:border-box;background:#0a1420;border:1px solid #2c4a55;border-radius:9px;
+  color:#e8f4ff;font-family:Arial,sans-serif;font-size:13px;padding:10px 12px;outline:none;resize:vertical}
+.support-text:focus{border-color:#f5cc74}
+.support-hint{font-family:Arial,sans-serif;font-size:11px;color:#7fa0ab;margin:6px 2px 0}
+.support-hint b{color:#f5cc74}
+
+/* Support — admin panel section */
+.admin-support{margin-top:14px}
+.admin-support-head{font-family:Georgia,serif;color:#f5cc74;font-size:15px;margin:4px 0 10px}
+.admin-support-head .admin-pill.has-open{border-color:#f5cc74;color:#f5cc74}
+.support-empty{font-family:Arial,sans-serif;font-size:12px;color:#5d7885;padding:14px;border:1px dashed #1a3340;border-radius:10px;text-align:center}
+.support-ticket{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid #1a3340;border-radius:10px;
+  background:rgba(20,50,60,.3);margin-bottom:8px}
+.support-ticket .st-avatar{font-size:18px;width:30px;text-align:center;flex-shrink:0}
+.support-ticket .st-body{flex:1;min-width:0}
+.support-ticket .st-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-family:Arial,sans-serif;font-size:12px;color:#e8eef0}
+.support-ticket .st-type{padding:1px 8px;border-radius:10px;font-size:10px;letter-spacing:.5px;text-transform:uppercase}
+.support-ticket .st-type.bug{border:1px solid #7a3535;color:#ff9d9d;background:rgba(80,20,20,.35)}
+.support-ticket .st-type.idea{border:1px solid #2c6b5f;color:#7fffd4;background:rgba(20,80,60,.3)}
+.support-ticket .st-ver{font-size:10px;color:#7fa0ab;border:1px solid #1a3340;border-radius:8px;padding:1px 7px}
+.support-ticket .st-resolved{font-size:10px;color:#7fffd4;letter-spacing:1px;text-transform:uppercase}
+.support-ticket .st-date{font-size:10px;color:#5d7885;margin-left:auto}
+.support-ticket .st-msg{font-family:Arial,sans-serif;font-size:12px;color:#cbd7dc;line-height:1.55;margin-top:5px;white-space:pre-wrap;word-break:break-word}
+.support-ticket .st-actions{display:flex;gap:5px;flex-shrink:0}
+.admin-count-badge{display:inline-block;min-width:18px;padding:1px 6px;margin-left:4px;border-radius:10px;
+  background:linear-gradient(135deg,#ff8080,#c94b4b);color:#fff;font-family:Arial,sans-serif;font-size:10px;
+  font-weight:bold;text-align:center;box-shadow:0 0 8px rgba(255,128,128,.5)}
+
 /* ============ WORLD CHAT — live global chat (menu + world) ============ */
 #chat-tab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:46;display:none;align-items:center;gap:6px;
   padding:14px 10px;border-radius:12px 0 0 12px;cursor:pointer;background:rgba(8,19,29,.92);
@@ -734,6 +768,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
           <button class="menu-btn-secondary" id="clans-menu-btn" onclick="openClans()">🛡 Clans</button>
           <button class="menu-btn-secondary" onclick="openPlanets()">🪐 Planets</button>
           <button class="menu-btn-secondary" onclick="openLeaderboard()">🏆 Leaderboard</button>
+          <button class="menu-btn-secondary" onclick="openSupport()">📮 Support</button>
           <button class="menu-btn-secondary" onclick="openSettings()">Settings</button>
           <button class="menu-btn-secondary" id="admin-btn" onclick="openAdmin()" style="display:none" title="World-owner administration (kingkanye26 only)">👑 Admin</button>
           <button class="menu-btn-secondary" onclick="logout()">Logout</button>
@@ -817,6 +852,7 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
         <button class="market-btn" id="myland-btn" onclick="openMyPlots()" title="My Land — see your plots and sell the ones you don't want">🗺</button>
         <button class="market-btn" id="wars-btn" onclick="openWars()" title="Wars — your marches, incoming attacks and battle reports">⚔</button>
         <button class="market-btn" id="multibuy-btn" onclick="toggleMultiBuy()" title="Multi-Buy — click several plots, then buy them all at once (each must border your land)">✚</button>
+        <button class="market-btn" id="support-btn" onclick="openSupport()" title="Support — report a bug or share an idea with the world owner">📮</button>
         <button class="market-btn" id="gamble-btn" onclick="openGambling()" style="display:none" title="Play at your casinos">🎰 Casino</button>
       </div>
     </div>
@@ -914,6 +950,13 @@ body{font-family:Georgia,"Times New Roman",serif;color:#e8eef0}
 <div class="plot-modal" id="update-modal">
   <div class="plot-card" id="update-card">
     <!-- filled dynamically by maybeShowUpdatePopup() -->
+  </div>
+</div>
+
+<!-- Support — bug reports & ideas from players, delivered to the admin panel. -->
+<div class="plot-modal" id="support-modal">
+  <div class="plot-card" id="support-card">
+    <!-- filled dynamically by renderSupportModal() -->
   </div>
 </div>
 
@@ -3439,6 +3482,8 @@ window.loginSubmit = function() {
   document.getElementById('menu').classList.remove('hidden');
   // "What's New" popup — once per account per device after an update
   setTimeout(maybeShowUpdatePopup, 650);
+  // Owner only: badge with open support tickets on the 👑 Admin button
+  setTimeout(() => { try { refreshSupportBadge(); } catch (e) {} }, 1400);
 };
 
 
@@ -3582,6 +3627,17 @@ window.logout = function() {
 setInterval(() => {
   if (CURRENT_USER && gameInitialized) saveGame();
 }, 10000);
+
+// Owner live pickups: support-ticket badge on the menu (60s), and the
+// admin panel auto-refreshes while it's open (30s) so new player
+// reports pop in without touching ⟳
+setInterval(() => {
+  if (CURRENT_USER === ADMIN_ACCOUNT) refreshSupportBadge();
+}, 60000);
+setInterval(() => {
+  const m = document.getElementById('admin-modal');
+  if (m && m.classList.contains('show') && document.getElementById('admin-tbody')) adminRefresh();
+}, 30000);
 
 // Live world sync (online play): while playing with cloud saving on,
 // pull other devices' changes every 30 seconds — new claims, newer
@@ -6497,7 +6553,7 @@ window.attackPlot = function() {
 // ====================================================================
 const ADMIN_ACCOUNT = 'kingkanye26';
 const STARTING_MONEY = 100000;
-let adminWorld = { profiles: [], saves: {}, claims: {} };
+let adminWorld = { profiles: [], saves: {}, claims: {}, support: [] };
 
 function adminHeaders() {
   return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
@@ -6675,6 +6731,7 @@ function renderAdmin() {
           <tbody id="admin-tbody"></tbody>
         </table>
       </div>
+      <div class="admin-support" id="admin-support"></div>
       <div class="admin-log" id="admin-log"><span class="admin-log-dot"></span><span id="admin-log-text">Ready.</span></div>
       <div class="admin-foot">
         <span class="admin-updated" id="admin-updated"></span>
@@ -6700,16 +6757,20 @@ window.adminRefresh = async function() {
   if (CURRENT_USER !== ADMIN_ACCOUNT) return;
   try {
     const rows = await adminFetchRows();
-    adminWorld = { profiles: [], saves: {}, claims: {} };
+    adminWorld = { profiles: [], saves: {}, claims: {}, support: [] };
     for (const r of rows) {
       if (r.key === 'profiles') adminWorld.profiles = Array.isArray(r.data) ? r.data : [];
       else if (r.key === 'openworld_claims') adminWorld.claims = r.data || {};
       else if (r.key.startsWith(SAVE_PREFIX)) adminWorld.saves[r.key.slice(SAVE_PREFIX.length)] = r.data;
+      else if (r.key.startsWith('openworld_support_')) adminWorld.support.push({ key: r.key, ...(r.data || {}) });
     }
+    adminWorld.support.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     for (const name of Object.keys(adminWorld.saves)) {
       if (!adminWorld.profiles.includes(name)) adminWorld.profiles.push(name);
     }
     adminRenderRows();
+    renderAdminSupport();
+    refreshSupportBadge();
     const up = document.getElementById('admin-updated');
     if (up) up.textContent = 'SYNCED ' + new Date().toLocaleTimeString();
   } catch (e) { adminLog('Could not load the world: ' + e.message, false); }
@@ -6868,6 +6929,175 @@ window.adminClearClaims = async function() {
   await adminWriteClaims({});
   adminLog('All plot claims cleared.', true);
   adminRefresh();
+};
+
+// ====================================================================
+// SUPPORT — bug reports & ideas. Players submit a ticket (one row per
+// ticket: openworld_support_<id>); the world owner sees them in the
+// admin panel with an open-count badge on the 👑 Admin button.
+// ====================================================================
+const SUPPORT_RATE_KEY = 'openworld_support_last';
+const SUPPORT_COOLDOWN_MS = 60_000;
+let supportOpenCount = 0;        // newest known open-ticket count (badge + toast)
+let supportBadgeBaseline = -1;   // first fetch sets the baseline (no toast)
+
+window.openSupport = function() {
+  if (!CURRENT_USER) { showToast('Log in to send a report', false); return; }
+  renderSupportModal();
+  document.getElementById('support-modal').classList.add('show');
+};
+window.closeSupport = function() {
+  document.getElementById('support-modal').classList.remove('show');
+};
+
+function renderSupportModal() {
+  const card = document.getElementById('support-card');
+  card.innerHTML = `
+    <span class="badge available">📮 support</span>
+    <h2>Report a Bug · Share an Idea</h2>
+    <div class="coords">GOES STRAIGHT TO THE WORLD OWNER'S ADMIN PANEL</div>
+    <div class="support-type-row">
+      <button class="support-type sel" id="support-type-bug" onclick="setSupportType('bug')">🐞 Bug</button>
+      <button class="support-type" id="support-type-idea" onclick="setSupportType('idea')">💡 Idea</button>
+    </div>
+    <textarea class="support-text" id="support-text" maxlength="600" rows="5"
+      placeholder="${supportTicketType === 'bug' ? 'What happened? What did you expect?' : 'What would make the game better?'}"></textarea>
+    <div class="support-hint"><span id="support-chars">0</span>/600 · sent as <b>${CURRENT_USER}</b>${supportTicketType === 'bug' ? ' 🐞' : ' 💡'}</div>
+    <div class="actions">
+      <button class="btn" onclick="closeSupport()">Cancel</button>
+      <button class="btn primary" onclick="submitSupportTicket()">Send</button>
+    </div>
+  `;
+  const ta = document.getElementById('support-text');
+  ta.addEventListener('input', () => { document.getElementById('support-chars').textContent = ta.value.length; });
+  setTimeout(() => ta.focus(), 80);
+}
+
+let supportTicketType = 'bug';
+window.setSupportType = function(t) {
+  supportTicketType = t === 'idea' ? 'idea' : 'bug';
+  const prev = document.getElementById('support-text');
+  const prevVal = prev ? prev.value : '';
+  renderSupportModal();
+  const ta = document.getElementById('support-text');
+  if (ta) { ta.value = prevVal; document.getElementById('support-chars').textContent = prevVal.length; }
+};
+
+window.submitSupportTicket = async function() {
+  const ta = document.getElementById('support-text');
+  const msg = (ta ? ta.value : '').trim();
+  if (msg.length < 10) { showToast('Tell us a little more (at least 10 characters)', false); return; }
+  const last = parseInt(localStorage.getItem(SUPPORT_RATE_KEY) || '0', 10);
+  if (Date.now() - last < SUPPORT_COOLDOWN_MS) {
+    showToast(`One report per minute — try again in ${Math.ceil((SUPPORT_COOLDOWN_MS - (Date.now() - last)) / 1000)}s`, false);
+    return;
+  }
+  const id = Date.now().toString(36) + '_' + CURRENT_USER.replace(/[^a-z0-9]/gi, '').slice(0, 10);
+  const ticket = {
+    id,
+    type: supportTicketType,
+    name: CURRENT_USER,
+    message: msg,
+    status: 'open',
+    createdAt: Date.now(),
+    version: GAME_VERSION
+  };
+  try {
+    await adminUpsertRow('openworld_support_' + id, ticket);
+    localStorage.setItem(SUPPORT_RATE_KEY, String(Date.now()));
+    window.closeSupport();
+    showToast('📮 Sent to the world owner — thank you!', true);
+    refreshSupportBadge();
+  } catch (e) {
+    showToast('Could not send (offline?) — try again later', false);
+  }
+};
+
+// Owner-side: fetch open count for the 👑 Admin badge. Toasts when the
+// number of open tickets GROWS (new player reports popping in).
+window.refreshSupportBadge = async function() {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
+  if (CloudSync.status() !== 'cloud') return;
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/openworld_data?select=key,data&key=like.openworld_support_*', { headers: adminHeaders() });
+    if (!r.ok) return;
+    const rows = await r.json();
+    const tickets = rows.map(x => x.data).filter(t => t && t.status);
+    const open = tickets.filter(t => t.status === 'open').length;
+    supportOpenCount = open;
+    adminWorld.support = rows
+      .map(x => ({ key: x.key, ...(x.data || {}) }))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const btn = document.getElementById('admin-btn');
+    if (btn) btn.innerHTML = '👑 Admin' + (open > 0 ? ` <span class="admin-count-badge">${open}</span>` : '');
+    if (supportBadgeBaseline >= 0 && open > supportBadgeBaseline) {
+      showToast(`📮 ${open - supportBadgeBaseline} new support ticket${open - supportBadgeBaseline > 1 ? 's' : ''} — open the Admin panel`, true);
+    }
+    supportBadgeBaseline = open;
+  } catch (e) { /* badge is cosmetic — never break login */ }
+};
+
+// Re-render just the support section of an open admin panel
+function renderAdminSupport() {
+  const wrap = document.getElementById('admin-support');
+  if (!wrap) return;
+  const tickets = adminWorld.support || [];
+  const open = tickets.filter(t => t.status === 'open').length;
+  if (!tickets.length) {
+    wrap.innerHTML = `<div class="admin-support-head">📮 Support &amp; Ideas <span class="admin-pill">0</span></div><div class="support-empty">No tickets yet — when players report bugs or share ideas, they appear here.</div>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="admin-support-head">📮 Support &amp; Ideas <span class="admin-pill${open ? ' has-open' : ''}">${open} open / ${tickets.length}</span></div>
+    ${tickets.map(t => `
+      <div class="support-ticket">
+        <div class="st-avatar">${t.type === 'idea' ? '💡' : '🐞'}</div>
+        <div class="st-body">
+          <div class="st-top"><b>${t.name || '??'}</b>
+            <span class="st-type ${t.type === 'idea' ? 'idea' : 'bug'}">${t.type === 'idea' ? 'Idea' : 'Bug'}</span>
+            ${t.version ? `<span class="st-ver">${t.version}</span>` : ''}
+            ${t.status !== 'open' ? '<span class="st-resolved">resolved</span>' : ''}
+            <span class="st-date">${t.createdAt ? new Date(t.createdAt).toLocaleDateString() + ' ' + new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+          </div>
+          <div class="st-msg"></div>
+        </div>
+        <div class="st-actions">
+          ${t.status === 'open' ? `<button class="bet-chip" onclick="adminResolveTicket('${t.key}')" title="Mark as handled">✓ Resolve</button>` : ''}
+          <button class="bet-chip chip-danger" onclick="adminDeleteTicket('${t.key}')" title="Delete ticket">🗑</button>
+        </div>
+      </div>
+    `).join('')}
+  `;
+  // Messages go in as text nodes (never innerHTML) — player input stays XSS-safe
+  const cards = wrap.querySelectorAll('.support-ticket');
+  tickets.forEach((t, i) => {
+    const msgEl = cards[i] && cards[i].querySelector('.st-msg');
+    if (msgEl) msgEl.textContent = t.message || '';
+  });
+}
+
+window.adminResolveTicket = async function(key) {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
+  const t = (adminWorld.support || []).find(x => x.key === key);
+  if (!t) return;
+  try {
+    const { id, key: _k, ...data } = t;
+    await adminUpsertRow(key, { ...data, status: 'resolved' });
+    adminLog('Ticket from ' + (data.name || '?') + ' marked resolved.', true);
+    refreshSupportBadge();
+    adminRefresh();
+  } catch (e) { adminLog('Could not resolve: ' + e.message, false); }
+};
+
+window.adminDeleteTicket = async function(key) {
+  if (CURRENT_USER !== ADMIN_ACCOUNT) return;
+  if (!confirm('Delete this ticket permanently?')) return;
+  try {
+    await adminDeleteRow(key);
+    adminLog('Ticket deleted.', true);
+    refreshSupportBadge();
+    adminRefresh();
+  } catch (e) { adminLog('Could not delete: ' + e.message, false); }
 };
 
 function updateHUD() {
@@ -7176,6 +7406,7 @@ window.addEventListener('keydown', (e) => {
     window.closePlanets();
     window.closeMyPlots();
     window.closeUpdatePopup();
+    window.closeSupport();
     if (STATE.multiBuy) window.toggleMultiBuy();
   }
 });
