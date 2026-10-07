@@ -13,7 +13,7 @@ expression without a license.
 | # | Decision |
 |---|---|
 | D18 | The new game is an original, competing game, not a rebuild of upstream |
-| D19 | Owned by **Gamble Limited**; proprietary, all rights reserved |
+| D19 | Branded **Gamble Limited Ltd.** (fictional studio name + GitHub org); proprietary, all rights reserved |
 | D20 | Clean-room: upstream ideas/mechanics only, no copied code, text, or assets |
 | D21 | No upstream player data or accounts imported |
 | D26 | Gamble Limited assets Boss owns may be reused |
@@ -44,11 +44,11 @@ simpler for a proprietary product.
 7. Keep this repo's history as a record that the new code was written separately (a dated trail
    helps if anyone ever asks).
 
-## 4. What Gamble Limited owns
+## 4. What "Gamble Limited Ltd." owns
 
 | Item | Owner | Notes |
 |---|---|---|
-| All new code, docs, designs | Gamble Limited | Header: `// © <year> Gamble Limited. All rights reserved.` + root `LICENSE` stating proprietary |
+| All new code, docs, designs | Gamble Limited | Header: `// © <year> Gamble Limited Ltd. All rights reserved.` + root `LICENSE` stating proprietary |
 | Code Claude writes in Boss's sessions | Gamble Limited (via Boss) | Anthropic's terms assign outputs to the user |
 | Reused GLL assets (D26) | Gamble Limited | List each one with origin in `ASSETS.md` (Q110) |
 | Third-party libraries | Their authors | Only permissive licenses (MIT/BSD/Apache/ISC) in the client bundle; **no GPL/AGPL** in proprietary code; track in `NOTICE` |
@@ -58,9 +58,12 @@ simpler for a proprietary product.
 
 ## 5. Things to check
 
-- **Is Gamble Limited a registered company or a brand name?** (Q143) This affects whether "©
-  Gamble Limited" or "© <your name>, trading as Gamble Limited" is right, and whether "Limited"
-  is OK to use (in many countries "Limited"/"Ltd" is reserved for registered companies).
+- **Gamble Limited Ltd. is a fictional studio brand** (Q143 ✅), and also the GitHub org name.
+  A fictional entity can't legally own anything, so **the copyright actually belongs to Boss
+  personally**; "© Gamble Limited Ltd." is the brand line. That's fine for a friends game. If the
+  game ever goes public or commercial, either register a real company or use "© <your name>
+  (Gamble Limited Ltd.)". Avoid presenting it as a registered company to outsiders, since
+  "Ltd" is legally reserved for registered companies in many countries.
 - Contributor terms if anyone else ever contributes (default: they assign to Gamble Limited).
 - Asset provenance for everything reused from GLL (Q110).
 - Final name trademark search before going public (Q106).

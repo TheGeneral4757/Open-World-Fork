@@ -54,8 +54,8 @@ docs/             plans (moved from this fork)
 ```sql
 -- identity (see 04)
 users          (id uuid pk, username citext unique, display_name text, first_name text,
-                last_name text, email citext unique, email_verified_at, password_hash,
-                role text, status text, created_at, last_login_at, banned_until, muted_until)
+                last_name text, email citext unique, password_hash,
+                rank text, status text, created_at, last_login_at, banned_until, muted_until)
 sessions       (id, user_id, token_hash bytea unique, created_at, expires_at, ip inet, user_agent)
 totp_secrets   (user_id pk, secret_enc bytea, enabled_at)
 

@@ -8,11 +8,12 @@ browser game. It is used for **two things only**:
 1. **Reference.** The upstream game (`index.html`, `admin.html`, `supabase-setup.sql`) is kept
    as-is so its *ideas and mechanics* can be studied.
 2. **Planning.** The docs in [`docs/plans/`](docs/plans/README.md) describe a **new, original,
-   proprietary game** that Boss is building under his company **Gamble Limited**. It will be hosted
+   proprietary game** that Boss is building under **Gamble Limited Ltd.**, a fictional studio brand that is also the name of his
+   GitHub org. It will be hosted
    on Boss's own hardware and set on real-world countries, regions and waters.
 
-The new game's code will live in a **new private repo under one of Boss's GitHub organizations**
-(not created yet). Nothing in this fork is the new game's code.
+The new game's code will live in a **new private repo in the Gamble Limited GitHub org** (Boss is
+setting that up in a separate session). Nothing in this fork is the new game's code.
 
 > Note: forks of public repos stay public. Sensitive plans should move to the private repo as soon
 > as it exists.
@@ -44,7 +45,7 @@ countries, subdivided regions, and maritime sectors, at mixed granularity. Playe
 territory, run businesses, trade on a server-side global market, and fight. Progression is harder
 and more realistic than upstream but still approachable, **with offline progression**. The stack is
 TypeScript end to end: a Vite + Three.js client, a Fastify server, and Postgres (+ PostGIS) on
-Boss's Proxmox box behind a Cloudflare Tunnel. Proprietary, © Gamble Limited.
+Boss's Proxmox box behind a Cloudflare Tunnel. Proprietary, © Gamble Limited Ltd.
 
 ## Plans index
 
@@ -58,5 +59,5 @@ Record every new decision in that log, and mark answered questions in `01-questi
   does it*, and never paste its code into plans meant for implementation.
 - New-game code standards (once the private repo exists): TypeScript `strict`, server-authoritative
   for money, inventory, combat and RNG, parameterized SQL only, secrets via env, and a
-  `// © Gamble Limited. All rights reserved.` style header per the licensing doc.
+  `// © Gamble Limited Ltd. All rights reserved.` style header per the licensing doc.
 - Commit messages: imperative summary line, then a body explaining *why*.

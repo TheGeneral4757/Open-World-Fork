@@ -11,7 +11,7 @@ P0 Repo & infra ─▶ P1 Accounts & admin core ─▶ P2 World map ─▶ P3 Ec
 ---
 
 ## P0 — Repo & infrastructure
-- [ ] Create the private repo under a Boss GitHub org (D24); move `docs/plans` there; archive/keep this fork as reference only.
+- [ ] Create the private repo in the **Gamble Limited** GitHub org (D24; Boss handles this in a separate session); move `docs/plans` there; archive/keep this fork as reference only.
 - [ ] pnpm monorepo (`apps/client`, `apps/server`, `packages/shared`, `tools/`, `deploy/`), TS strict, Biome, Vitest.
 - [ ] CI: typecheck, lint, test, build; Docker image to GHCR (private).
 - [ ] Proxmox VM/LXC: Docker Compose (Postgres+PostGIS, API, Caddy, cloudflared), staging + prod stacks.
@@ -21,9 +21,9 @@ P0 Repo & infra ─▶ P1 Accounts & admin core ─▶ P2 World map ─▶ P3 Ec
 **Exit:** a hello-world API + page served through the tunnel, deployed by CI, backed up, and restored once.
 
 ## P1 — Accounts & admin core
-- [ ] Signup (username, first/last name, email on the allow-list) → email verification → login/logout/sessions (see `04`).
-- [ ] Password reset by email; rate limits; reserved names.
-- [ ] Roles; super-admin `THE_STRONGEST` / `thestrongest` with TOTP.
+- [ ] Signup (username, first/last name, email ending in `@<DOMAIN>`, no verification) → login/logout/sessions (see `04`).
+- [ ] Staff-issued password reset codes; rate limits; reserved names.
+- [ ] Ranks; super-admin account `thestrongest` with rank `THE_STRONGEST`, TOTP required.
 - [ ] Admin shell: players list, ban/mute, audit log, feature flags, maintenance mode.
 - [ ] Privacy policy/ToS pages (reused from GLL, D33).
 
@@ -55,7 +55,7 @@ P0 Repo & infra ─▶ P1 Accounts & admin core ─▶ P2 World map ─▶ P3 Ec
 - [ ] Rules designed fresh (no copied formulas, D20).
 
 ## P6 — Friends alpha
-- [ ] Invite-only (allow-listed emails); load test with ~50 simulated clients; balance pass with server analytics.
+- [ ] Friends only (`@<DOMAIN>` emails); load test with ~50 simulated clients; balance pass with server analytics.
 
 ## P7 — Polish & ecosystem
 - [ ] GLL integration (shared accounts / branding / staff), decided in its own session (D32).
@@ -67,6 +67,6 @@ P0 Repo & infra ─▶ P1 Accounts & admin core ─▶ P2 World map ─▶ P3 Ec
 |---|---|
 | Accidentally copying upstream code | Clean-room rule in CLAUDE.md; code written from `docs/plans` specs only |
 | Map pipeline harder than expected | Start with countries + admin-1 only; add admin-2/water later |
-| PII leak (names/emails) | Email verification, encrypted backups, minimal admin exposure, audit log |
+| PII leak (names/emails) | Encrypted backups, minimal admin exposure, audit log |
 | Home outage | Best effort + PBS backups (D36); status note |
 | Scope creep | Ideas backlog; only the current phase gets built |

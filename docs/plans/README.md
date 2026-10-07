@@ -1,4 +1,4 @@
-# New Game: Planning Docs (Gamble Limited)
+# New Game: Planning Docs (Gamble Limited Ltd.)
 
 Status: **Planning** · Working title: *TBD* · Last updated: 2026-10-07
 
@@ -27,12 +27,12 @@ regions, and maritime sectors at mixed detail. Buy and develop territory, run bu
 one global supply/demand market, and fight. Harder and more realistic than upstream but still easy
 to pick up, with offline progression. TypeScript everywhere (Vite + Three.js client, Fastify
 server, Postgres + PostGIS) on Boss's Proxmox box behind Cloudflare Tunnel. Proprietary, © Gamble
-Limited. Written from scratch.
+Limited Ltd. Written from scratch.
 
 ## Blocking questions
 
 Q106 (codename), Q112 (map granularity), Q118 (offline cap), Q121 (core loop: Boss's ideas doc),
-Q141 (email sender), Q145 (email allow-list). See `01-questions.md` §I.
+Q110 (which GLL assets get reused). See `01-questions.md` §I.
 
 ## Decision log
 
@@ -54,19 +54,19 @@ Q141 (email sender), Q145 (email allow-list). See `01-questions.md` §I.
 | D14–D16 | 2026-10-07 | ~~Ownership split with upstream owner, AGPL~~ | ❌ superseded by D19–D20 |
 | D17 | — | ~~Exit plan with upstream owner~~ | ❌ moot |
 | **D18** | 2026-10-07 | **New, original, competing game**, not a rebuild of upstream | ✅ |
-| **D19** | 2026-10-07 | Owned by **Gamble Limited** (Boss's company, which also runs his other game); **proprietary**, all rights reserved | ✅ |
+| **D19** | 2026-10-07 | Branded **Gamble Limited Ltd.**, a fictional studio name that is also Boss's GitHub org (and runs his other game); **proprietary**, all rights reserved (legally Boss's) | ✅ |
 | **D20** | 2026-10-07 | **Clean-room**: upstream ideas/mechanics only; zero copied code, text, or assets | ✅ |
 | **D21** | 2026-10-07 | No upstream players, accounts or data are imported | ✅ |
 | **D22** | 2026-10-07 | World = **real countries / sub-regions / water sectors**, **mixed granularity** (exact rules TBD) | ✅ (details Q112–Q117) |
 | **D23** | 2026-10-07 | **Offline progression ON**; progression harder/more realistic but still easy to start | ✅ (cap Q118) |
-| **D24** | 2026-10-07 | Code lives in a **new private repo under one of Boss's GitHub orgs** (to be created) | ✅ |
+| **D24** | 2026-10-07 | Code lives in a **new private repo in the Gamble Limited GitHub org**; Boss does the repo/git setup in a separate session | ✅ |
 | **D25** | 2026-10-07 | Boss tells the upstream owner about his security risks | ✅ |
 | **D26** | 2026-10-07 | Gamble Limited assets that Boss owns may be reused | ✅ (provenance list Q110) |
-| **D27** | 2026-10-07 | Accounts: username + **first/last name + email**, email **restricted to an allow-list** (like GLL), verified by email | ✅ |
+| **D27** | 2026-10-07 | Accounts: username + **first/last name + email**, email must **end in `@<DOMAIN>`** (like GLL), **no verification**; staff-issued password resets | ✅ (amended) |
 | **D28** | 2026-10-07 | Chat channels: **global + alliance** | ✅ |
 | **D29** | 2026-10-07 | Chat moderation: **minimal** (rate limits, staff delete/mute, logged) | ✅ |
-| **D30** | 2026-10-07 | Roles: super_admin / admin / player | ✅ |
-| **D31** | 2026-10-07 | Super admin = Boss, handle **`THE_STRONGEST`**, displayed **`thestrongest`** (matches GLL); role-based, TOTP required | ✅ |
+| **D30** | 2026-10-07 | Ranks: `THE_STRONGEST` (super admin) / admin / player | ✅ (amended) |
+| **D31** | 2026-10-07 | Super admin = Boss: username **`thestrongest`**, internal rank **`THE_STRONGEST`** (matches GLL); rank stored in DB, TOTP required | ✅ (amended) |
 | **D32** | 2026-10-07 | Gamble Limited integration designed in a **separate session** | ✅ |
 | **D33** | 2026-10-07 | Legal pages: reuse/extend GLL's ToS + privacy policy | ✅ |
 | **D34** | 2026-10-07 | Audience = friends; **no real money ever, no ads**; team = Boss + Claude; no deadline | ✅ |

@@ -433,33 +433,31 @@ Open: the codename itself and the final name (+ a trademark check before going p
 **Q132 — Gamble Limited integration** (shared accounts, staff, branding, release flow).
 ✅ To be designed in a **separate session**. Keep identity swappable until then.
 
-**Q143 — Is Gamble Limited a registered company or a brand/trading name?** Affects the
-copyright line and whether "Limited" may be used. Default: brand name, © Boss trading as Gamble Limited.
+**Q143 — Is Gamble Limited a registered company?** ✅ **Fictional studio brand**, written "Gamble Limited
+Ltd.", and the name of Boss's GitHub org. Rights legally sit with Boss (see `08` §5).
 
-**Q138 — Which GitHub org hosts the private repo?** Default: the one GLL lives in.
+**Q138 — Which GitHub org hosts the private repo?** ✅ The **Gamble Limited** org.
 
-**Q139 — This public fork after the docs move:** keep as reference, archive, or delete?
-Default: archive it and keep it private-ish by moving the docs out.
+**Q139 — This public fork after the docs move:** ✅ Boss handles the new repo / git setup in a separate session.
 
 ### Accounts & privacy
 **Q109 — Account fields.** ✅ Username + first name + last name + email, **email restricted to an
-allow-list**, like GLL.
+allow-list**, like GLL. **Amended:** email must simply end in `@<DOMAIN>`; **no verification**.
 
-**Q145 🚧 — What is the allow-list?** Specific domains (e.g. a school domain), specific addresses,
-or the same list GLL uses? Default: same list as GLL.
+**Q145 — What is the allow-list?** ✅ One domain: emails must end in `@<DOMAIN>` (actual domain kept
+as a config value, filled in at setup).
 
-**Q141 🚧 — Email sending** (verification + password reset). Which provider: the one GLL uses,
-Resend, Postmark, or SMTP via Gmail? Default: whatever GLL uses.
+**Q141 — Email sending.** ✅ Not needed: no verification, and password resets are staff-issued codes.
 
 **Q140 — Real names visibility:** staff-only, shown to friends, or shown on leaderboards?
 Default: **staff-only**; players see usernames only.
 
-**Q142 — Invite codes on top of the email allow-list?** Default: no, the allow-list is enough.
+**Q142 — Invite codes on top of the email domain rule?** Default: no, the domain rule is enough.
 
 **Q144 — Age range of players?** Collecting real names + emails from under-13s (US) / under-16s
 (EU) brings extra obligations. Default: assume teens; minimal data; GLL policy covers it.
 
-**Q128 — Staff.** ✅ Boss = super admin, handle **`THE_STRONGEST`**, displayed **`thestrongest`** (as in GLL).
+**Q128 — Staff.** ✅ Boss = super admin. Username **`thestrongest`**; internal rank **`THE_STRONGEST`** (as in GLL).
 
 **Q129 — Legal pages.** ✅ Reuse/extend Gamble Limited's ToS + privacy policy.
 
