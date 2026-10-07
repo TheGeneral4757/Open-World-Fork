@@ -31,18 +31,18 @@ Cloudflare edge  (TLS, WAF, rate-limit rules, Turnstile, hides your IP)
 # deploy/docker-compose.yml  (sketch — values come from .env, never committed)
 services:
   postgres:
-    image: postgres:16
+    image: postgis/postgis:16-3.4
     environment:
-      POSTGRES_DB: openworld
-      POSTGRES_USER: openworld
+      POSTGRES_DB: game
+      POSTGRES_USER: game
       POSTGRES_PASSWORD_FILE: /run/secrets/pg_password
     volumes: [pgdata:/var/lib/postgresql/data]
     networks: [internal]                # no published ports
-    healthcheck: { test: ["CMD", "pg_isready", "-U", "openworld"], interval: 10s }
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "game"], interval: 10s }
     restart: unless-stopped
 
   api:
-    image: ghcr.io/thegeneral4757/openworld-api:${API_TAG}
+    image: ghcr.io/<boss-org>/<codename>-api:${API_TAG}
     env_file: .env                      # DATABASE_URL, SESSION_PEPPER, TURNSTILE_SECRET, ...
     depends_on: { postgres: { condition: service_healthy } }
     networks: [internal, edge]
@@ -85,6 +85,7 @@ A separate `docker-compose.dev.yml` (Q33) runs a second Postgres + API on other 
 |---|---|---|
 | Logical dump | `pg_dump -Fc` nightly via cron container | 14 daily, 8 weekly |
 | Point-in-time | WAL-G or pgBackRest → NAS | 7 days |
+| VM snapshots | **Proxmox Backup Server** (D36) | per PBS schedule |
 | Off-site | rclone/restic → Backblaze B2 (encrypted) | 8 weekly, 6 monthly |
 
 Restore drill each phase: spin up the dev stack, restore last night's dump, run the e2e smoke

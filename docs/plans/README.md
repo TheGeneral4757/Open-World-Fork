@@ -1,51 +1,77 @@
-# Open World — Planning Docs (personal dev fork)
+# New Game: Planning Docs (Gamble Limited)
 
-Status: **Planning** · Fork point: upstream v1.15 (`f50ea29`) · Last updated: 2026-10-07
+Status: **Planning** · Working title: *TBD* · Last updated: 2026-10-07
+
+> **Pivot (2026-10-07):** this is no longer a rebuild of the friend's game. Boss is building a
+> **new, original, proprietary game** under Gamble Limited, inspired by the *mechanics* of
+> `kayneheffelfinger-cyber/Open-World` but sharing **no code, text or assets** with it (clean-room,
+> see [08](08-ownership-and-licensing.md)). Earlier decisions that assumed a rebuild are marked
+> **superseded** below.
 
 | Doc | What's in it |
 |---|---|
-| [00-audit.md](00-audit.md) | What the current code does well, and every security / integrity / scale problem found |
-| [01-questions.md](01-questions.md) | **105 open questions** with defaults — answer these to unblock decisions |
-| [02-roadmap.md](02-roadmap.md) | Phases 0–5, exit criteria, risk register |
-| [03-architecture.md](03-architecture.md) | Target system: TS server + Postgres, data model, realtime protocol |
-| [04-auth-and-admin.md](04-auth-and-admin.md) | Passwords, sessions, roles, admin panel v2, legacy account migration |
-| [05-typescript-migration.md](05-typescript-migration.md) | Step-by-step move from single `index.html` to Vite + TS without breaking the game |
-| [06-self-hosting.md](06-self-hosting.md) | Home-hardware topology, Compose sketch, hardening, backups, monitoring |
-| [07-owner-workflow.md](07-owner-workflow.md) | How the owner keeps pushing to GitHub to update the live game, before and after the transition |
-| [08-ownership-and-licensing.md](08-ownership-and-licensing.md) | Who owns what, AGPL plan, the shared-package snag, 16 licensing questions |
-| [friend-security-summary.md](friend-security-summary.md) | Short, friendly write-up of the security issues to send the game's owner |
+| [00-audit.md](00-audit.md) | Analysis of the upstream game: what to learn from, what mistakes not to repeat (reference only) |
+| [01-questions.md](01-questions.md) | Open questions with defaults. **Section I is the new-game questionnaire** |
+| [02-roadmap.md](02-roadmap.md) | Greenfield phases from empty repo to launch |
+| [03-architecture.md](03-architecture.md) | TS server + Postgres/PostGIS, data model, realtime, offline progression |
+| [04-auth-and-admin.md](04-auth-and-admin.md) | Passwords, sessions, roles, admin panel |
+| [05-world-map.md](05-world-map.md) | Real countries/regions/waters: data sources, granularity, rendering, politics |
+| [06-self-hosting.md](06-self-hosting.md) | Proxmox + Cloudflare Tunnel, Compose, hardening, backups |
+| [08-ownership-and-licensing.md](08-ownership-and-licensing.md) | Clean-room rules, what you can and can't take, Gamble Limited IP, asset provenance |
+| [friend-security-summary.md](friend-security-summary.md) | Security notes Boss is sending to the upstream owner |
 
 ## The one-paragraph version
 
-The game is a single 7,500-line HTML file that trusts every browser completely: the Supabase
-table is public read/write/delete, password hashes are public 32-bit DJB2, admin is a
-username check in JS, and money/combat/RNG all run client-side. The plan: (0) brief the friend on the
-security issues, (1) wrap the client in Vite + TS and extract shared rules, (2) build a
-Fastify + Postgres server that owns all rules and real auth, (3) reach feature parity,
-(4) cut over to your hardware behind a Cloudflare Tunnel, (5) build admin v2 and new features.
+A persistent browser strategy/economy game on a real-world 3D globe: countries, subdivided
+regions, and maritime sectors at mixed detail. Buy and develop territory, run businesses, trade on
+one global supply/demand market, and fight. Harder and more realistic than upstream but still easy
+to pick up, with offline progression. TypeScript everywhere (Vite + Three.js client, Fastify
+server, Postgres + PostGIS) on Boss's Proxmox box behind Cloudflare Tunnel. Proprietary, © Gamble
+Limited. Written from scratch.
 
-## Blocking questions (answer these first)
+## Blocking questions
 
-Still open: **Q1, Q13, Q14** (+ Q21 specs, Q24 domain, Q71 wager cap). Everything else on the old blocking list is answered below.
+Q106 (codename), Q112 (map granularity), Q118 (offline cap), Q121 (core loop: Boss's ideas doc),
+Q141 (email sender), Q145 (email allow-list). See `01-questions.md` §I.
 
 ## Decision log
 
-| # | Date | Decision | Source |
+| # | Date | Decision | Status |
 |---|---|---|---|
-| D1 | 2026-10-07 | Work happens in personal fork `TheGeneral4757/Open-World-Fork`; fork must never write to upstream's Supabase | Boss |
-| D2 | 2026-10-07 | DB will eventually be hosted on Boss's own hardware | Boss |
-| D3 | 2026-10-07 | Work flows back upstream as reviewed PRs; friend's repo stays canonical | Q2 |
-| D4 | 2026-10-07 | Backend = own Node/TypeScript server + plain Postgres; whole backend on Boss's hardware | Q22, Q28, Q87 |
-| D5 | 2026-10-07 | Host = Proxmox VM/LXC; ingress = Cloudflare Tunnel | Q21, Q23 |
-| D6 | 2026-10-07 | Scale target: ≤30 concurrent, ≤200 accounts | Q7 |
-| D7 | 2026-10-07 | Existing progress carries over; passwords re-set via admin-issued claim codes | Q16, Q48 |
-| D8 | 2026-10-07 | Sign-in = username + password only, no email/PII | Q39 |
-| D9 | 2026-10-07 | Roles = owner / admin / player (no moderator tier) | Q56 |
-| D10 | 2026-10-07 | TypeScript on server + client, strict, shared rules package | Q86 |
-| D11 | 2026-10-07 | Economy: server-authoritative, ONE global market with supply/demand pricing, NO offline production, casino stays (server RNG) | Q67–Q69, Q71 |
-| D12 | 2026-10-07 | Phase 0 = Boss sends friend the security summary; no hotfix PR from us | Q3 |
-| D13 | 2026-10-07 | Owner keeps "push to main = live" workflow; client via Pages, server auto-pulls images from GHCR on Boss's box | Boss |
-| D14 | 2026-10-07 | The game (name, concept, existing code, final say) belongs to the owner | Boss |
-| D15 | 2026-10-07 | Boss keeps copyright on what he builds (backend/infra/tooling), licensed to the game | Boss |
-| D16 | 2026-10-07 | Boss's code licensed AGPL-3.0; shared rules package license pending (see 08 §3) | Boss |
-| D17 | — | *(pending)* Exit plan if you part ways | Q-L11 |
+| D1 | 2026-10-07 | This fork is reference + planning only; never touch upstream's live Supabase | ✅ active |
+| D2 | 2026-10-07 | Backend hosted on Boss's own hardware | ✅ active |
+| D3 | 2026-10-07 | ~~Work flows back upstream as PRs~~ | ❌ superseded by D18 |
+| D4 | 2026-10-07 | Backend = own Node/TypeScript server + Postgres | ✅ active |
+| D5 | 2026-10-07 | Proxmox VM/LXC + Cloudflare Tunnel | ✅ active |
+| D6 | 2026-10-07 | Scale target ≤30 concurrent / ≤200 accounts at launch (friends) | ✅ active |
+| D7 | 2026-10-07 | ~~Import upstream accounts via claim codes~~ | ❌ superseded by D21 |
+| D8 | 2026-10-07 | ~~Username + password, no email/PII~~ | ❌ superseded by D27 |
+| D9 | 2026-10-07 | ~~Roles owner / admin / player~~ | ❌ superseded by D30 |
+| D10 | 2026-10-07 | TypeScript strict, server + client + shared package | ✅ active |
+| D11 | 2026-10-07 | Server-authoritative economy, global supply/demand market, ~~no offline production~~, ~~casino stays~~ | ⚠️ amended by D23; casino → Q134 |
+| D12 | 2026-10-07 | Boss sends the upstream owner the security summary | ✅ active (D25) |
+| D13 | 2026-10-07 | ~~Upstream owner's push-to-main workflow~~ | ❌ superseded by D18 |
+| D14–D16 | 2026-10-07 | ~~Ownership split with upstream owner, AGPL~~ | ❌ superseded by D19–D20 |
+| D17 | — | ~~Exit plan with upstream owner~~ | ❌ moot |
+| **D18** | 2026-10-07 | **New, original, competing game**, not a rebuild of upstream | ✅ |
+| **D19** | 2026-10-07 | Owned by **Gamble Limited** (Boss's company, which also runs his other game); **proprietary**, all rights reserved | ✅ |
+| **D20** | 2026-10-07 | **Clean-room**: upstream ideas/mechanics only; zero copied code, text, or assets | ✅ |
+| **D21** | 2026-10-07 | No upstream players, accounts or data are imported | ✅ |
+| **D22** | 2026-10-07 | World = **real countries / sub-regions / water sectors**, **mixed granularity** (exact rules TBD) | ✅ (details Q112–Q117) |
+| **D23** | 2026-10-07 | **Offline progression ON**; progression harder/more realistic but still easy to start | ✅ (cap Q118) |
+| **D24** | 2026-10-07 | Code lives in a **new private repo under one of Boss's GitHub orgs** (to be created) | ✅ |
+| **D25** | 2026-10-07 | Boss tells the upstream owner about his security risks | ✅ |
+| **D26** | 2026-10-07 | Gamble Limited assets that Boss owns may be reused | ✅ (provenance list Q110) |
+| **D27** | 2026-10-07 | Accounts: username + **first/last name + email**, email **restricted to an allow-list** (like GLL), verified by email | ✅ |
+| **D28** | 2026-10-07 | Chat channels: **global + alliance** | ✅ |
+| **D29** | 2026-10-07 | Chat moderation: **minimal** (rate limits, staff delete/mute, logged) | ✅ |
+| **D30** | 2026-10-07 | Roles: super_admin / admin / player | ✅ |
+| **D31** | 2026-10-07 | Super admin = Boss, handle **`THE_STRONGEST`**, displayed **`thestrongest`** (matches GLL); role-based, TOTP required | ✅ |
+| **D32** | 2026-10-07 | Gamble Limited integration designed in a **separate session** | ✅ |
+| **D33** | 2026-10-07 | Legal pages: reuse/extend GLL's ToS + privacy policy | ✅ |
+| **D34** | 2026-10-07 | Audience = friends; **no real money ever, no ads**; team = Boss + Claude; no deadline | ✅ |
+| **D35** | 2026-10-07 | Analytics: server-side only, no third-party trackers | ✅ |
+| **D36** | 2026-10-07 | Availability: best effort for now; DB backups + **Proxmox Backup Server** | ✅ (details TBD) |
+| **D37** | 2026-10-07 | Release flow same as/similar to GLL's | ✅ |
+| **D38** | 2026-10-07 | Platform: browser, desktop-first. Visual style: decide later | ✅ |
+| **D39** | 2026-10-07 | Codename for now; branding pattern "Gamble Limited's <Name>" | ✅ |

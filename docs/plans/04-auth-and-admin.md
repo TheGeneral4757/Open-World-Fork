@@ -1,101 +1,94 @@
-# 04 — Auth, Sessions, Roles & Admin Plan
+# 04 — Accounts, Auth, Roles & Admin
 
-**Invariant: identity and permissions are decided by the server on every request. The
-browser never holds a password hash, never decides who is admin, and never sees a secret.**
+**Invariant: the server decides who you are and what you may do on every request. The browser
+never holds a password hash, never decides who is admin, and never sees a secret.**
+
+Status: account fields and super-admin decided (D27–D31). How it ties into Gamble Limited's
+existing system will be **decided in a separate integration session** (D32). Everything here is
+written so the identity layer can be swapped for a shared GLL identity service later.
 
 ---
 
-## 1. Bad → Better → Best
+## 1. Account model (D27, matching Gamble Limited)
 
-| | Password storage | Login check | Admin check |
-|---|---|---|---|
-| **Today** | DJB2 32-bit, public in every save | Client compares hashes | `CURRENT_USER === 'kingkanye26'` in JS |
-| Stop-gap (Phase 1, Supabase) | Supabase Auth (bcrypt) | Supabase Auth | RLS + `role` claim, admin via RPC `security definer` |
-| **Target** | argon2id, server-only table | Server, constant-time, rate-limited | `role`/permissions in DB, checked per route + audited |
+| Field | Required | Notes |
+|---|---|---|
+| Username (handle) | ✅ | Login + display. Case-insensitive unique. `[A-Za-z0-9_]{3,20}`, reserved list |
+| First name, last name | ✅ | **Private by default**: visible to staff only, never in chat/leaderboards (Q140) |
+| Email | ✅ | **Restricted to allowed domains/addresses** (same rule as GLL), stored lowercase |
+| Password | ✅ | argon2id, min 8 chars, HIBP k-anonymity check |
 
-## 2. Signup / login flow (target)
+⚠️ **Collecting real names + emails changes the privacy picture** (this supersedes D8 "no PII"):
+- **Verify the email.** A domain allow-list does nothing if anyone can *type* an allowed address.
+  Send a one-time code or link to it before the account activates. That needs an email sender
+  (SMTP / Resend / the same one GLL uses) → Q141.
+- Privacy policy + data deletion: reuse/extend GLL's (D33).
+- Encrypt backups; limit who can see names/emails in the admin panel; log every admin view of PII.
+
+## 2. Signup / login flow
 
 ```
-signup:  POST /api/auth/signup {username, password, turnstileToken}
-         → validate username rules, HIBP k-anon check, Turnstile verify
-         → argon2id(password) → INSERT users + players (starting money)
-         → create session → Set-Cookie: ow_session=<random 32B>; HttpOnly; Secure; SameSite=Lax; Path=/
-         → return { user, recoveryCodes[8] }   (shown once)
-
-login:   POST /api/auth/login {username, password}
-         → rate-limit (per IP + per username) → lookup → argon2.verify (dummy verify if no user,
-           to keep timing flat) → check banned_until → new session (rotate) → cookie
-
-request: cookie → sha256(token) → sessions row (not expired) → user → role
-logout:  DELETE session row, clear cookie.   "Log out everywhere": delete all user sessions.
+signup:  POST /api/auth/signup {username, firstName, lastName, email, password}
+         → validate fields → email domain/address on allow-list?
+         → argon2id(password) → INSERT user (status: 'pending_email')
+         → send 6-digit code / magic link to email
+verify:  POST /api/auth/verify {email, code} → status 'active' → session cookie
+login:   POST /api/auth/login {usernameOrEmail, password}
+         → rate-limit (per IP via CF-Connecting-IP + per account)
+         → argon2.verify (dummy verify when the user doesn't exist, for flat timing)
+         → check status/bans → new session (rotate) → Set-Cookie
+reset:   POST /api/auth/forgot {email} → emailed code → set new password → revoke all sessions
 ```
+- Sessions: random 32-byte token in an `HttpOnly; Secure; SameSite=Lax` cookie; stored **hashed**
+  (sha256) in `sessions`; 30-day rolling; "log out everywhere".
+- Serve the client and API from the same site (`game.example.com` + `/api`) so SameSite cookies
+  just work; check `Origin` on state-changing routes.
+- Invite codes are optional on top of the email allow-list (Q142).
 
-Details:
-- Session tokens stored **hashed** (sha256) so a DB leak doesn't hand out live sessions.
-- Rolling expiry: 30 days, refreshed on use at most once per hour.
-- CSRF: SameSite=Lax + require `Content-Type: application/json` + check `Origin` on state-changing
-  routes. If the client is on a different domain than the API (Pages vs your box), use
-  `SameSite=None; Secure` + strict CORS allow-list + Origin check, or (simpler) proxy the API
-  under the same site (`play.example.com/api`).
-- Error messages: "Invalid username or password" (don't reveal which).
-
-## 3. Roles & permissions
+## 3. Roles (D30, D31)
 
 ```ts
-// D9: owner / admin / player — no moderator tier. Permissions stay granular under the
-// hood so a moderator role can be added later without touching route code.
-type Role = 'owner' | 'admin' | 'player';
-const PERMS = {
-  owner:  ['*'],
-  admin:  ['players.view', 'players.edit', 'players.ban', 'players.mute', 'world.edit',
-           'clans.edit', 'chat.moderate', 'tickets.manage', 'settings.edit', 'audit.view'],
-  player: [],
-} as const;
+type Role = 'super_admin' | 'admin' | 'player';
+// granular permissions under the hood, so a moderator role can be added later without
+// touching route code
 ```
-- Only `owner` can grant/revoke `admin`. Owner can't be demoted by admins.
-- Every admin route: `requirePerm('players.edit')` + **reason required** + audit log write in
-  the same transaction as the change.
-- Admin/owner accounts **must** have TOTP enabled before admin routes respond (Q46).
-- Optional hardening: admin routes only reachable via Tailscale / Cloudflare Access (Q61).
 
-## 4. Admin panel v2 — feature list
+| Role | Who | Powers |
+|---|---|---|
+| **super_admin** | **Boss only.** Login handle `THE_STRONGEST`, displayed as **`thestrongest`** (matches GLL) | Everything, including granting/revoking admin, settings, viewing the full audit log and PII |
+| admin | Nobody at launch (optional later) | Player tools, chat moderation, tickets, world edits. No role changes, no PII export |
+| player | Everyone else | — |
+
+Rules:
+- The super-admin is defined by **role in the DB**, never by a hard-coded username check in code.
+  The handle `thestrongest` goes on the reserved list so nobody else can register it or anything
+  confusable with it (`the_str0ngest`, mixed case, Unicode look-alikes).
+- Super-admin login requires **TOTP 2FA** (passkey later).
+- Display: case-preserving handle internally (`THE_STRONGEST`), lowercase display name
+  (`thestrongest`), staff badge in chat/leaderboards.
+
+## 4. Admin panel
+
+Separate `/admin` route in the same client, lazy-loaded, **every action enforced server-side**.
 
 | Area | Actions |
 |---|---|
-| Players | search, view (money, inventory, plots, businesses, sessions, history), set money (with reason), grant/remove items, reset, ban/temp-ban, mute, force logout, issue password-reset code, rename |
-| World | release plot, transfer plot, clear planet, feature flags, maintenance mode, broadcast notice |
-| Economy | price chart per material, money supply over time, top earners, recent large transactions, manual price nudge |
-| War | active marches, cancel/refund a march, set truce/shield |
-| Clans | view, rename, disband, remove member |
-| Chat | live view, delete message, slow mode, mute user from message |
-| Tickets & reports | inbox, assign, reply, status |
-| Audit | filterable log (actor, action, target, before/after diff) — owner-only for full view |
+| Players | search, view profile/state/history, set money/items (reason required), reset, ban/temp-ban, mute, force logout, trigger password reset, rename |
+| World | release/transfer territory, feature flags, maintenance mode, broadcast notice |
+| Economy | price charts, money supply, top earners, large transactions, manual price nudge |
+| War | active attacks, cancel/refund |
+| Alliances | view, rename, disband, remove member |
+| Chat | live view, delete message, mute from message, slow mode |
+| Tickets | inbox, reply (player sees it in-game), status |
+| Audit | append-only log of every staff action: who, what, before/after, reason. DB role can't UPDATE/DELETE it |
+| Analytics (D35) | server-side stats only: signups, DAU, actions, economy health. No third-party trackers |
 
-Every destructive action = confirm dialog showing the diff; bulk actions ("reset all") require
-typing the word `RESET` and owner role.
+Destructive bulk actions need you to type the word `CONFIRM` + TOTP re-prompt.
 
-## 5. Migrating existing accounts (Q48 default = claim codes)
+## 5. Chat moderation (D29: minimal)
 
-1. Export all `openworld_save_*` rows from Supabase (read-only, using the public endpoint —
-   no writes to production).
-2. `tools/import-legacy.ts`: create `users` with `password_hash = NULL`, `legacy_import = true`,
-   import money/plots/businesses/inventory; resolve claim conflicts with the same
-   "first alphabetical wins" rule upstream uses, log every conflict.
-3. Generate one **claim code** per account (random 10 chars, stored hashed, 30-day expiry).
-4. Friend distributes codes privately (Discord DM / in person).
-5. `POST /api/auth/claim {username, code, newPassword}` → sets argon2 hash, clears flag.
-6. Unclaimed accounts after 30 days: plots released (configurable).
-
-Never accept the old DJB2 hash as proof of identity — collisions are trivially computable.
-
-## 6. Stop-gap if Phase 1 stays on Supabase
-
-- Enable **Supabase Auth** (username → synthetic email `name@players.invalid`, email confirmations off).
-- New table `profiles(id uuid = auth.uid(), username, role)`.
-- RLS: players may `select` public fields of everyone, `update` nothing directly.
-- All game mutations via `security definer` Postgres functions (`buy_plot(plot_id)`, `sell(material, qty)`)
-  that check `auth.uid()`.
-- Admin functions check `(select role from profiles where id = auth.uid()) in ('owner','admin')`.
-- Remove the anonymous insert/update/delete policies on `openworld_data`.
-
-This is real work for a temporary state — only do it if the self-hosted server is > ~2 months away.
+Channels: **global** + **alliance** (D28). Minimal moderation means:
+- Server-side rate limit (e.g. 1 msg / 1.5s, burst 5) and max length.
+- Text rendered with `textContent` only; links shown as plain text.
+- Staff can delete messages and mute users; everything is logged.
+- No automatic profanity filter at launch (can be a feature flag later).

@@ -1,4 +1,11 @@
-# 01 — Open Questions (answer these, Boss)
+# 01 — Questions
+
+> **Pivot 2026-10-07 (D18):** sections A–H were written for a *rebuild of the friend's game*. Many are
+> now **superseded** (anything about upstream PRs, the friend's workflow, legacy account
+> migration, Supabase, AGPL, or "keeping parity with v1.15"). The rest (hosting, auth, tech stack,
+> general game-design defaults) still apply as defaults for the new game. **Section I is the
+> active questionnaire.** Answer with `Q112: default` / `Q112: B` / free text.
+
 
 **How to use this:** every question has my **default** — the thing I'll assume if you don't
 answer. Reply with `Q12: default`, `Q12: B`, or your own words. Questions marked **🚧 blocking**
@@ -403,3 +410,106 @@ Default: add "All rights reserved" until your friend decides.
 
 **Q105 — Name/branding:** keep "Open World"? (Very generic; also clashes with the genre name.)
 Default: keep for now.
+
+
+---
+
+## I. New game: founding questionnaire (Q106–Q145) · active
+
+✅ = answered 2026-10-07 · 🚧 = blocking
+
+### Identity & business
+**Q106 🚧 — Name.** ✅ partial: codename for now; branding pattern **"Gamble Limited's <Name>"**.
+Open: the codename itself and the final name (+ a trademark check before going public).
+
+**Q107 — Audience.** ✅ Friends.
+
+**Q108 — Real money.** ✅ **Never.** No purchases, no ads, in-game currency has no cash value.
+
+**Q130 — Team.** ✅ Boss + Claude only.
+
+**Q131 — Timeline.** ✅ No deadline.
+
+**Q132 — Gamble Limited integration** (shared accounts, staff, branding, release flow).
+✅ To be designed in a **separate session**. Keep identity swappable until then.
+
+**Q143 — Is Gamble Limited a registered company or a brand/trading name?** Affects the
+copyright line and whether "Limited" may be used. Default: brand name, © Boss trading as Gamble Limited.
+
+**Q138 — Which GitHub org hosts the private repo?** Default: the one GLL lives in.
+
+**Q139 — This public fork after the docs move:** keep as reference, archive, or delete?
+Default: archive it and keep it private-ish by moving the docs out.
+
+### Accounts & privacy
+**Q109 — Account fields.** ✅ Username + first name + last name + email, **email restricted to an
+allow-list**, like GLL.
+
+**Q145 🚧 — What is the allow-list?** Specific domains (e.g. a school domain), specific addresses,
+or the same list GLL uses? Default: same list as GLL.
+
+**Q141 🚧 — Email sending** (verification + password reset). Which provider: the one GLL uses,
+Resend, Postmark, or SMTP via Gmail? Default: whatever GLL uses.
+
+**Q140 — Real names visibility:** staff-only, shown to friends, or shown on leaderboards?
+Default: **staff-only**; players see usernames only.
+
+**Q142 — Invite codes on top of the email allow-list?** Default: no, the allow-list is enough.
+
+**Q144 — Age range of players?** Collecting real names + emails from under-13s (US) / under-16s
+(EU) brings extra obligations. Default: assume teens; minimal data; GLL policy covers it.
+
+**Q128 — Staff.** ✅ Boss = super admin, handle **`THE_STRONGEST`**, displayed **`thestrongest`** (as in GLL).
+
+**Q129 — Legal pages.** ✅ Reuse/extend Gamble Limited's ToS + privacy policy.
+
+### Platform, ops & release
+**Q111 — Platform.** ✅ Browser, desktop/Chromebook first.
+
+**Q123 — Analytics.** ✅ Server-side only (own DB), no third-party trackers.
+
+**Q124 — Uptime/backups.** ✅ To be decided; combine **DB backups + Proxmox Backup Server**.
+
+**Q125 — Release flow.** ✅ Same as / similar to GLL's.
+
+**Q133 — Scale target:** keep ≤30 concurrent / ≤200 accounts for sizing? Default: yes.
+
+**Q136 — Domain:** subdomain of GLL's domain (e.g. `world.<gll-domain>`) or a new domain?
+Default: GLL subdomain.
+
+### World map (see `05-world-map.md`)
+**Q112 🚧 — Granularity rules:** which thresholds split a country into regions? Default: area/population
+thresholds aiming for territories within ~10× of each other in size.
+
+**Q113 — Admin-2 (counties) anywhere at launch?** Default: no; countries + admin-1 first.
+
+**Q114 — Waters:** EEZ chunks, H3 high-seas grid, named seas, or a mix? Default: EEZ chunks + H3 high seas.
+
+**Q115 — Target number of territories at launch?** Default: ~3,000–6,000.
+
+**Q116 — Disputed territories:** de facto, neutral zones, or one point of view? Default: neutral zones + disclaimer.
+
+**Q117 — Show real country/region names?** Default: yes, real names.
+
+**Q122 — Visual style.** ✅ Decide later (prototype first).
+
+### Progression & game feel (detailed ideas come from Boss later)
+**Q118 🚧 — Offline progression cap:** hours of production that accrue while offline. Default: 24h.
+
+**Q119 — Offline efficiency:** full rate, or tapered (e.g. 100% for 2h then 50%)? Default: tapered.
+
+**Q120 — "Hard but easy":** what should the first 10 minutes and the first week feel like?
+Default: first territory in < 2 min, a meaningful empire in about a week.
+
+**Q121 🚧 — Core loop:** Boss's game-ideas doc. Pending.
+
+**Q126 — Chat.** ✅ Global + alliance.
+
+**Q127 — Moderation.** ✅ Minimal (rate limits, staff delete/mute, logged).
+
+**Q134 — Casino / slots in this game?** (In-game currency only per Q108.) Default: undecided, park until Q121.
+
+**Q135 — Seasons / world resets?** Default: no, but keep a `season_id` column ready.
+
+**Q137 — Inspiration list:** which games besides upstream should this feel like (Risk, OGame,
+Territorial.io, Civ…)? Helps with design without copying anyone.

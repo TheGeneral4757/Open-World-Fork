@@ -37,12 +37,11 @@ game.
 | Export the `openworld_data` table regularly (Supabase dashboard → Table → Export CSV) | ~2 min/day | Recovering if someone wipes it |
 | Remove the public **delete** policy | ~15 min + testing | Mass deletion (the admin delete would need to use tombstones only) |
 
-## The real fix (what we're planning)
+## The long-term fix
 
-A small TypeScript server with its own Postgres database. The server makes every decision
-(money, buying, battles, slots). Passwords are hashed properly (argon2) and never leave the
-server, and admin powers are checked by the server. Existing players keep their progress;
-everyone sets a new password with a one-time code you hand out. All of it would come to your
-repo as normal PRs for you to review.
+The underlying issue is that the browser is trusted with everything. A lasting fix is a small
+server between the game and the database that makes the decisions (money, buying, battles,
+slots), hashes passwords properly (e.g. argon2), and checks admin rights itself. Supabase can do
+part of this with its own Auth + row-level-security policies + database functions.
 
-The full technical audit is in `docs/plans/00-audit.md` if you want the details.
+Happy to answer questions about any of these.

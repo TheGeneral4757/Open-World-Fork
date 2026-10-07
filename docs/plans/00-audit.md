@@ -1,4 +1,10 @@
-# 00 — Code Audit (fork point: upstream v1.15, commit `f50ea29`)
+# 00 — Upstream Audit (reference only)
+
+> **Read this as a list of lessons, not a porting guide.** Since D18/D20 the new game is written
+> from scratch. Nothing here should be copied into the new codebase. The "tell the friend"
+> list in §6 is what Boss is passing on to the upstream owner (D25).
+
+Fork point: upstream v1.15, commit `f50ea29`.
 
 > **Bottom line:** the game is genuinely impressive for a no-build single file — the
 > Voronoi tessellation, pooled draw calls, deterministic war seeds and the changelog

@@ -1,112 +1,72 @@
-# 02 — Roadmap (phased, each phase shippable)
+# 02 — Roadmap (greenfield)
 
-**Rule: stop the bleeding first, then move the rules to the server, then move the server home.**
-Polishing anything before the trust model is fixed is decorating a house with no doors.
+**Rule: foundations → identity → world → economy → social → war → polish.** Each phase ends in
+something you can run and click. No deadline (D34); phases are ordered, not dated.
 
 ```
-Phase 0 ── Phase 1 ──── Phase 2 ─────────── Phase 3 ────────── Phase 4 ──────── Phase 5
-triage     foundations  server + auth       feature parity      cutover          admin v2 &
-(days)     (1–2 wks)    (core loop)         (social + war)      (go live home)   beyond
+P0 Repo & infra ─▶ P1 Accounts & admin core ─▶ P2 World map ─▶ P3 Economy loop
+      ─▶ P4 Chat & alliances ─▶ P5 Conflict ─▶ P6 Alpha with friends ─▶ P7 Polish & GLL integration
 ```
-
-Estimates assume evenings/weekends with Claude doing the bulk of implementation. Adjust after Q8.
 
 ---
 
-## Phase 0 — Triage (upstream, small, with the friend) · ~1–3 days
+## P0 — Repo & infrastructure
+- [ ] Create the private repo under a Boss GitHub org (D24); move `docs/plans` there; archive/keep this fork as reference only.
+- [ ] pnpm monorepo (`apps/client`, `apps/server`, `packages/shared`, `tools/`, `deploy/`), TS strict, Biome, Vitest.
+- [ ] CI: typecheck, lint, test, build; Docker image to GHCR (private).
+- [ ] Proxmox VM/LXC: Docker Compose (Postgres+PostGIS, API, Caddy, cloudflared), staging + prod stacks.
+- [ ] Backups: nightly `pg_dump` + WAL + **Proxmox Backup Server** snapshots (D36); first restore drill.
+- [ ] Release flow mirrors GLL's (D37): auto-deploy to staging, promote to prod.
 
-**Decision D12:** no hotfix PR from us. Boss sends the friend
-[`friend-security-summary.md`](friend-security-summary.md); the friend decides what to patch.
+**Exit:** a hello-world API + page served through the tunnel, deployed by CI, backed up, and restored once.
 
-- [ ] Boss sends the summary; friend warns players about password reuse.
-- [ ] *(Friend's call)* the quick fixes listed in the summary.
-- [ ] Ask the friend for (or take, read-only) a JSON export of the table — needed for import tests.
+## P1 — Accounts & admin core
+- [ ] Signup (username, first/last name, email on the allow-list) → email verification → login/logout/sessions (see `04`).
+- [ ] Password reset by email; rate limits; reserved names.
+- [ ] Roles; super-admin `THE_STRONGEST` / `thestrongest` with TOTP.
+- [ ] Admin shell: players list, ban/mute, audit log, feature flags, maintenance mode.
+- [ ] Privacy policy/ToS pages (reused from GLL, D33).
 
-**Exit:** friend is informed; we have an export of current world data.
+**Exit:** friends can register and log in; you can see and manage them; every staff action is logged.
 
-### Upstream model (D3)
+## P2 — World map
+- [ ] `tools/build-world`: Natural Earth (+ EEZ / H3 water) → granularity rules → ids, neighbors, terrain, base prices (see `05`).
+- [ ] Seed PostGIS; build LOD meshes for the client.
+- [ ] Client globe: pooled meshes, picking, LOD switching, ownership colors, performance on a Chromebook.
+- [ ] Visual style prototype(s) (Q-style, D38 = decide later).
 
-Every phase lands as PRs from this fork into `kayneheffelfinger-cyber/Open-World`. Implications:
-- Each PR must keep the live game working — the strangler approach in `05` is mandatory, not optional.
-- The **build step** (Vite, Phase 1) and the Pages workflow change need the friend's explicit buy-in
-  *before* we start — it changes how he edits the game.
-- The server code lives in the upstream repo too (`apps/server`), but only Boss's box deploys it.
-  The upstream Pages workflow deploys the client only.
-- Keep PRs small and reviewable; the friend is the reviewer.
+**Exit:** a smooth real-world globe where you can click any territory and see its info.
 
-## Phase 1 — Foundations (this fork) · ~1–2 weeks
+## P3 — Economy loop
+- [ ] Buy/sell territory with adjacency rules; buildings; settle-on-read production with offline cap.
+- [ ] Global supply/demand market; transactions ledger; leaderboard (net worth).
+- [ ] Server-side analytics tables for the admin dashboard (D35).
+- [ ] Your game ideas land here: Boss's design doc drives catalogs and rules.
 
-- [ ] Agree with the friend on the monorepo + Vite build step (D3).
-- [ ] Point the fork at **offline mode** (blank Supabase constants) so nothing touches prod.
-- [ ] Monorepo: `pnpm` workspaces `apps/client`, `apps/server`, `packages/shared`.
-- [ ] Vite wraps the existing `index.html` unchanged (migration step 0–2 in `05`).
-- [ ] CI: typecheck, Biome, Vitest, build on every PR. Protected `main`.
-- [ ] `tools/export-plots.ts`: run the seeded generator for all 4 planets → `plots.json` +
-      neighbors. **Golden test:** ids/neighbors match what the live client generates.
-- [ ] Extract `catalog.ts` + pure rules into `packages/shared` with unit tests that pin current
-      numbers (plot prices, production rates, battle odds) — these are the regression net.
-- [ ] Local dev stack: `docker compose -f deploy/docker-compose.dev.yml up` → Postgres.
+**Exit:** two accounts can play the core loop; nothing can be cheated from the browser.
 
-**Exit:** `pnpm dev` runs the same game as upstream (offline); shared rules are tested.
+## P4 — Chat & alliances
+- [ ] Global + alliance chat over WS (D28), minimal moderation (D29), staff delete/mute.
+- [ ] Alliances: create/join/leave/kick, roles, peace between members.
+- [ ] Support tickets with in-game replies.
 
-## Phase 2 — Server, auth, core loop · ~2–4 weeks
+## P5 — Conflict
+- [ ] Attacks with travel time, server seeds, defender warnings, protection windows; resolved by the scheduler.
+- [ ] Rules designed fresh (no copied formulas, D20).
 
-- [ ] Fastify server skeleton, config via env, health endpoints, Pino logging.
-- [ ] Drizzle schema + migrations for identity, world, player state, economy (see `03`).
-- [ ] Seed `planets`, `plots`, `plot_neighbors`, `materials` from Phase 1 exports.
-- [ ] Auth: signup/login/logout/sessions/rate limits/Turnstile (see `04`).
-- [ ] Endpoints: world snapshot, buy plot (+multi-buy), sell plot, build/demolish business,
-      settle production (online-only, D11), sell materials, global supply/demand market, planet unlock/travel, plot color.
-- [ ] WebSocket: `plot.claimed/released`, `market.tick`, `self.updated`.
-- [ ] Client switches auth + core loop from CloudSync → API. Legacy cloud code disabled behind a flag.
-- [ ] Server-side slots (or casino disabled until Phase 3 — Q15/Q71).
-- [ ] Playwright e2e: signup → buy → build → wait → sell.
+## P6 — Friends alpha
+- [ ] Invite-only (allow-listed emails); load test with ~50 simulated clients; balance pass with server analytics.
 
-**Exit:** two browsers on the dev stack can play the core loop; editing localStorage or calling
-the API directly cannot create money or plots.
+## P7 — Polish & ecosystem
+- [ ] GLL integration (shared accounts / branding / staff), decided in its own session (D32).
+- [ ] Visual polish, notifications, quality-of-life, new features from the ideas backlog.
 
-## Phase 3 — Social & war parity · ~2–3 weeks
+## Risks
 
-- [ ] Chat (rows, channels global + clan, server rate-limit, profanity mask, reports).
-- [ ] Clans + alliances with server-enforced peace rule.
-- [ ] Wars: marches, scheduler, deterministic resolution with server seeds, truces, shields,
-      recall, war room events.
-- [ ] Leaderboards (net worth / plots / military; all-time + weekly) as SQL views.
-- [ ] Support tickets with admin reply.
-- [ ] Minimal admin (players list, set money w/ reason, ban/mute, audit log) — enough to run launch.
-
-**Exit:** feature parity with upstream v1.15 (minus anything Q15 deferred).
-
-## Phase 4 — Cutover to your hardware · ~1 week + a launch evening
-
-- [ ] Provision VM, Compose stack, Cloudflare Tunnel, backups — run the `06` checklist.
-- [ ] Restore drill passes.
-- [ ] `tools/import-legacy.ts` dry run against the latest export; review conflict log.
-- [ ] Load test: 50 simulated clients (k6 / autocannon + WS) for 30 min, no errors.
-- [ ] Launch plan: announce → freeze upstream (maintenance banner on old site) → final export →
-      import → hand out claim codes → point Pages at new client → watch logs.
-- [ ] Rollback plan: old Supabase site stays read-only for 2 weeks.
-
-**Exit:** players are on your hardware; old backend frozen.
-
-## Phase 5 — Admin v2, ops, and fun again · ongoing
-
-- [ ] Full admin panel (`04` §4), TOTP for staff, economy dashboards.
-- [ ] Feature flags / maintenance mode.
-- [ ] Error tracking (GlitchTip), Uptime Kuma, monthly update routine.
-- [ ] Finish TS migration step 8–9; delete legacy code and `admin.html`.
-- [ ] Then: new gameplay (trading, clan bank, seasons, Discord notifications…) driven by Q18/Q70–Q84.
-
----
-
-## Risk register
-
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Live DB gets vandalized before cutover | Medium | High | Phase 0 fixes; regular exports |
-| Friend keeps shipping features upstream during rebuild → parity target moves | High | Medium | Agree on a feature freeze date, or port weekly |
-| Plot ids differ between generator export and client | Low | Critical | Golden test in Phase 1 |
-| School network blocks your domain / WebSockets | Medium | High | Cloudflare (443), polling fallback, test from a school Chromebook early |
-| Home outage on launch day | Low | Medium | Launch when you're home; status message on Pages |
-| Scope creep (new features before parity) | High | Medium | Features go to a "Later" list until Phase 5 |
-| Bus factor = you | Medium | High | `06` runbook, friend gets documented access to backups |
+| Risk | Mitigation |
+|---|---|
+| Accidentally copying upstream code | Clean-room rule in CLAUDE.md; code written from `docs/plans` specs only |
+| Map pipeline harder than expected | Start with countries + admin-1 only; add admin-2/water later |
+| PII leak (names/emails) | Email verification, encrypted backups, minimal admin exposure, audit log |
+| Home outage | Best effort + PBS backups (D36); status note |
+| Scope creep | Ideas backlog; only the current phase gets built |
