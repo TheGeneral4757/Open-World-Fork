@@ -19,11 +19,13 @@ Default: friend owns game design; you own infra/security/backend.
 (a) PRs back to `kayneheffelfinger-cyber/Open-World`, (b) fork becomes canonical and upstream
 is archived, (c) permanent separate game.
 Default: (b) — rebuild here, then cut over the live game to it.
+✅ **Answered 2026-10-07: (a) PRs back upstream** — friend's repo stays canonical.
 
 **Q3 👥 — Does your friend know about the security issues in `00-audit.md`?** Should I prepare a
 short, non-scary summary + small hotfix PR for upstream (escape usernames, pin deps, drop the
 delete policy)?
 Default: yes, prepare it; you send it.
+✅ **Answered: Boss tells the friend (summary in `friend-security-summary.md`); no hotfix PR from us.**
 
 **Q4 👥 — How many people will write code?** Just you + friend + Claude? Anyone else?
 Default: 2 humans + Claude.
@@ -38,6 +40,7 @@ Default: friends/classmates, mostly teens, invite-only-ish.
 
 **Q7 👥 — Expected player count?** Concurrent at peak, and total accounts in 6 months.
 Default: ≤30 concurrent, ≤200 accounts.
+✅ **Answered: small — ≤30 concurrent, ≤200 accounts.**
 
 **Q8 👥 — Timeline / pressure?** Is there a date you want the self-hosted version live?
 Default: no hard date; phased, each phase shippable.
@@ -74,6 +77,7 @@ Default: parity for core loop (plots, businesses, market, war, chat, clans); cas
 
 **Q16 🚧 — Do existing accounts and progress carry over?** Or fresh "season 1" wipe at cutover?
 Default: carry over money/plots/businesses; force password reset (see Q48).
+✅ **Answered: carry over progress + claim codes.**
 
 **Q17 — Is a full world reset ever acceptable (seasons)?**
 Default: yes — seasons are a feature, not a failure (see Q75).
@@ -92,14 +96,17 @@ Default: Chromebook/desktop first; tablets usable; phones "works but not great."
 **Q21 🏠🚧 — What hardware?** CPU, RAM, disk (SSD/HDD), OS. Is it a dedicated box, a Proxmox
 VM/LXC, a NAS, a Pi?
 Default: Proxmox VM, 2 vCPU / 4 GB RAM / SSD, Debian 12 or Ubuntu 24.04.
+✅ **Answered: Proxmox VM/LXC** (specs still TBD).
 
 **Q22 🏠🚧 — Host only the DB, or the whole backend (API + game server + DB)?** "Host the DB on my
 hardware" with the game server elsewhere means DB traffic over the internet — not recommended.
 Default: whole backend on your hardware; static client can stay on GitHub Pages or move too.
+✅ **Answered: whole backend on Boss's hardware.**
 
 **Q23 🏠🚧 — How will players reach it?** Port-forward + dynamic DNS, Cloudflare Tunnel, Tailscale
 Funnel, or a cheap VPS reverse-proxying to home?
 Default: **Cloudflare Tunnel** — no open ports, hides home IP, free TLS, works on school networks.
+✅ **Answered: Cloudflare Tunnel.**
 
 **Q24 🏠 — Do you own a domain?** Which one? Subdomain plan (e.g. `play.`, `api.`, `admin.`)?
 Default: you'll buy/use one; `play.example.com` + `api.example.com`.
@@ -117,6 +124,7 @@ Default: unknown → recommend one; Postgres hates sudden power loss less than y
 containers (Kong, GoTrue, PostgREST, Realtime, Storage, Studio…) — heavy for one box. Plain
 Postgres + our own TypeScript server is lighter and more controllable.
 Default: **plain Postgres 16 + our own TS server**. (Option: keep Supabase Cloud for now, move later.)
+✅ **Answered: plain Postgres + own TS server.**
 
 **Q29 🏠 — Docker / Docker Compose OK?** Or do you prefer bare systemd services?
 Default: Docker Compose (postgres, api, caddy/cloudflared, backups).
@@ -155,6 +163,7 @@ Default: just you; friend gets admin panel access, not shell.
 **Q39 🔐🚧 — Login identifier:** username only, email + username, or "Sign in with Google /
 Discord"?
 Default: **username + password**, optional email later; Discord OAuth as phase-2 nice-to-have.
+✅ **Answered: username + password, no email/PII.**
 
 **Q40 🔐 — OAuth providers you'd want, if any?** Google (school accounts may block it),
 Discord, GitHub, Microsoft?
@@ -188,6 +197,7 @@ Default: both — 8 recovery codes shown at signup + admin-issued one-time reset
 (b) accept old password once then rehash (risky: anyone can find a DJB2 collision),
 (c) wipe accounts.
 Default: **(a)** — import saves, lock accounts, friend/you hand out claim codes.
+✅ **Answered: (a) claim codes.**
 
 **Q49 🔐 — Username rules:** allowed characters, length, case-insensitive uniqueness, reserved
 names (admin, mod, system), profanity filter?
@@ -217,6 +227,7 @@ Default: collect no PII — username + password only; privacy note on signup.
 
 **Q56 🔐🚧 — Roles:** just `admin` + `player`, or `owner / admin / moderator / player`?
 Default: `owner`, `admin`, `moderator`, `player` (permission-based under the hood).
+✅ **Answered: owner / admin / player (no moderator tier).**
 
 **Q57 — Who are the admins at launch?** Friend (owner) + you (admin)?
 Default: friend = owner, you = admin.
@@ -256,14 +267,17 @@ Default: yes, phase 4 — simple charts from DB aggregates.
 **Q67 🎮🚧 — Server-authoritative economy:** OK that the server decides money/production/prices
 and the client only displays + requests actions? (Required to stop cheating.)
 Default: yes, absolutely.
+✅ **Answered: yes (implied by server backend).**
 
 **Q68 🎮🚧 — Offline production:** should businesses keep producing while players are offline?
 Capped (e.g. max 8 hours of storage)?
 Default: yes, capped at 12h of production per business ("storage full").
+✅ **Answered: NO offline production** — businesses only produce while the owner is online (see `03` §5).
 
 **Q69 🎮🚧 — Market model:** (a) one truly global market with shared prices, (b) global prices
 driven by supply/demand (selling lowers price), (c) keep per-player random walk.
 Default: **(b)** — global prices, server tick, selling pressure moves price, slow recovery to base.
+✅ **Answered: (b) one global market with supply/demand pricing.**
 
 **Q70 🎮 — Player-to-player trading** (direct trades, auction house, money transfers)?
 Default: not at launch; design for it later (and anti-alt-feeding rules from Q54).
@@ -271,6 +285,7 @@ Default: not at launch; design for it later (and anti-alt-feeding rules from Q54
 **Q71 🎮 — Casino:** keep it? Server RNG with published odds? Daily wager limits? (Kids +
 gambling mechanics = something your friend should decide consciously.)
 Default: keep, server-side RNG, daily wager cap, clearly shows odds.
+✅ **Answered: keep casino** (server RNG; wager cap still TBD).
 
 **Q72 🎮 — War timing:** keep 5/8-minute marches and 10-minute truces? Offline defense —
 should plots be attackable while the owner is offline?
@@ -321,9 +336,11 @@ Default: never (and if ever, that's a very different legal conversation).
 
 **Q86 🛠🚧 — TypeScript:** client, server, or both? Strict mode?
 Default: both, `strict: true`, shared types package.
+✅ **Answered: server + client, strict.**
 
 **Q87 🛠🚧 — Server framework:** Fastify, Hono, Express, NestJS? Runtime Node or Bun?
 Default: **Node 22 LTS + Fastify** (mature, fast, great TS + schema validation). Hono is the runner-up.
+✅ **Answered: Node/TS server** (framework default Fastify unless objected).
 
 **Q88 🛠 — DB access:** Drizzle ORM, Kysely, Prisma, or raw SQL?
 Default: **Drizzle** (typed, SQL-shaped, real migrations, no heavy engine).

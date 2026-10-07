@@ -15,21 +15,28 @@ Estimates assume evenings/weekends with Claude doing the bulk of implementation.
 
 ## Phase 0 — Triage (upstream, small, with the friend) · ~1–3 days
 
-Goal: reduce live damage while the rebuild happens. All changes are tiny PRs to upstream.
+**Decision D12:** no hotfix PR from us. Boss sends the friend
+[`friend-security-summary.md`](friend-security-summary.md); the friend decides what to patch.
 
-- [ ] Share `00-audit.md` summary with the friend; warn players about password reuse.
-- [ ] Escape usernames everywhere they hit `innerHTML` (leaderboard, admin table, onclick attrs).
-- [ ] Fix `hashPassword('default')` fallback in `saveGame()`.
-- [ ] Pin `@supabase/supabase-js` to an exact version.
-- [ ] Remove the public **delete** policy (switch admin delete to tombstones only) — *test that
-      nothing else depends on delete first.*
-- [ ] Sync `GAME_VERSION` with README.
-- [ ] (Optional) Supabase daily backup / manual export of the table so we have a baseline.
+- [ ] Boss sends the summary; friend warns players about password reuse.
+- [ ] *(Friend's call)* the quick fixes listed in the summary.
+- [ ] Ask the friend for (or take, read-only) a JSON export of the table — needed for import tests.
 
-**Exit:** friend has merged the hotfixes; we have a JSON export of current world data for import tests.
+**Exit:** friend is informed; we have an export of current world data.
+
+### Upstream model (D3)
+
+Every phase lands as PRs from this fork into `kayneheffelfinger-cyber/Open-World`. Implications:
+- Each PR must keep the live game working — the strangler approach in `05` is mandatory, not optional.
+- The **build step** (Vite, Phase 1) and the Pages workflow change need the friend's explicit buy-in
+  *before* we start — it changes how he edits the game.
+- The server code lives in the upstream repo too (`apps/server`), but only Boss's box deploys it.
+  The upstream Pages workflow deploys the client only.
+- Keep PRs small and reviewable; the friend is the reviewer.
 
 ## Phase 1 — Foundations (this fork) · ~1–2 weeks
 
+- [ ] Agree with the friend on the monorepo + Vite build step (D3).
 - [ ] Point the fork at **offline mode** (blank Supabase constants) so nothing touches prod.
 - [ ] Monorepo: `pnpm` workspaces `apps/client`, `apps/server`, `packages/shared`.
 - [ ] Vite wraps the existing `index.html` unchanged (migration step 0–2 in `05`).
@@ -49,7 +56,7 @@ Goal: reduce live damage while the rebuild happens. All changes are tiny PRs to 
 - [ ] Seed `planets`, `plots`, `plot_neighbors`, `materials` from Phase 1 exports.
 - [ ] Auth: signup/login/logout/sessions/rate limits/Turnstile (see `04`).
 - [ ] Endpoints: world snapshot, buy plot (+multi-buy), sell plot, build/demolish business,
-      settle production, sell materials, global market tick, planet unlock/travel, plot color.
+      settle production (online-only, D11), sell materials, global supply/demand market, planet unlock/travel, plot color.
 - [ ] WebSocket: `plot.claimed/released`, `market.tick`, `self.updated`.
 - [ ] Client switches auth + core loop from CloudSync → API. Legacy cloud code disabled behind a flag.
 - [ ] Server-side slots (or casino disabled until Phase 3 — Q15/Q71).

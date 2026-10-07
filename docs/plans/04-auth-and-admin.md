@@ -42,19 +42,20 @@ Details:
 ## 3. Roles & permissions
 
 ```ts
-type Role = 'owner' | 'admin' | 'moderator' | 'player';
+// D9: owner / admin / player — no moderator tier. Permissions stay granular under the
+// hood so a moderator role can be added later without touching route code.
+type Role = 'owner' | 'admin' | 'player';
 const PERMS = {
-  owner:     ['*'],
-  admin:     ['players.view', 'players.edit', 'players.ban', 'world.edit', 'clans.edit',
-              'chat.moderate', 'tickets.manage', 'settings.edit', 'audit.view'],
-  moderator: ['players.view', 'players.mute', 'chat.moderate', 'tickets.manage'],
-  player:    [],
+  owner:  ['*'],
+  admin:  ['players.view', 'players.edit', 'players.ban', 'players.mute', 'world.edit',
+           'clans.edit', 'chat.moderate', 'tickets.manage', 'settings.edit', 'audit.view'],
+  player: [],
 } as const;
 ```
 - Only `owner` can grant/revoke `admin`. Owner can't be demoted by admins.
 - Every admin route: `requirePerm('players.edit')` + **reason required** + audit log write in
   the same transaction as the change.
-- Admin/mod accounts **must** have TOTP enabled before admin routes respond (Q46).
+- Admin/owner accounts **must** have TOTP enabled before admin routes respond (Q46).
 - Optional hardening: admin routes only reachable via Tailscale / Cloudflare Access (Q61).
 
 ## 4. Admin panel v2 — feature list

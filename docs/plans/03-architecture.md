@@ -41,7 +41,7 @@ TARGET
 | Client | Vite + TypeScript, Three.js r160, vanilla TS modules | Render, input, panels; holds a *read model* of state |
 | API | Node 22 + Fastify + Zod | REST for actions, auth, admin |
 | Realtime | `@fastify/websocket` | Push events: chat, claims, marches, price ticks, admin notices |
-| Game loop | In-process scheduler (same Node process at first) | Market ticks, march arrivals, cleanup |
+| Game loop | In-process scheduler (same Node process at first) | Market ticks (global supply/demand, D11), march arrivals, cleanup |
 | DB | Postgres 16 + Drizzle migrations | Source of truth |
 | Auth | Own implementation: argon2id + opaque session cookies | See `04-auth-and-admin.md` |
 | Edge | Cloudflare Tunnel → Caddy | TLS, no open ports, hides home IP, works on school wifi |
@@ -116,12 +116,39 @@ Don't tick production every second for every player. Store `last_settled_at` and
 produced = rate × area_mult × region_bonus × min(now − last_settled_at, CAP)
 ```
 
+**D11: no offline production.** Production only accrues while the owner has a live session.
+Implementation: track `players.online_since` (set on WS connect / first API call) and clamp the
+window to `[max(last_settled_at, online_since), min(now, last_seen_at + 60s)]`. On WS disconnect
+(or 60s without a heartbeat) settle once and clear `online_since`. Multiple tabs/devices = still
+one window, not double production.
+
 Settle (write inventory + bump `last_settled_at`) whenever the player does anything that
 reads or spends inventory (sell, attack, view market) or every N minutes while connected.
 The client runs the *same formula* locally (shared package) purely for a smooth ticking
 counter — the server number wins on every response.
 
 Troop housing cap and military resources follow the same pattern.
+
+## 5b. Global supply/demand market (D11)
+
+One price per material, shared by everyone, stored in `market_prices`.
+
+```
+on sell(material, qty):
+  price_paid  = integrate price over the sale (large sales get a worse average price)
+  pressure   += qty / liquidity[material]          # liquidity = tuning constant per material
+  price       = base × clamp(1 − pressure_term, 0.5, 2.0)
+
+every tick (e.g. 60s):
+  pressure   *= decay                               # price recovers toward base
+  small random drift (±1–2%) so the market isn't static
+  broadcast market.tick
+```
+- Bounds stay 0.5×–2× base, as today.
+- Selling in one big chunk is penalised vs selling over time, so whales can't crash a price and
+  dump in one click.
+- `market_history` stores every tick for charts and admin dashboards.
+- Tuning constants live in `settings`, so they can be changed without a deploy.
 
 ## 6. Action flow example — buying a plot
 
