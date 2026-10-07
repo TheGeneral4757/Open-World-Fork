@@ -12,6 +12,7 @@ Status: **Planning** · Fork point: upstream v1.15 (`f50ea29`) · Last updated: 
 | [05-typescript-migration.md](05-typescript-migration.md) | Step-by-step move from single `index.html` to Vite + TS without breaking the game |
 | [06-self-hosting.md](06-self-hosting.md) | Home-hardware topology, Compose sketch, hardening, backups, monitoring |
 | [07-owner-workflow.md](07-owner-workflow.md) | How the owner keeps pushing to GitHub to update the live game, before and after the transition |
+| [08-ownership-and-licensing.md](08-ownership-and-licensing.md) | Who owns what, AGPL plan, the shared-package snag, 16 licensing questions |
 | [friend-security-summary.md](friend-security-summary.md) | Short, friendly write-up of the security issues to send the game's owner |
 
 ## The one-paragraph version
@@ -44,3 +45,7 @@ Still open: **Q1, Q13, Q14** (+ Q21 specs, Q24 domain, Q71 wager cap). Everythin
 | D11 | 2026-10-07 | Economy: server-authoritative, ONE global market with supply/demand pricing, NO offline production, casino stays (server RNG) | Q67–Q69, Q71 |
 | D12 | 2026-10-07 | Phase 0 = Boss sends friend the security summary; no hotfix PR from us | Q3 |
 | D13 | 2026-10-07 | Owner keeps "push to main = live" workflow; client via Pages, server auto-pulls images from GHCR on Boss's box | Boss |
+| D14 | 2026-10-07 | The game (name, concept, existing code, final say) belongs to the owner | Boss |
+| D15 | 2026-10-07 | Boss keeps copyright on what he builds (backend/infra/tooling), licensed to the game | Boss |
+| D16 | 2026-10-07 | Boss's code licensed AGPL-3.0; shared rules package license pending (see 08 §3) | Boss |
+| D17 | — | *(pending)* Exit plan if you part ways | Q-L11 |

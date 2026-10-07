@@ -144,3 +144,4 @@ in cloud sessions).
   combat/RNG, parameterized SQL only, secrets via env.
 - Commit messages: imperative summary line, then body explaining *why*.
 - Don't edit upstream-facing files (README changelog, deploy workflow) as part of planning work.
+- Ownership: the game belongs to the upstream owner; Boss owns his server/infra code (AGPL-3.0). See `docs/plans/08-ownership-and-licensing.md` before adding any LICENSE file or SPDX header.
