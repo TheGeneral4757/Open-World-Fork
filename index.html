@@ -3355,26 +3355,23 @@ const RELEASE_NOTES = [
 
 function maybeShowUpdatePopup() {
   if (!CURRENT_USER) return;
-  const seenKey = 'openworld_seen_update_' + CURRENT_USER;
+  // One seen-marker per DEVICE (not per account) — switching accounts
+  // doesn't re-show it, and it only ever shows the newest release
+  const seenKey = 'openworld_seen_update';
   let seen = '';
   try { seen = localStorage.getItem(seenKey) || ''; } catch (e) { return; }
   if (seen === GAME_VERSION) return;
-  // Every version newer than what this account last saw on this device
-  // (all listed versions for first-timers — doubles as a highlights tour)
-  const seenIdx = RELEASE_NOTES.findIndex(n => n.v === seen);
-  const sections = seenIdx === -1 ? RELEASE_NOTES : RELEASE_NOTES.slice(0, seenIdx);
-  if (!sections.length) return;
+  const latest = RELEASE_NOTES[0];
+  if (!latest) return;
   const card = document.getElementById('update-card');
   if (!card) return;
   card.innerHTML = `
     <span class="badge available">🆕 what's new</span>
     <h2>The World Grew</h2>
-    <div class="coords">UPDATES SINCE YOUR LAST VISIT</div>
+    <div class="coords">${latest.v} · JUST ADDED</div>
     <div class="update-body">
-      ${sections.map(s => `
-        <div class="update-ver">${s.v}</div>
-        <ul class="update-list">${s.items.map(t => `<li>${t}</li>`).join('')}</ul>
-      `).join('')}
+      <div class="update-ver">${latest.v}</div>
+      <ul class="update-list">${latest.items.map(t => `<li>${t}</li>`).join('')}</ul>
     </div>
     <div class="actions"><button class="btn primary" onclick="closeUpdatePopup()">Nice — let's go</button></div>
   `;
